@@ -191,7 +191,7 @@ const Header = () => {
             />
             <Link href='/'>
               <Image
-                src='/images/logo.png'
+                src='/assets/images/logo.png'
                 alt='logo'
                 width={120}
                 height={40}
@@ -210,7 +210,7 @@ const Header = () => {
             <div className='flex basis-[20%] mt-3'>
               <Link href='/'>
                 <Image
-                  src='/images/logo.png'
+                  src='/assets/images/logo.png'
                   alt='logo'
                   width={200}
                   height={60}

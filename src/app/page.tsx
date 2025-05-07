@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Button} from 'antd';
 import { Metadata } from 'next';
 import Image from 'next/image';
+import './globals.css';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
