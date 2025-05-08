@@ -1,11 +1,25 @@
+// src/components/layout/Header.tsx
+
 'use client';
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState, ChangeEvent } from 'react';
-import { Input, Button, Menu, Drawer, Popover, QRCode, Badge } from 'antd';
-import { SearchOutlined, ShoppingCartOutlined, UserOutlined, MenuOutlined, CloseOutlined, PhoneFilled, MobileFilled } from '@ant-design/icons';
+import { Input, Button, Menu, Drawer, Popover, QRCode, Badge, Dropdown } from 'antd';
+import {
+  SearchOutlined,
+  ShoppingCartOutlined,
+  UserOutlined,
+  MenuOutlined,
+  CloseOutlined,
+  PhoneFilled,
+  MobileFilled,
+  DownOutlined,
+} from '@ant-design/icons';
 import { useCartStore } from '@/store/cartStore';
 import type { MenuProps } from 'antd';
+import { useUser } from '@/context/UserContext';
+import { useRouter } from 'next/navigation';
 
 interface CustomMenuItem {
   key: string;
@@ -108,6 +122,8 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const cartItems = useCartStore((state) => state.items);
   const cartItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const { user, logout } = useUser(); 
+  const router = useRouter();
 
   const toggleMenu = (): void => {
     setIsMenuOpen(!isMenuOpen);
@@ -129,17 +145,17 @@ const Header = () => {
     children: item.children?.map((child) =>
       'type' in child && child.type === 'group'
         ? {
-            type: 'group',
-            label: child.label,
-            children: child.children.map((subChild) => ({
-              key: subChild.key,
-              label: subChild.label,
-            })),
-          }
+          type: 'group',
+          label: child.label,
+          children: child.children.map((subChild) => ({
+            key: subChild.key,
+            label: subChild.label,
+          })),
+        }
         : {
-            key: (child as CustomMenuItem).key,
-            label: (child as CustomMenuItem).label,
-          }
+          key: (child as CustomMenuItem).key,
+          label: (child as CustomMenuItem).label,
+        }
     ),
   }));
 
@@ -148,6 +164,21 @@ const Header = () => {
     { key: 'search_vaccine', label: <Link href='/products?search=vaccine'>Vaccine</Link> },
     { key: 'search_vitamin', label: <Link href='/products?search=vitamin'>Vitamin</Link> },
     { key: 'search_oto', label: <Link href='/products?search=oto'>Ô tô đồ chơi</Link> },
+  ];
+
+  const userMenuItems: MenuProps['items'] = [
+    {
+      key: 'profile',
+      label: <Link href='/account'>Hồ sơ</Link>,
+    },
+    {
+      key: 'logout',
+      label: 'Đăng xuất',
+      onClick: () => {
+        logout();
+        router.push('/login');
+      },
+    },
   ];
 
   return (
@@ -180,7 +211,7 @@ const Header = () => {
         </div>
       </div>
 
-      <div className='md:bg-[url("/images/bg-header.png")] bg-cover bg-[#3c81e8]'>
+      <div className='md:bg-[url("/assets/images/bg-header.png")] bg-cover bg-[#3c81e8]'>
         <div className='container mx-auto'>
           <div className='flex justify-between items-center md:hidden px-3 py-2'>
             <Button
@@ -191,7 +222,7 @@ const Header = () => {
             />
             <Link href='/'>
               <Image
-                src='/images/logo.png'
+                src='/assets/images/logo.png'
                 alt='logo'
                 width={120}
                 height={40}
@@ -210,7 +241,7 @@ const Header = () => {
             <div className='flex basis-[20%] mt-3'>
               <Link href='/'>
                 <Image
-                  src='/images/logo.png'
+                  src='/assets/images/logo.png'
                   alt='logo'
                   width={200}
                   height={60}
@@ -246,10 +277,20 @@ const Header = () => {
                 </Link>
               </div>
               <div className='text-white custom-account'>
-                <Link href='/account' className='flex items-center'>
-                  <UserOutlined style={{ fontSize: '24px' }} />
-                  <span className='ml-1'>Tài khoản</span>
-                </Link>
+                {user ? (
+                  <Dropdown menu={{ items: userMenuItems }} trigger={['click']}>
+                    <div className='flex items-center cursor-pointer'>
+                      <UserOutlined style={{ fontSize: '24px' }} />
+                      <span className='ml-1'>{user.hoten}</span>
+                      <DownOutlined className='ml-1' style={{ fontSize: '12px' }} />
+                    </div>
+                  </Dropdown>
+                ) : (
+                  <Link href='/login' className='flex items-center'>
+                    <UserOutlined style={{ fontSize: '24px' }} />
+                    <span className='ml-1'>Tài khoản</span>
+                  </Link>
+                )}
               </div>
             </div>
           </div>
@@ -293,10 +334,22 @@ const Header = () => {
         closeIcon={<CloseOutlined />}
         width={300}
       >
-        <Link href='/account' className='flex items-center custom-ant-menu'>
-          <UserOutlined className='mr-2' />
-          Tài khoản
-        </Link>
+        <div className='flex items-center custom-ant-menu mb-4'>
+          {user ? (
+            <Dropdown menu={{ items: userMenuItems }} trigger={['click']}>
+              <div className='flex items-center cursor-pointer'>
+                <UserOutlined className='mr-2' />
+                <span>{user.hoten}</span>
+                <DownOutlined className='ml-1' style={{ fontSize: '12px' }} />
+              </div>
+            </Dropdown>
+          ) : (
+            <Link href='/login' className='flex items-center'>
+              <UserOutlined className='mr-2' />
+              Tài khoản
+            </Link>
+          )}
+        </div>
         <Menu
           mode='inline'
           items={menuItems}
