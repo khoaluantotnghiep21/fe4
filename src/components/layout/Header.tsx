@@ -230,7 +230,7 @@ const Header = () => {
                 priority
               />
             </Link>
-            <Link href='/cart' className='text-white'>
+            <Link   href='/cart' className='text-white'>
               <Badge count={cartItemCount} size="small">
                 <ShoppingCartOutlined style={{ fontSize: '24px', color: 'white' }} />
               </Badge>
