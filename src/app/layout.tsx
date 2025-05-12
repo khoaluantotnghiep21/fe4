@@ -6,11 +6,12 @@ import './globals.css';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import useClientReady from '@/hooks/useClientReady';
+import { UserProvider } from '@/context/UserContext';
 
 import { Spin } from 'antd';
 import 'antd/dist/reset.css';
 import {useEffect} from "react"; // reset mặc định của antd
-import { AuthService } from '@/lib/auth/authService';
+import { SanphamService } from '@/lib/api/sanPham/sanPhamApi';
 
 
 
@@ -36,7 +37,7 @@ export default function RootLayout({
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const resp = await AuthService.detailEsurvey();
+                const resp = await new SanphamService().getAll();
                 console.log(resp); // xử lý dữ liệu ở đây
             } catch (error) {
                 console.error('Lỗi khi gọi API:', error);
@@ -53,11 +54,11 @@ export default function RootLayout({
             <Spin size="large" />
           </div>
       ) : (
-          <>
+          <UserProvider>
             <Header />
             <main className="flex-grow">{children}</main>
             <Footer />
-          </>
+          </UserProvider>
       )}
       </body>
       </html>
