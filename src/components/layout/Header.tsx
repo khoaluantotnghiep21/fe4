@@ -122,7 +122,7 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const cartItems = useCartStore((state) => state.items);
   const cartItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const { user, logout } = useUser(); 
+  const { user, logout } = useUser();
   const router = useRouter();
 
   const toggleMenu = (): void => {
@@ -167,9 +167,15 @@ const Header = () => {
   ];
 
   const userMenuItems: MenuProps['items'] = [
+    // ...(user && user.roles && user.roles?.includes('admin')
+    //   ? [{
+    //     key: 'admin',
+    //     label: <Link href='/admin'>Trang quản trị</Link>,
+    //   }]
+    //   : []),
     {
       key: 'profile',
-      label: <Link href='/account'>Hồ sơ</Link>,
+      label: <Link href='/profile'>Hồ sơ</Link>,
     },
     {
       key: 'logout',
@@ -230,7 +236,7 @@ const Header = () => {
                 priority
               />
             </Link>
-            <Link   href='/cart' className='text-white'>
+            <Link href='/cart' className='text-white'>
               <Badge count={cartItemCount} size="small">
                 <ShoppingCartOutlined style={{ fontSize: '24px', color: 'white' }} />
               </Badge>
