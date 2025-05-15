@@ -39,20 +39,7 @@ export default function Login() {
       if (user) {
         message.success('Đăng nhập thành công!');
         setUser(user);
-
-        console.log(user);
-        
-        if (user.roles) {
-          if (user.roles.includes('admin')) {
-            router.push('/admin');
-          } else if (user.roles.includes('staff')) {
-            router.push('/staff/orders');
-          } else {
-            router.push('/');
-          }
-        } else {
-          router.push('/');
-        }
+        router.push('/');
       } else {
         message.error('Mật khẩu không đúng!');
       }

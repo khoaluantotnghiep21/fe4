@@ -6,9 +6,6 @@ export default function AuthLayout({
   return (
     <div className="auth-layout min-h-screen flex flex-col items-center justify-center bg-[#f4f6fb]">
       <div className="w-full max-w-md p-6 rounded-lg shadow-lg bg-white relative">
-        <div className="flex justify-center mb-6">
-          <img src="/assets/images/logo.png" alt="Logo" className="h-12" />
-        </div>
         {children}
       </div>
     </div>

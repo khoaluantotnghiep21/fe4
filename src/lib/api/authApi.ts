@@ -18,6 +18,17 @@ export async function getUserById(id: string): Promise<User | null> {
   }
 }
 
+export async function getUserRole(id: string): Promise<User | null> {
+  try {
+    const response = await axiosClient.get(`/UserRole/getUserRoles/${id}`);
+    return response.data;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (error) {
+    return null;
+  }
+}
+
+
 export async function getUserByPhone(dienthoai: string): Promise<User | null> {
   try {
     const response = await axiosClient.get(
