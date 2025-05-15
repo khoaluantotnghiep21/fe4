@@ -1,4 +1,5 @@
 import axios from "axios";
+import { message } from "antd";
 
 const axiosClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/",
@@ -38,7 +39,11 @@ axiosClient.interceptors.response.use(
       }
 
       if (status === 500) {
-        console.error("Lỗi server, vui lòng thử lại sau.");
+        if (typeof window !== "undefined") {
+          message.error("Lỗi server, vui lòng thử lại sau.");
+        } else {
+          console.error("Lỗi server, vui lòng thử lại sau.");
+        }
       }
     }
 

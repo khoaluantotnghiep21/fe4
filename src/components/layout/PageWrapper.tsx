@@ -11,11 +11,12 @@ export default function PageWrapper({
 }) {
   const pathname = usePathname()
   const isAuthPage = pathname === '/login' || pathname === '/register'
-  const isLoginStaffPage = pathname === '/management/login'
-  if (isAuthPage || isLoginStaffPage) {
+  const isStaffPage = pathname.includes('/management')
+
+  if (isAuthPage || isStaffPage) {
     return <div className="auth-container">{children}</div>
   }
-  
+
   return (
     <>
       <Header />

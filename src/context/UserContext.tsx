@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { User } from '@/types/user.types';
 import { logout as apiLogout, getUserRole } from '@/lib/api/authApi';
 import Cookies from 'js-cookie';
+import { message } from 'antd';
 
 interface UserContextType {
   user: User | null;
@@ -68,6 +69,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
           setUserState(userData);
         } catch (error) {
+          message.error('Lỗi xử lý dữ liệu người dùng');
           console.error('Error parsing user data:', error);
           localStorage.removeItem('user_information');
           Cookies.remove('user_information', { path: '/' });
@@ -83,6 +85,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     try {
       await apiLogout();
     } catch (error) {
+      message.error('Lỗi khi đăng xuất');
       console.error('Error during logout:', error);
     } finally {
       setUser(null);

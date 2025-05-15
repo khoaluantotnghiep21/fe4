@@ -1,7 +1,16 @@
 // src/lib/api/authApi.ts
 
 import { User, LoginCredentials, RegisterData } from "@/types/user.types";
+import { message } from "antd";
 import axiosClient from "../axiosClient";
+
+// Error state strings for UI components to display with Alert
+export const AuthErrors = {
+  USER_ROLE_ERROR: "Lỗi khi lấy thông tin quyền người dùng",
+  USER_PHONE_ERROR: "Lỗi khi lấy thông tin người dùng theo số điện thoại",
+  LOGIN_ERROR: "Lỗi khi đăng nhập",
+  LOGOUT_ERROR: "Lỗi khi đăng xuất",
+};
 
 export async function getUsers(): Promise<User[]> {
   const response = await axiosClient.get("/users");
@@ -47,7 +56,11 @@ export async function getUserRole(id: string): Promise<User | null> {
 
     return null;
   } catch (error) {
-    console.error("Error fetching user role:", error);
+    if (typeof window !== "undefined") {
+      message.error("Lỗi khi lấy thông tin quyền người dùng");
+    } else {
+      console.error("Error fetching user role:", error);
+    }
     return null;
   }
 }
@@ -66,7 +79,11 @@ export async function getUserByPhone(dienthoai: string): Promise<User | null> {
     }
     return null;
   } catch (error) {
-    console.error("Error fetching user by phone:", error);
+    if (typeof window !== "undefined") {
+      message.error("Lỗi khi lấy thông tin người dùng theo số điện thoại");
+    } else {
+      console.error("Error fetching user by phone:", error);
+    }
     return null;
   }
 }
@@ -109,7 +126,11 @@ export async function login(
     }
     return null;
   } catch (error) {
-    console.error("Login error:", error);
+    if (typeof window !== "undefined") {
+      message.error("Lỗi khi đăng nhập");
+    } else {
+      console.error("Login error:", error);
+    }
     return null;
   }
 }

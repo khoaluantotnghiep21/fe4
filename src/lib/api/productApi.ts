@@ -1,10 +1,10 @@
 import { Product } from "@/types/product.types";
-
+import { message } from "antd";
 import axiosClient from "../axiosClient";
 
 export async function getProducts(): Promise<Product[]> {
   try {
-    const res = await axiosClient.get('/product/getAllProducts');
+    const res = await axiosClient.get("/product/getAllProducts");
     const rawProducts = res.data.data.data;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -12,15 +12,19 @@ export async function getProducts(): Promise<Product[]> {
       id: item.id,
       name: item.tensanpham,
       price: item.gianhap,
-      image: item.anhsanpham?.[0]?.url || '',
+      image: item.anhsanpham?.[0]?.url || "",
       discount: item.khuyenmai?.tenchuongtrinh || undefined,
-      originalPrice: item.gianhap + 10000, 
-      subText: item.thuonghieu?.tenthuonghieu || '',
+      originalPrice: item.gianhap + 10000,
+      subText: item.thuonghieu?.tenthuonghieu || "",
     }));
 
     return mappedProducts;
   } catch (err) {
-    console.error('Lỗi khi fetch sản phẩm:', err);
+    if (typeof window !== "undefined") {
+      message.error("Lỗi khi fetch sản phẩm");
+    } else {
+      console.error("Lỗi khi fetch sản phẩm:", err);
+    }
     return [];
   }
 }
