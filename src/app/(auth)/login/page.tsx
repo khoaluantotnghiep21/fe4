@@ -1,60 +1,60 @@
 'use client';
 
-import Image from 'next/image';
 import { Form, Input, Button, message } from 'antd';
 import { useRouter } from 'next/navigation';
-import { login } from '@/lib/api/authApi';
+import { login, getUserByPhone } from '@/lib/api/authApi';
 import { useUser } from '@/context/UserContext';
 import styles from './login.module.css';
-
+import { useState } from 'react';
 
 export default function Login() {
   const router = useRouter();
-  const [messageApi, contextHolder] = message.useMessage();
-  const { setUser } = useUser(); 
+  const { setUser } = useUser();
+  const [step, setStep] = useState<'phone' | 'password'>('phone');
+  const [phone, setPhone] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const onFinish = async (values: { dienthoai: string; matkhau: string }) => {
+  const handlePhoneSubmit = async (values: { dienthoai: string }) => {
+    setLoading(true);
     try {
-      const user = await login(values);
-      if (user) {
-        messageApi.success('Đăng nhập thành công!');
+      const user = await getUserByPhone(values.dienthoai);
 
-        localStorage.setItem('user', JSON.stringify(user));
-        setUser(user); 
-        router.push('/'); 
+      if (user) {
+        setPhone(values.dienthoai);
+        setStep('password');
       } else {
-        messageApi.error('Số điện thoại hoặc mật khẩu không đúng');
+        message.error('Số điện thoại chưa đăng ký!');
+        router.push('/register');
       }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
-      messageApi.error('Đã có lỗi xảy ra, vui lòng thử lại');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogin = async (values: { matkhau: string }) => {
+    setLoading(true);
+    try {
+      const user = await login({ sodienthoai: phone, matkhau: values.matkhau });
+
+      if (user) {
+        message.success('Đăng nhập thành công!');
+        setUser(user);
+        router.push('/');
+      } else {
+        message.error('Mật khẩu không đúng!');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className={styles.container}>
-      {contextHolder}
-      <Image
-        src="/assets/icons/background1.svg"
-        alt=""
-        width={100}
-        height={100}
-        className={styles.background1}
-        role="presentation"
-      />
-      <Image
-        src="/assets/icons/background2.svg"
-        alt=""
-        width={100}
-        height={100}
-        className={styles.background2}
-        role="presentation"
-      />
-      <div className={styles.formContainer}>
-        <h1 className={styles.title}>Đăng nhập</h1>
+    <div className={styles.formContainer}>
+      <h1 className={styles.title}>Đăng nhập</h1>
+      {step === 'phone' && (
         <Form
-          name="login_form"
-          onFinish={onFinish}
+          name="phone_form"
+          onFinish={handlePhoneSubmit}
           layout="vertical"
           className={styles.form}
         >
@@ -63,15 +63,28 @@ export default function Login() {
             name="dienthoai"
             rules={[
               { required: true, message: 'Vui lòng nhập số điện thoại!' },
-              {
-                pattern: /^[0-9]{10}$/,
-                message: 'Số điện thoại phải có 10 chữ số!',
-              },
+              { pattern: /^[0-9]{10}$/, message: 'Số điện thoại phải có 10 chữ số!' },
             ]}
           >
             <Input placeholder="Nhập số điện thoại" className={styles.input} />
           </Form.Item>
-
+          <Form.Item>
+            <Button type="primary" htmlType="submit" className={styles.submitButton} loading={loading}>
+              Tiếp tục
+            </Button>
+          </Form.Item>
+        </Form>
+      )}
+      {step === 'password' && (
+        <Form
+          name="login_form"
+          onFinish={handleLogin}
+          layout="vertical"
+          className={styles.form}
+        >
+          <Form.Item label="Số điện thoại">
+            <Input value={phone} disabled className={styles.input} />
+          </Form.Item>
           <Form.Item
             label="Mật khẩu"
             name="matkhau"
@@ -79,14 +92,14 @@ export default function Login() {
           >
             <Input.Password placeholder="Nhập mật khẩu" className={styles.input} />
           </Form.Item>
-
           <Form.Item>
-            <Button type="primary" htmlType="submit" className={styles.submitButton}>
+            <Button type="primary" htmlType="submit" className={styles.submitButton} loading={loading}>
               Đăng nhập
             </Button>
           </Form.Item>
         </Form>
-      </div>
+      )}
     </div>
+
   );
 }

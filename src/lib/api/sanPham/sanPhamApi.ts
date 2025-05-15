@@ -47,17 +47,16 @@ class SanphamService {
     page?: number;
     take?: number;
   } = {}): Promise<GlobalResponse<Product>> {
-    const response = await axiosClient.get<GlobalResponse<Product>>('sanpham/search', {
+    const response = await axiosClient.get<GlobalResponse<Product>>('/product/getAllProducts', {
       params: {
-        page: 1,
-        take: 10,
         ...params
       }
     });
+
+    console.log(response.data);
     return response.data;
   }
 
-  // Placeholder for future methods like create, update, delete
 }
 
 export { SanphamService };

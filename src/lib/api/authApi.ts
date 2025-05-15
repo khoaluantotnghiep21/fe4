@@ -1,79 +1,85 @@
 // src/lib/api/authApi.ts
 
-import { User, Role, LoginCredentials, RegisterData } from '@/types/user.types';
+import { User, LoginCredentials, RegisterData } from "@/types/user.types";
+import axiosClient from "../axiosClient";
 
-// Mock roles
-const mockRoles: Role[] = [
-  { id: '1', name: 'Admin' },
-  { id: '2', name: 'Customer' },
-  { id: '3', name: 'Employee' },
-];
-
-// Mock users
-const mockUsers: User[] = [
-  {
-    id: '1',
-    hoten: 'Nguyen Van A',
-    dienthoai: '0909123456',
-    matkhau: 'password123',
-    email: 'nguyenvana@example.com',
-    gioitinh: 'Nam',
-    ngaysinh: '1990-01-01',
-    sodiem: 150,
-    diachi: '123 Duong ABC, Quan 1, TP.HCM',
-    roles: [mockRoles[0]], 
-  },
-  {
-    id: '2',
-    hoten: 'Tran Thi B',
-    dienthoai: '0918123456',
-    matkhau: 'password456',
-    email: 'tranthib@example.com',
-    gioitinh: 'Nu',
-    ngaysinh: '1995-05-15',
-    sodiem: 80,
-    diachi: '456 Duong DEF, Quan 3, TP.HCM',
-    roles: [mockRoles[1]], // Customer
-  },
-];
-
-// Simulate fetching all users
 export async function getUsers(): Promise<User[]> {
-  return mockUsers;
+  const response = await axiosClient.get("/users");
+  return response.data;
 }
 
-// Simulate fetching a user by ID
 export async function getUserById(id: string): Promise<User | null> {
-  return mockUsers.find((user) => user.id === id) || null;
-}
-
-// Simulate fetching a user by phone number (for login)
-export async function getUserByPhone(dienthoai: string): Promise<User | null> {
-  return mockUsers.find((user) => user.dienthoai === dienthoai) || null;
-}
-
-// Simulate login using phone number
-export async function login(credentials: LoginCredentials): Promise<User | null> {
-  const user = await getUserByPhone(credentials.dienthoai);
-  if (user && user.matkhau === credentials.matkhau) {
-    return user;
+  try {
+    const response = await axiosClient.get(`/users/${id}`);
+    return response.data;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (error) {
+    return null;
   }
-  return null;
+}
+
+export async function getUserRole(id: string): Promise<User | null> {
+  try {
+    const response = await axiosClient.get(`/UserRole/getUserRoles/${id}`);
+    return response.data;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (error) {
+    return null;
+  }
+}
+
+
+export async function getUserByPhone(dienthoai: string): Promise<User | null> {
+  try {
+    const response = await axiosClient.get(
+      `/identityuser/getUserByPhone/${dienthoai}`
+    );
+
+    if (response.data && response.data.data) {
+      return response.data.data;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching user by phone:", error);
+    return null;
+  }
+}
+
+export async function login(
+  credentials: LoginCredentials
+): Promise<User | null> {
+  try {
+    const response = await axiosClient.post("identityuser/signIn", credentials);
+
+    if (response.data && response.data.data && response.data.data.accessToken) {
+      // Store the access token
+      localStorage.setItem("access_token", response.data.data.accessToken);
+
+      // Fetch user details with the phone number
+      const userData = await getUserByPhone(credentials.sodienthoai);
+
+      if (userData) {
+        localStorage.setItem("user_information", JSON.stringify(userData));
+        return userData;
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error("Login error:", error);
+    return null;
+  }
 }
 
 export async function register(data: RegisterData): Promise<User> {
-  const newUser: User = {
-    id: String(mockUsers.length + 1),
-    hoten: data.hoten,
-    dienthoai: data.dienthoai,
-    matkhau: data.matkhau,
-    email: data.email,
-    gioitinh: data.gioitinh,
-    ngaysinh: data.ngaysinh,
-    sodiem: 0,
-    diachi: data.diachi,
-    roles: [mockRoles[1]], 
-  };
-  mockUsers.push(newUser);
-  return newUser;
+  const response = await axiosClient.post("/auth/register", data);
+  if (response.data.token) {
+    localStorage.setItem("access_token", response.data.token);
+  }
+  return response.data.user;
+}
+
+export async function logout(): Promise<void> {
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("user");
+  return Promise.resolve();
 }

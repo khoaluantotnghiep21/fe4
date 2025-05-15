@@ -3,16 +3,16 @@
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
+// import Header from '@/components/layout/Header';
+// import Footer from '@/components/layout/Footer';
 import useClientReady from '@/hooks/useClientReady';
 import { UserProvider } from '@/context/UserContext';
 
 import { Spin } from 'antd';
 import 'antd/dist/reset.css';
-import {useEffect} from "react"; // reset mặc định của antd
-import { SanphamService } from '@/lib/api/sanPham/sanPhamApi';
+import { useEffect } from "react"; // reset mặc định của antd
 
+import PageWrapper from '@/components/layout/PageWrapper';
 
 
 const geistSans = Geist({
@@ -29,38 +29,31 @@ const geistMono = Geist_Mono({
 
 
 export default function RootLayout({
-                                     children,
-                                   }: {
+  children,
+}: {
   children: React.ReactNode;
 }) {
   const ready = useClientReady();
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const resp = await new SanphamService().getAll();
-                console.log(resp); // xử lý dữ liệu ở đây
-            } catch (error) {
-                console.error('Lỗi khi gọi API:', error);
-            }
-        };
-
-        fetchData();
-    }, []);
+  useEffect(() => {
+    if (!localStorage.getItem("access_token")) {
+      localStorage.removeItem("user_information");
+    }
+  }, []);
   return (
-      <html lang="vi" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="vi" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="antialiased flex flex-col min-h-screen">
-      {!ready ? (
+        {!ready ? (
           <div className="w-full h-screen flex items-center justify-center bg-white">
             <Spin size="large" />
           </div>
-      ) : (
+        ) : (
           <UserProvider>
-            <Header />
-            <main className="flex-grow">{children}</main>
-            <Footer />
+            <PageWrapper>
+              <main className="flex-grow">{children}</main>
+            </PageWrapper>
           </UserProvider>
-      )}
+        )}
       </body>
-      </html>
+    </html>
   );
 }

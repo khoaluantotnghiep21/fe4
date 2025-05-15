@@ -3,5 +3,11 @@ export default function AuthLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>; // No Header or Footer here
+  return (
+    <div className="auth-layout min-h-screen flex flex-col items-center justify-center bg-[#f4f6fb]">
+      <div className="w-full max-w-md p-6 rounded-lg shadow-lg bg-white relative">
+        {children}
+      </div>
+    </div>
+  );
 }
