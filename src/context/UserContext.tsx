@@ -23,20 +23,32 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem('user_information', JSON.stringify(user));
     } else {
       localStorage.removeItem('user_information');
+      localStorage.removeItem('access_token');
     }
   };
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user_information');
     if (storedUser) {
-      setUserState(JSON.parse(storedUser));
+      try {
+        setUserState(JSON.parse(storedUser));
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        localStorage.removeItem('user_information');
+      }
     }
     setIsUserLoaded(true);
   }, []);
 
   const logout = async () => {
-    await apiLogout();
-    setUser(null);
+    try {
+      await apiLogout();
+    } catch (error) {
+      console.error('Error during logout:', error);
+    } finally {
+      setUser(null);
+      localStorage.removeItem('access_token');
+    }
   };
 
   return (

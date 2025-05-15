@@ -19,11 +19,8 @@ export default function Login() {
     try {
       const user = await getUserByPhone(values.dienthoai);
 
-      console.log('user', user);
-
       if (user) {
         setPhone(values.dienthoai);
-        console.log('values.dienthoai', values.dienthoai);
         setStep('password');
       } else {
         message.error('Số điện thoại chưa đăng ký!');
@@ -39,16 +36,20 @@ export default function Login() {
     try {
       const user = await login({ sodienthoai: phone, matkhau: values.matkhau });
 
-
       if (user) {
         message.success('Đăng nhập thành công!');
-        localStorage.setItem('user', JSON.stringify(user));
-
         setUser(user);
 
-
-        if (user.roles && user.roles.includes(('admin'))) {
-          router.push('/admin');
+        console.log(user);
+        
+        if (user.roles) {
+          if (user.roles.includes('admin')) {
+            router.push('/admin');
+          } else if (user.roles.includes('staff')) {
+            router.push('/staff/orders');
+          } else {
+            router.push('/');
+          }
         } else {
           router.push('/');
         }

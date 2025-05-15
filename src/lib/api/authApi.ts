@@ -21,16 +21,15 @@ export async function getUserById(id: string): Promise<User | null> {
 export async function getUserByPhone(dienthoai: string): Promise<User | null> {
   try {
     const response = await axiosClient.get(
-      `identityuser/getUserByPhone/${dienthoai}`
+      `/identityuser/getUserByPhone/${dienthoai}`
     );
 
-    console.log(response.data.data);
-    if (response.data.data) {
-      localStorage.setItem("user_information", response.data.data);
+    if (response.data && response.data.data) {
+      return response.data.data;
     }
-    return response.data;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    return null;
   } catch (error) {
+    console.error("Error fetching user by phone:", error);
     return null;
   }
 }
@@ -40,12 +39,22 @@ export async function login(
 ): Promise<User | null> {
   try {
     const response = await axiosClient.post("identityuser/signIn", credentials);
-    if (response.data.data.accessToken) {
+
+    if (response.data && response.data.data && response.data.data.accessToken) {
+      // Store the access token
       localStorage.setItem("access_token", response.data.data.accessToken);
+
+      // Fetch user details with the phone number
+      const userData = await getUserByPhone(credentials.sodienthoai);
+
+      if (userData) {
+        localStorage.setItem("user_information", JSON.stringify(userData));
+        return userData;
+      }
     }
-    return response.data.data;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    return null;
   } catch (error) {
+    console.error("Login error:", error);
     return null;
   }
 }

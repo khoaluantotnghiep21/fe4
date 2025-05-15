@@ -167,16 +167,34 @@ const Header = () => {
   ];
 
   const userMenuItems: MenuProps['items'] = [
-    // ...(user && user.roles && user.roles?.includes('admin')
-    //   ? [{
-    //     key: 'admin',
-    //     label: <Link href='/admin'>Trang quản trị</Link>,
-    //   }]
-    //   : []),
-    {
-      key: 'profile',
-      label: <Link href='/profile'>Hồ sơ</Link>,
-    },
+    ...(user && user.roles && user.roles.includes('admin')
+      ? [
+        {
+          key: 'admin',
+          label: <Link href='/admin'>Trang quản trị</Link>,
+        },
+        {
+          key: 'account-management',
+          label: <Link href='/admin/accounts'>Quản lý tài khoản</Link>,
+        }
+      ]
+      : []),
+    ...(user && user.roles && user.roles.includes('staff')
+      ? [
+        {
+          key: 'order-management',
+          label: <Link href='/staff/orders'>Quản lý đơn hàng</Link>,
+        }
+      ]
+      : []),
+    ...(user && user.roles && user.roles.includes('customer')
+      ? [
+        {
+          key: 'profile',
+          label: <Link href='/profile'>Hồ sơ</Link>,
+        }
+      ]
+      : []),
     {
       key: 'logout',
       label: 'Đăng xuất',
