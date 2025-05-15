@@ -8,15 +8,25 @@ export default function ManagementLayout({
     children: React.ReactNode;
 }) {
     const pathname = usePathname();
-    const isLoginPage = pathname === '/management/login';
+    const isLoginPage = pathname === '/management/admin/login' || pathname === '/management/staff/login';
 
-    // Use a simpler layout for login page
+    // Determine which role is logging in for displaying appropriate title
+    let roleTitle = 'Khu vực quản lý';
+    if (pathname === '/management/admin/login') {
+        roleTitle = 'Đăng nhập Quản trị viên';
+    } else if (pathname === '/management/staff/login') {
+        roleTitle = 'Đăng nhập Nhân viên';
+    }
+
+    // Use a simpler layout for login pages
     if (isLoginPage) {
+        const bgColor = pathname === '/management/admin/login' ? '#001529' : '#003a8c';
+
         return (
-            <div className="management-auth-layout min-h-screen flex flex-col items-center justify-center bg-[#001529]">
+            <div className="management-auth-layout min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: bgColor }}>
                 <div className="w-full max-w-md p-6 rounded-lg shadow-lg bg-white relative">
                     <div className="flex justify-center mb-6">
-                        <h1 className="text-2xl font-bold text-blue-700">Khu vực quản lý</h1>
+                        <h1 className="text-2xl font-bold text-blue-700">{roleTitle}</h1>
                     </div>
                     {children}
                 </div>

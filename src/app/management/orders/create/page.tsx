@@ -34,7 +34,7 @@ export default function CreateOrder() {
 
     useEffect(() => {
         if (isUserLoaded && (!user || !user?.roles || !user.roles?.includes('staff'))) {
-            router.replace('/management/login');
+            router.replace('/management/staff/login');
         }
     }, [user, isUserLoaded, router]);
 
@@ -117,7 +117,8 @@ export default function CreateOrder() {
         {
             title: 'Hành động',
             key: 'action',
-            render: (_, record: any) => (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            render: (_: any, record: any) => (
                 <Button type="link" danger onClick={() => handleRemoveItem(record.id)}>
                     Xóa
                 </Button>
