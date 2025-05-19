@@ -64,7 +64,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
             className="w-full max-w-[12rem] h-auto object-contain"
           />
         </div>
-        <h2 className="product-name text-lg font-semibold text-gray-800 text-center mb-4 h-14 flex justify-center line-clamp-2">{title}</h2>
+        <div className='flex flex-col items-center justify-center'>
+          <h2 className='text-lg font-semibold text-gray-800 text-center mb-4 line-clamp-2'>
+            {title}
+          </h2>
+        </div>
+
         <div className="flex flex-wrap justify-center gap-2 mb-4 h-10 items-center">
           {options.map((option) => (
             <button
