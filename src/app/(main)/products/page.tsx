@@ -41,14 +41,7 @@ export default async function Products() {
           products.map((product) => (
             <ProductCard
               key={product.id}
-              productId={product.id}
-              imageUrl={product.image}
-              discount={product.discount}
-              title={product.name}
-              options={product.options || ['Hộp']}
-              price={product.price.toLocaleString('vi-VN') + ' VNĐ'}
-              originalPrice={product.originalPrice?.toLocaleString('vi-VN') + ' VNĐ' || ''}
-              subText={product.subText || ''}
+              product={product}
               buttonText="Thêm vào giỏ"
             />
           ))

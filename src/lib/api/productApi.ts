@@ -7,15 +7,32 @@ export async function getProducts(): Promise<Product[]> {
     const res = await axiosClient.get("/product/getAllProducts");
     const rawProducts = res.data.data.data;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // Map the raw products to our Product interface
     const mappedProducts: Product[] = rawProducts.map((item: any) => ({
       id: item.id,
-      name: item.tensanpham,
-      price: item.gianhap,
-      image: item.anhsanpham?.[0]?.url || "",
-      discount: item.khuyenmai?.tenchuongtrinh || undefined,
-      originalPrice: item.gianhap + 10000,
-      subText: item.thuonghieu?.tenthuonghieu || "",
+      masanpham: item.masanpham,
+      tensanpham: item.tensanpham,
+      slug: item.slug,
+      dangbaoche: item.dangbaoche,
+      congdung: item.congdung,
+      chidinh: item.chidinh,
+      chongchidinh: item.chongchidinh,
+      thuockedon: item.thuockedon,
+      motangan: item.motangan,
+      doituongsudung: item.doituongsudung,
+      luuy: item.luuy,
+      ngaysanxuat: item.ngaysanxuat,
+      hansudung: item.hansudung,
+      gianhap: item.gianhap,
+      mathuonghieu: item.mathuonghieu,
+      madanhmuc: item.madanhmuc,
+      machuongtrinh: item.machuongtrinh,
+      danhmuc: item.danhmuc,
+      thuonghieu: item.thuonghieu,
+      khuyenmai: item.khuyenmai,
+      anhsanpham: item.anhsanpham,
+      chitietdonvi: item.chitietdonvi,
+      chitietthanhphan: item.chitietthanhphan,
     }));
 
     return mappedProducts;
@@ -29,9 +46,48 @@ export async function getProducts(): Promise<Product[]> {
   }
 }
 
+export async function getProductByCode(
+  masanpham: string
+): Promise<Product | null> {
+  try {
+    const res = await axiosClient.get(`/product/findProduct/${masanpham}`);
+    return res.data.data;
+  } catch (err) {
+    if (typeof window !== "undefined") {
+      message.error("Lỗi khi fetch chi tiết sản phẩm");
+    } else {
+      console.error("Lỗi khi fetch chi tiết sản phẩm:", err);
+    }
+    return null;
+  }
+}
+
 export async function getProductById(id: string): Promise<Product | null> {
-  const products = await getProducts();
-  return products.find((product) => product.id === id) || null;
+  try {
+    const res = await axiosClient.get(`/product/getProductById/${id}`);
+    return res.data.data;
+  } catch (err) {
+    if (typeof window !== "undefined") {
+      message.error("Lỗi khi fetch chi tiết sản phẩm");
+    } else {
+      console.error("Lỗi khi fetch chi tiết sản phẩm:", err);
+    }
+    return null;
+  }
+}
+
+export async function getProductBySlug(slug: string): Promise<Product | null> {
+  try {
+    const res = await axiosClient.get(`/product/getProductBySlug/${slug}`);
+    return res.data.data;
+  } catch (err) {
+    if (typeof window !== "undefined") {
+      message.error("Lỗi khi fetch chi tiết sản phẩm");
+    } else {
+      console.error("Lỗi khi fetch chi tiết sản phẩm:", err);
+    }
+    return null;
+  }
 }
 
 export async function getCarouselItems() {
