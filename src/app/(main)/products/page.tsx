@@ -1,6 +1,7 @@
 import { getProducts } from '@/lib/api/productApi';
 import ProductCard from '@/components/common/ProductCard';
 import { Metadata } from 'next';
+import ClientErrorDisplay from '@/components/common/ClientErrorDisplay';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -17,12 +18,18 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function Products() {
   const products = await getProducts();
+  let errorMessage = '';
+
   if (!Array.isArray(products)) {
+    errorMessage = "Không thể tải sản phẩm. Vui lòng thử lại sau.";
     console.error("Products is not an array:", products);
     return (
       <div className="container mx-auto py-8">
         <h1 className="text-3xl font-bold mb-6">Sản phẩm</h1>
-        <p>Không thể tải sản phẩm. Vui lòng thử lại sau.</p>
+        <ClientErrorDisplay error={errorMessage} />
+        <div className="mt-4">
+          <p>Vui lòng quay lại sau.</p>
+        </div>
       </div>
     );
   }
@@ -34,19 +41,14 @@ export default async function Products() {
           products.map((product) => (
             <ProductCard
               key={product.id}
-              productId={product.id}
-              imageUrl={product.image}
-              discount={product.discount}
-              title={product.name}
-              options={product.options || ['Hộp']}
-              price={product.price.toLocaleString('vi-VN') + ' VNĐ'}
-              originalPrice={product.originalPrice?.toLocaleString('vi-VN') + ' VNĐ' || ''}
-              subText={product.subText || ''}
+              product={product}
               buttonText="Thêm vào giỏ"
             />
           ))
         ) : (
-          <p>Không có sản phẩm nào để hiển thị.</p>
+          <div className="col-span-full">
+            <ClientErrorDisplay error="Không có sản phẩm nào để hiển thị." />
+          </div>
         )}
       </div>
     </div>

@@ -2,7 +2,7 @@ import { getProducts, getCarouselItems, getSliderItems } from '@/lib/api/product
 import CarouselCustom from '@/components/common/Carousel';
 import ProductCard from '@/components/common/ProductCard';
 import Link from 'next/link';
-import { Button} from 'antd';
+import { Button } from 'antd';
 import { Metadata } from 'next';
 import Image from 'next/image';
 import './globals.css';
@@ -35,31 +35,31 @@ export default async function Home() {
 
           {/* Khu vực Slider + Banner */}
           <div className="hidden md:grid grid-cols-3 gap-2">
-                    <div className="col-span-2">
-                        <CarouselCustom items={sliderItems} />
-                    </div>
+            <div className="col-span-2">
+              <CarouselCustom items={sliderItems} />
+            </div>
 
-                    <div className="flex flex-col gap-3">
-                        <div className="w-full">
-                            <Image
-                                src="/assets/images/bannerungthu.png"
-                                alt="Banner nhỏ 1"
-                                width={480}
-                                height={300}
-                                className="object-cover w-full h-auto"
-                            />
-                        </div>
-                        <div className="w-full">
-                            <Image
-                                src="/assets/images/banneryte1.png"
-                                alt="Banner nhỏ 2"
-                                width={480}
-                                height={300}
-                                className="object-cover w-full h-auto"
-                            />
-                        </div>
-                    </div>
-                </div>
+            <div className="flex flex-col gap-3">
+              <div className="w-full">
+                <Image
+                  src="/assets/images/bannerungthu.png"
+                  alt="Banner nhỏ 1"
+                  width={480}
+                  height={300}
+                  className="object-cover w-full h-auto"
+                />
+              </div>
+              <div className="w-full">
+                <Image
+                  src="/assets/images/banneryte1.png"
+                  alt="Banner nhỏ 2"
+                  width={480}
+                  height={300}
+                  className="object-cover w-full h-auto"
+                />
+              </div>
+            </div>
+          </div>
 
           {/* Tiêu đề và nút xem tất cả */}
           <div className="flex justify-between items-center">
@@ -76,14 +76,7 @@ export default async function Home() {
             {products.map((product) => (
               <ProductCard
                 key={product.id}
-                productId={product.id}
-                imageUrl={product.image}
-                discount={product.discount}
-                title={product.name}
-                options={product.options || ['Hộp']}
-                price={product.price.toLocaleString('vi-VN') + ' VNĐ'}
-                originalPrice={product.originalPrice?.toLocaleString('vi-VN') + ' VNĐ' || ''}
-                subText={product.subText || ''}
+                product={product}
                 buttonText="Thêm vào giỏ"
               />
             ))}

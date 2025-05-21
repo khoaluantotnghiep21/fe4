@@ -22,7 +22,7 @@ export default function AdminDashboard() {
 
     useEffect(() => {
         if (isUserLoaded && (!user || !user?.roles || !user.roles?.includes('admin'))) {
-            router.replace('/management/login');
+            router.replace('/management/admin/login');
         }
     }, [user, isUserLoaded, router]);
 

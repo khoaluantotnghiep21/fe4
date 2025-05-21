@@ -1,10 +1,45 @@
 export interface Product {
-    id: string;
-    name: string;
-    price: number;
-    image: string;
-    discount?: string;
-    options?: string[];
-    originalPrice?: number;
-    subText?: string;
-  }
+  id: string;
+  masanpham: string;
+  tensanpham: string;
+  slug: string;
+  dangbaoche: string;
+  congdung: string;
+  chidinh: string;
+  chongchidinh: string;
+  thuockedon: boolean;
+  motangan: string;
+  doituongsudung: string;
+  luuy: string;
+  ngaysanxuat: string;
+  hansudung: number;
+  gianhap: number;
+  mathuonghieu: string;
+  madanhmuc: string;
+  machuongtrinh: string;
+  danhmuc: {
+    tendanhmuc: string;
+  };
+  thuonghieu: {
+    tenthuonghieu: string;
+  };
+  khuyenmai: {
+    tenchuongtrinh: string;
+  };
+  anhsanpham: {
+    url: string;
+  }[];
+  chitietdonvi: {
+    dinhluong: number;
+    giaban: number;
+    donvitinh: {
+      donvitinh: string;
+    };
+  }[];
+  chitietthanhphan: {
+    hamluong: string;
+    thanhphan: {
+      tenthanhphan: string;
+    };
+  }[];
+}

@@ -4,7 +4,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState, ChangeEvent } from 'react';
+import { useState, ChangeEvent, useEffect } from 'react';
 import { Input, Button, Menu, Drawer, Popover, QRCode, Badge, Dropdown } from 'antd';
 import {
   SearchOutlined,
@@ -20,6 +20,11 @@ import { useCartStore } from '@/store/cartStore';
 import type { MenuProps } from 'antd';
 import { useUser } from '@/context/UserContext';
 import { useRouter } from 'next/navigation';
+import { getLoais } from '@/lib/api/loaiApi';
+import { getDanhMucByLoai } from '@/lib/api/danhMucApi';
+import { Loai } from '@/types/loai.types';
+import { DanhMuc } from '@/types/danhmuc.types';
+import { useLoading } from '@/context/LoadingContext';
 
 interface CustomMenuItem {
   key: string;
@@ -27,103 +32,36 @@ interface CustomMenuItem {
   children?: Array<CustomMenuItem | { type: 'group'; label: string; children: CustomMenuItem[] }>;
 }
 
-const items: CustomMenuItem[] = [
-  {
-    key: 'home',
-    label: <Link href='/'>Thực phẩm chức năng</Link>,
-    children: [
-      {
-        type: 'group',
-        label: 'Dinh dưỡng',
-        children: [
-          { key: 'home_1', label: <Link href='/products?type=vitamin'>Vitamin & Khoáng chất</Link> },
-          { key: 'home_2', label: <Link href='/products?type=supplement'>Thực phẩm bổ sung</Link> },
-        ],
-      },
-      {
-        type: 'group',
-        label: 'Tự nhiên',
-        children: [
-          { key: 'home_3', label: <Link href='/products?type=herbal'>Thảo dược</Link> },
-        ],
-      },
-    ],
-  },
-  {
-    key: 'products',
-    label: <Link href='/products'>Dược mỹ phẩm</Link>,
-    children: [
-      {
-        type: 'group',
-        label: 'Chăm sóc',
-        children: [
-          { key: 'products_1_1', label: <Link href='/products?type=skincare'>Chăm sóc da</Link> },
-          { key: 'products_1_2', label: <Link href='/products?type=haircare'>Chăm sóc tóc</Link> },
-        ],
-      },
-      {
-        type: 'group',
-        label: 'Trang điểm',
-        children: [
-          { key: 'products_1_3', label: <Link href='/products?type=makeup'>Trang điểm</Link> },
-        ],
-      },
-    ],
-  },
-  {
-    key: 'products_1',
-    label: <Link href='/products?cat=1'>Thuốc</Link>,
-    children: [
-      {
-        type: 'group',
-        label: 'Loại thuốc',
-        children: [
-          { key: 'products_1_4', label: <Link href='/products?type=prescription'>Thuốc kê đơn</Link> },
-          { key: 'products_1_5', label: <Link href='/products?type=otc'>Thuốc không kê đơn</Link> },
-        ],
-      },
-    ],
-  },
-  {
-    key: 'products_2',
-    label: <Link href='/products?cat=2'>Chăm sóc cá nhân</Link>,
-    children: [
-      {
-        type: 'group',
-        label: 'Vệ sinh',
-        children: [
-          { key: 'products_2_1', label: <Link href='/products?type=hygiene'>Vệ sinh cá nhân</Link> },
-          { key: 'products_2_2', label: <Link href='/products?type=oralcare'>Chăm sóc răng miệng</Link> },
-        ],
-      },
-    ],
-  },
-  { key: 'products_3', label: <Link href='/products?cat=3'>Thiết bị y tế</Link> },
-  { key: 'products_4', label: <Link href='/products?cat=4'>Tiêm chủng</Link> },
-  {
-    key: 'promotions',
-    label: <Link href='/promotions'>Bệnh & Góc sức khỏe</Link>,
-    children: [
-      {
-        type: 'group',
-        label: 'Thông tin sức khỏe',
-        children: [
-          { key: 'promotions_1', label: <Link href='/promotions?type=health-tips'>Mẹo sức khỏe</Link> },
-          { key: 'promotions_2', label: <Link href='/promotions?type=diseases'>Thông tin bệnh</Link> },
-        ],
-      },
-    ],
-  },
-  { key: 'about', label: <Link href='/about'>Hệ thống nhà thuốc</Link> },
-];
-
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [loais, setLoais] = useState<Loai[]>([]);
+  const [danhMucByLoai, setDanhMucByLoai] = useState<Record<string, DanhMuc[]>>({});
   const cartItems = useCartStore((state) => state.items);
   const cartItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const { user, logout } = useUser();
   const router = useRouter();
+  const { showLoading } = useLoading();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const loaiData = await getLoais();
+        setLoais(loaiData);
+
+        const danhMucData: Record<string, DanhMuc[]> = {};
+        for (const loai of loaiData) {
+          const danhMucs = await getDanhMucByLoai(loai.maloai);
+          danhMucData[loai.maloai] = danhMucs;
+        }
+        setDanhMucByLoai(danhMucData);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const toggleMenu = (): void => {
     setIsMenuOpen(!isMenuOpen);
@@ -131,6 +69,7 @@ const Header = () => {
 
   const handleSearch = (): void => {
     if (searchQuery) {
+      showLoading(); // Show loading before navigation
       window.location.href = `/products?search=${encodeURIComponent(searchQuery)}`;
     }
   };
@@ -139,31 +78,36 @@ const Header = () => {
     setSearchQuery(e.target.value);
   };
 
-  const menuItems: MenuProps['items'] = items.map((item) => ({
-    key: item.key,
-    label: item.label,
-    children: item.children?.map((child) =>
-      'type' in child && child.type === 'group'
-        ? {
+  // Handle navigation to cart with loading
+  const handleNavigateToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    showLoading();
+    router.push('/cart');
+  };
+
+  const menuItems: MenuProps['items'] = loais.map(loai => {
+    const danhMucs = danhMucByLoai[loai.maloai] || [];
+    
+    return {
+      key: loai.maloai,
+      label: <Link href={`/products?loai=${loai.maloai}`} onClick={() => showLoading()}>{loai.tenloai}</Link>,
+      children: danhMucs.length > 0 ? [
+        {
           type: 'group',
-          label: child.label,
-          children: child.children.map((subChild) => ({
-            key: subChild.key,
-            label: subChild.label,
-          })),
+          label: loai.tenloai,
+          children: danhMucs.map(danhmuc => ({
+            key: danhmuc.madanhmuc,
+            label: <Link href={`/products?danhmuc=${danhmuc.madanhmuc}`} onClick={() => showLoading()}>{danhmuc.tendanhmuc}</Link>
+          }))
         }
-        : {
-          key: (child as CustomMenuItem).key,
-          label: (child as CustomMenuItem).label,
-        }
-    ),
-  }));
+      ] : undefined
+    };
+  });
 
   const searchKeywordMenuItems: MenuProps['items'] = [
-    { key: 'search_milk', label: <Link href='/products?search=sua'>Sữa</Link> },
-    { key: 'search_vaccine', label: <Link href='/products?search=vaccine'>Vaccine</Link> },
-    { key: 'search_vitamin', label: <Link href='/products?search=vitamin'>Vitamin</Link> },
-    { key: 'search_oto', label: <Link href='/products?search=oto'>Ô tô đồ chơi</Link> },
+    { key: 'search_milk', label: <Link href='/products?search=sua' onClick={() => showLoading()}>Sữa</Link> },
+    { key: 'search_vitamin', label: <Link href='/products?search=vitamin' onClick={() => showLoading()}>Vitamin</Link> },
+    { key: 'search_oto', label: <Link href='/products?search=oto' onClick={() => showLoading()}>Ô tô đồ chơi</Link> },
   ];
 
   const userMenuItems: MenuProps['items'] = [
@@ -171,11 +115,11 @@ const Header = () => {
       ? [
         {
           key: 'admin',
-          label: <Link href='/admin'>Trang quản trị</Link>,
+          label: <Link href='/admin' onClick={() => showLoading()}>Trang quản trị</Link>,
         },
         {
           key: 'account-management',
-          label: <Link href='/admin/accounts'>Quản lý tài khoản</Link>,
+          label: <Link href='/admin/accounts' onClick={() => showLoading()}>Quản lý tài khoản</Link>,
         }
       ]
       : []),
@@ -183,7 +127,7 @@ const Header = () => {
       ? [
         {
           key: 'order-management',
-          label: <Link href='/staff/orders'>Quản lý đơn hàng</Link>,
+          label: <Link href='/staff/orders' onClick={() => showLoading()}>Quản lý đơn hàng</Link>,
         }
       ]
       : []),
@@ -191,7 +135,7 @@ const Header = () => {
       ? [
         {
           key: 'profile',
-          label: <Link href='/profile'>Hồ sơ</Link>,
+          label: <Link href='/profile' onClick={() => showLoading()}>Hồ sơ</Link>,
         }
       ]
       : []),
@@ -199,8 +143,9 @@ const Header = () => {
       key: 'logout',
       label: 'Đăng xuất',
       onClick: () => {
+        showLoading();
         logout();
-        router.push('/login');
+        router.push('/');
       },
     },
   ];
@@ -254,11 +199,11 @@ const Header = () => {
                 priority
               />
             </Link>
-            <Link href='/cart' className='text-white'>
+            <a href='#' onClick={handleNavigateToCart} className='text-white'>
               <Badge count={cartItemCount} size="small">
                 <ShoppingCartOutlined style={{ fontSize: '24px', color: 'white' }} />
               </Badge>
-            </Link>
+            </a>
           </div>
 
           <div className='hidden md:flex align-bottom'>
@@ -293,12 +238,12 @@ const Header = () => {
             </div>
             <div className='flex basis-[25%] justify-evenly'>
               <div className='text-white custom-cart'>
-                <Link href='/cart' className='flex items-center'>
+                <a href='#' onClick={handleNavigateToCart} className='flex items-center'>
                   <Badge count={cartItemCount} size="small">
                     <ShoppingCartOutlined style={{ fontSize: '24px', color: 'white' }} />
                   </Badge>
                   <span className='ml-1'>Giỏ hàng</span>
-                </Link>
+                </a>
               </div>
               <div className='text-white custom-account'>
                 {user ? (

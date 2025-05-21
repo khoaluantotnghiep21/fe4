@@ -1,7 +1,6 @@
-@tailwind base;
-@tailwind components;
+@import "tailwindcss/preflight";
 @tailwind utilities;
-
+@tailwindcss line-clamp;
 :root {
   --foreground-rgb: 0, 0, 0;
   --background-rgb: 255, 255, 255;
@@ -24,4 +23,14 @@ body {
   .container {
     padding: 0 0.5rem;
   }
-} 
+}
+
+.product-name {
+  text-overflow: ellipsis;
+  max-width: 100%;
+  WebkitLineClamp: 2;
+  overflow: hidden;
+  display: -webkit-box;
+  justify-content: flex-start;
+
+}
