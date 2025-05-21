@@ -24,6 +24,7 @@ import { getLoais } from '@/lib/api/loaiApi';
 import { getDanhMucByLoai } from '@/lib/api/danhMucApi';
 import { Loai } from '@/types/loai.types';
 import { DanhMuc } from '@/types/danhmuc.types';
+import { useLoading } from '@/context/LoadingContext';
 
 interface CustomMenuItem {
   key: string;
@@ -40,15 +41,14 @@ const Header = () => {
   const cartItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const { user, logout } = useUser();
   const router = useRouter();
+  const { showLoading } = useLoading();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch all loais
         const loaiData = await getLoais();
         setLoais(loaiData);
 
-        // Fetch danh muc for each loai
         const danhMucData: Record<string, DanhMuc[]> = {};
         for (const loai of loaiData) {
           const danhMucs = await getDanhMucByLoai(loai.maloai);
@@ -69,6 +69,7 @@ const Header = () => {
 
   const handleSearch = (): void => {
     if (searchQuery) {
+      showLoading(); // Show loading before navigation
       window.location.href = `/products?search=${encodeURIComponent(searchQuery)}`;
     }
   };
@@ -77,19 +78,26 @@ const Header = () => {
     setSearchQuery(e.target.value);
   };
 
+  // Handle navigation to cart with loading
+  const handleNavigateToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    showLoading();
+    router.push('/cart');
+  };
+
   const menuItems: MenuProps['items'] = loais.map(loai => {
     const danhMucs = danhMucByLoai[loai.maloai] || [];
     
     return {
       key: loai.maloai,
-      label: <Link href={`/products?loai=${loai.maloai}`}>{loai.tenloai}</Link>,
+      label: <Link href={`/products?loai=${loai.maloai}`} onClick={() => showLoading()}>{loai.tenloai}</Link>,
       children: danhMucs.length > 0 ? [
         {
           type: 'group',
           label: loai.tenloai,
           children: danhMucs.map(danhmuc => ({
             key: danhmuc.madanhmuc,
-            label: <Link href={`/products?danhmuc=${danhmuc.madanhmuc}`}>{danhmuc.tendanhmuc}</Link>
+            label: <Link href={`/products?danhmuc=${danhmuc.madanhmuc}`} onClick={() => showLoading()}>{danhmuc.tendanhmuc}</Link>
           }))
         }
       ] : undefined
@@ -97,9 +105,9 @@ const Header = () => {
   });
 
   const searchKeywordMenuItems: MenuProps['items'] = [
-    { key: 'search_milk', label: <Link href='/products?search=sua'>Sữa</Link> },
-    { key: 'search_vitamin', label: <Link href='/products?search=vitamin'>Vitamin</Link> },
-    { key: 'search_oto', label: <Link href='/products?search=oto'>Ô tô đồ chơi</Link> },
+    { key: 'search_milk', label: <Link href='/products?search=sua' onClick={() => showLoading()}>Sữa</Link> },
+    { key: 'search_vitamin', label: <Link href='/products?search=vitamin' onClick={() => showLoading()}>Vitamin</Link> },
+    { key: 'search_oto', label: <Link href='/products?search=oto' onClick={() => showLoading()}>Ô tô đồ chơi</Link> },
   ];
 
   const userMenuItems: MenuProps['items'] = [
@@ -107,11 +115,11 @@ const Header = () => {
       ? [
         {
           key: 'admin',
-          label: <Link href='/admin'>Trang quản trị</Link>,
+          label: <Link href='/admin' onClick={() => showLoading()}>Trang quản trị</Link>,
         },
         {
           key: 'account-management',
-          label: <Link href='/admin/accounts'>Quản lý tài khoản</Link>,
+          label: <Link href='/admin/accounts' onClick={() => showLoading()}>Quản lý tài khoản</Link>,
         }
       ]
       : []),
@@ -119,7 +127,7 @@ const Header = () => {
       ? [
         {
           key: 'order-management',
-          label: <Link href='/staff/orders'>Quản lý đơn hàng</Link>,
+          label: <Link href='/staff/orders' onClick={() => showLoading()}>Quản lý đơn hàng</Link>,
         }
       ]
       : []),
@@ -127,7 +135,7 @@ const Header = () => {
       ? [
         {
           key: 'profile',
-          label: <Link href='/profile'>Hồ sơ</Link>,
+          label: <Link href='/profile' onClick={() => showLoading()}>Hồ sơ</Link>,
         }
       ]
       : []),
@@ -135,6 +143,7 @@ const Header = () => {
       key: 'logout',
       label: 'Đăng xuất',
       onClick: () => {
+        showLoading();
         logout();
         router.push('/');
       },
@@ -190,11 +199,11 @@ const Header = () => {
                 priority
               />
             </Link>
-            <Link href='/cart' className='text-white'>
+            <a href='#' onClick={handleNavigateToCart} className='text-white'>
               <Badge count={cartItemCount} size="small">
                 <ShoppingCartOutlined style={{ fontSize: '24px', color: 'white' }} />
               </Badge>
-            </Link>
+            </a>
           </div>
 
           <div className='hidden md:flex align-bottom'>
@@ -229,12 +238,12 @@ const Header = () => {
             </div>
             <div className='flex basis-[25%] justify-evenly'>
               <div className='text-white custom-cart'>
-                <Link href='/cart' className='flex items-center'>
+                <a href='#' onClick={handleNavigateToCart} className='flex items-center'>
                   <Badge count={cartItemCount} size="small">
                     <ShoppingCartOutlined style={{ fontSize: '24px', color: 'white' }} />
                   </Badge>
                   <span className='ml-1'>Giỏ hàng</span>
-                </Link>
+                </a>
               </div>
               <div className='text-white custom-account'>
                 {user ? (

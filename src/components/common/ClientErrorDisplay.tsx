@@ -4,16 +4,17 @@ import React from 'react';
 import { Alert } from 'antd';
 
 interface ClientErrorDisplayProps {
-    error: string;
+    title: string;
+    message: string;
 }
 
-const ClientErrorDisplay: React.FC<ClientErrorDisplayProps> = ({ error }) => {
-    if (!error) return null;
+const ClientErrorDisplay: React.FC<ClientErrorDisplayProps> = ({ title, message }) => {
+    if (!title || !message) return null;
 
     return (
         <div className="mb-4">
             <Alert
-                message={error}
+                message={message}
                 type="error"
                 showIcon
             />

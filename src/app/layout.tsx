@@ -7,10 +7,11 @@ import './globals.css';
 // import Footer from '@/components/layout/Footer';
 import useClientReady from '@/hooks/useClientReady';
 import { UserProvider } from '@/context/UserContext';
+import { LoadingProvider } from '../context/LoadingContext';
 
 import { Spin } from 'antd';
 import 'antd/dist/reset.css';
-import { useEffect } from "react"; // reset mặc định của antd
+import { useEffect } from "react";
 
 import PageWrapper from '@/components/layout/PageWrapper';
 
@@ -47,11 +48,13 @@ export default function RootLayout({
             <Spin size="large" />
           </div>
         ) : (
-          <UserProvider>
-            <PageWrapper>
-              <main className="flex-grow">{children}</main>
-            </PageWrapper>
-          </UserProvider>
+          <LoadingProvider>
+            <UserProvider>
+              <PageWrapper>
+                <main className="flex-grow">{children}</main>
+              </PageWrapper>
+            </UserProvider>
+          </LoadingProvider>
         )}
       </body>
     </html>

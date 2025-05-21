@@ -3,4 +3,5 @@ export interface DanhMuc {
   tendanhmuc: string;
   mota?: string;
   maloai: string;
+  slug: string;
 }
