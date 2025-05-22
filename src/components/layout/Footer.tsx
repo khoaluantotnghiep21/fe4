@@ -45,11 +45,11 @@ const footerCategories: FooterCategory[] = [
     {
         title: 'DANH MỤC',
         items: [
-            { label: 'Thực phẩm chức năng', url: '/categories/supplements' },
-            { label: 'Dược mỹ phẩm', url: '/categories/cosmetics' },
-            { label: 'Thuốc', url: '/categories/medicines' },
-            { label: 'Chăm sóc cá nhân', url: '/categories/personal-care' },
-            { label: 'Trang thiết bị y tế', url: '/categories/medical-equipment' },
+            { label: 'Thực phẩm chức năng', url: '/categories/thuc-pham-chuc-nang' },
+            { label: 'Dược mỹ phẩm', url: '/categories/duoc-my-pham' },
+            { label: 'Thuốc', url: '/categories/thuoc' },
+            { label: 'Chăm sóc cá nhân', url: '/categories/cham-soc-ca-nhan' },
+            { label: 'Trang thiết bị y tế', url: '/categories/thiet-bi-y-te' },
             { label: 'Đặt thuốc online', url: '/order-online' },
             { label: 'Trung tâm Tiêm chủng', url: '/vaccination-center' },
         ],

@@ -47,6 +47,29 @@ export async function getProducts(): Promise<Product[]> {
   }
 }
 
+export async function getProductsByCategory(
+  categorySlug: string
+): Promise<Product[]> {
+  try {
+    // First get all products
+    const allProducts = await getProducts();
+
+    // Then filter by category slug
+    const filteredProducts = allProducts.filter(
+      (product) => product.danhmuc && product.danhmuc.slug === categorySlug
+    );
+
+    return filteredProducts;
+  } catch (err) {
+    if (typeof window !== "undefined") {
+      message.error("Lỗi khi lấy sản phẩm theo danh mục");
+    } else {
+      console.error("Lỗi khi lấy sản phẩm theo danh mục:", err);
+    }
+    return [];
+  }
+}
+
 export async function getProductByCode(
   masanpham: string
 ): Promise<Product | null> {

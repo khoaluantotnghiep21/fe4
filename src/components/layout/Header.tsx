@@ -64,7 +64,7 @@ const Header = () => {
 
   const handleSearch = (): void => {
     if (searchQuery) {
-      showLoading(); 
+      showLoading();
       window.location.href = `/products?search=${encodeURIComponent(searchQuery)}`;
     }
   };
@@ -82,17 +82,17 @@ const Header = () => {
 
   const menuItems: MenuProps['items'] = loais.map(loai => {
     const danhMucs = danhMucByLoai[loai.maloai] || [];
-    
+
     return {
       key: loai.maloai,
-      label: <Link href={`/products?loai=${loai.maloai}`} onClick={() => showLoading()}>{loai.tenloai}</Link>,
+      label: <span>{loai.tenloai}</span>,
       children: danhMucs.length > 0 ? [
         {
           type: 'group',
           label: loai.tenloai,
           children: danhMucs.map(danhmuc => ({
             key: danhmuc.madanhmuc,
-            label: <Link href={`/products?danhmuc=${danhmuc.madanhmuc}`} onClick={() => showLoading()}>{danhmuc.tendanhmuc}</Link>
+            label: <Link href={`/categories/${danhmuc.slug}`} onClick={() => showLoading()}>{danhmuc.tendanhmuc}</Link>
           }))
         }
       ] : undefined

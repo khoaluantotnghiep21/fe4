@@ -19,6 +19,7 @@ export interface Product {
   machuongtrinh: string;
   danhmuc: {
     tendanhmuc: string;
+    slug: string;
   };
   thuonghieu: {
     tenthuonghieu: string;
@@ -28,6 +29,7 @@ export interface Product {
   };
   anhsanpham: {
     url: string;
+    isMain: boolean;
   }[];
   chitietdonvi: {
     dinhluong: number;

@@ -17,14 +17,29 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
   const [selectedUnit, setSelectedUnit] = useState(initialUnit);
   const addItem = useCartStore((state) => state.addItem);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string>('');
+
+  // Sort product images to show isMain first
+  const sortedImages = useMemo(() => {
+    return [...product.anhsanpham].sort((a, b) => {
+      if (a.isMain && !b.isMain) return -1;
+      if (!a.isMain && b.isMain) return 1;
+      return 0;
+    });
+  }, [product.anhsanpham]);
+
+  // Set the initial selected image to the main image
+  useEffect(() => {
+    if (sortedImages.length > 0) {
+      setSelectedImage(sortedImages[0].url);
+    }
+  }, [sortedImages]);
 
   // Format unit display string with x separator - memoized to prevent unnecessary recalculations
   const formatUnitString = useMemo(() => {
     return (unit: Product['chitietdonvi'][0] | null) => {
       if (!unit || !unit.donvitinh?.donvitinh) return 'Không xác định';
-      return unit.dinhluong === 1
-        ? unit.donvitinh.donvitinh
-        : `${unit.dinhluong} x ${unit.donvitinh.donvitinh}`;
+      return unit.donvitinh.donvitinh;
     };
   }, []);
 
@@ -47,7 +62,7 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
         name: product.tensanpham,
         option: formatUnitString(selectedUnit),
         price: selectedUnit.giaban,
-        image: product.anhsanpham[0]?.url || '/placeholder.png',
+        image: sortedImages[0]?.url || '/placeholder.png',
         quantity: 1,
       });
       message.success(`${product.tensanpham} (${formatUnitString(selectedUnit)}) đã được thêm vào giỏ hàng!`);
@@ -73,6 +88,20 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
           <div>
             <h3 className="font-semibold">Thương hiệu:</h3>
             <p>{product.thuonghieu?.tenthuonghieu || 'Không có'}</p>
+          </div>
+          <div>
+            <h3 className="font-semibold">Quy cách sản phẩm:</h3>
+            <p>
+              {product.chitietdonvi
+                .sort((a, b) => a.donvitinh.donvitinh.localeCompare(b.donvitinh.donvitinh))
+                .map((unit, index) => (
+                  <span key={index}>
+                    {unit.dinhluong > 1 ? `${unit.dinhluong} ` : ''}
+                    {unit.donvitinh.donvitinh}
+                    {index < product.chitietdonvi.length - 1 ? ' x ' : ''}
+                  </span>
+                ))}
+            </p>
           </div>
           <div>
             <h3 className="font-semibold">Dạng bảo quản:</h3>
@@ -173,7 +202,7 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
           <div className="space-y-4">
             <div className="relative w-full aspect-square">
               <Image
-                src={product.anhsanpham[0]?.url || '/placeholder.png'}
+                src={selectedImage || sortedImages[0]?.url || '/placeholder.png'}
                 alt={product.tensanpham}
                 fill
                 className="object-contain"
@@ -183,17 +212,24 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
               />
             </div>
             <div className="grid grid-cols-4 gap-2">
-              {product.anhsanpham.slice(1).map((image, index) => (
-                <div key={`${image.url}-${index}`} className="relative w-full aspect-square">
+              {sortedImages.map((image, index) => (
+                <div
+                  key={`${image.url}-${index}`}
+                  className={`relative w-full aspect-square cursor-pointer ${selectedImage === image.url ? 'border-2 border-blue-500' : 'border border-gray-200'}`}
+                  onClick={() => setSelectedImage(image.url)}
+                >
                   <Image
                     src={image.url}
-                    alt={`${product.tensanpham} - ${index + 2}`}
+                    alt={`${product.tensanpham} - ${index + 1}`}
                     fill
                     className="object-contain"
                     sizes="(max-width: 768px) 25vw, 12.5vw"
                     loading="lazy" // Lazy-load thumbnails
                     quality={50} // Lower quality for thumbnails
                   />
+                  {image.isMain && (
+                    <div className="absolute top-0 left-0 bg-blue-500 text-white text-xs px-1">Chính</div>
+                  )}
                 </div>
               ))}
             </div>
@@ -216,9 +252,9 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                         key={`${unit.dinhluong}-${unit.donvitinh.donvitinh}`}
                         onClick={() => handleUnitChange(unit)}
                         className={`px-4 py-2 border rounded-md text-sm ${selectedUnit?.dinhluong === unit.dinhluong &&
-                            selectedUnit?.donvitinh.donvitinh === unit.donvitinh.donvitinh
-                            ? 'bg-blue-500 text-white border-blue-500'
-                            : 'bg-white text-gray-700 border-gray-300'
+                          selectedUnit?.donvitinh.donvitinh === unit.donvitinh.donvitinh
+                          ? 'bg-blue-500 text-white border-blue-500'
+                          : 'bg-white text-gray-700 border-gray-300'
                           } hover:bg-blue-100 transition`}
                       >
                         {formatUnitString(unit)}
@@ -232,7 +268,7 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
 
               <div className="text-2xl font-bold text-red-500">
                 {selectedUnit?.giaban
-                  ? `${selectedUnit.giaban.toLocaleString('vi-VN')} VNĐ`
+                  ? `${selectedUnit.giaban.toLocaleString('vi-VN')} đồng/${selectedUnit.donvitinh.donvitinh}`
                   : 'Liên hệ'}
               </div>
 

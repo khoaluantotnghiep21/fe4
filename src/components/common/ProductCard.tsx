@@ -27,6 +27,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
   const [loading, setLoading] = useState(false);
   const addItem = useCartStore((state) => state.addItem);
 
+  // Find main image or use the first one as fallback
+  const mainImage = product.anhsanpham.find(img => img.isMain)?.url || product.anhsanpham[0]?.url || '/placeholder.png';
+
   // Format unit string showing unit type and quantity
   const formatUnitString = (unit: UnitDetail | null): string => {
     if (!unit || !unit.donvitinh?.donvitinh) {
@@ -58,7 +61,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
         name: product.tensanpham,
         option: formatUnitString(selectedUnit),
         price: selectedUnit.giaban,
-        image: product.anhsanpham[0]?.url || '',
+        image: mainImage,
         quantity: 1,
       });
       setLoading(false);
@@ -82,7 +85,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
           {/* Row 2: Product image */}
           <div className="flex justify-center mb-4 aspect-square relative">
             <Image
-              src={product.anhsanpham[0]?.url || '/placeholder.png'}
+              src={mainImage}
               alt={product.tensanpham}
               fill
               className="object-contain p-4"
@@ -145,12 +148,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
           <div className="text-center mb-4">
             <p className="text-xl font-bold text-red-500">
               {selectedUnit?.giaban
-                ? `${selectedUnit.giaban.toLocaleString('vi-VN')} VNĐ`
+                ? `${selectedUnit.giaban.toLocaleString('vi-VN')} đồng/${selectedUnit.donvitinh.donvitinh}`
                 : 'Liên hệ'}
             </p>
             <p className="text-sm text-gray-500 line-through">
               {selectedUnit?.giaban
-                ? `${(selectedUnit.giaban + 10000).toLocaleString('vi-VN')} VNĐ`
+                ? `${(selectedUnit.giaban + 10000).toLocaleString('vi-VN')} đồng/${selectedUnit.donvitinh.donvitinh}`
                 : 'Liên hệ'}
             </p>
             <p className="text-xs text-gray-600 mt-1">{product.thuonghieu?.tenthuonghieu || 'Không xác định'}</p>
