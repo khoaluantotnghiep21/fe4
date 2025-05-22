@@ -15,6 +15,7 @@ const MAX_LOADING_TIME = 8000;
 
 export const LoadingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loadingCount, setLoadingCount] = useState(0);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 

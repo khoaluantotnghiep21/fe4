@@ -11,17 +11,17 @@ export default function Cart() {
   const { items, removeItem, updateQuantity, clearCart } = useCartStore();
   const [loading, setLoading] = useState(true);
   const { showLoading, hideLoading } = useLoading();
-  
+
   // Simulate loading when component mounts
   useEffect(() => {
     // Show loading when cart page loads
     setLoading(true);
-    
+
     // Hide loading after a short delay (simulating data fetching)
     const timer = setTimeout(() => {
       setLoading(false);
     }, 800);
-    
+
     return () => clearTimeout(timer);
   }, []);
 
@@ -83,6 +83,7 @@ export default function Cart() {
         <h1 className="text-3xl font-bold mb-6">Giỏ hàng</h1>
         <div className="grid grid-cols-1 gap-6">
           {items.map((item) => (
+
             <div
               key={`${item.id}-${item.option}`}
               className="flex items-center bg-white rounded-xl shadow-lg p-4"
@@ -97,6 +98,7 @@ export default function Cart() {
               <div className="flex-grow">
                 <h2 className="text-lg font-semibold">{item.name}</h2>
                 <p className="text-gray-600">Loại: {item.option}</p>
+                {(() => { console.log('Option value:', item.option); return null; })()}
                 <p className="text-red-500 font-bold">
                   {(item.price * item.quantity).toLocaleString('vi-VN')} VNĐ
                 </p>
