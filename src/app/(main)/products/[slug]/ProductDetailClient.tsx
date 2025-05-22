@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Product } from '@/types/product.types';
 import Image from 'next/image';
 import { Button, Tabs, message } from 'antd';
@@ -12,18 +12,21 @@ interface ProductDetailClientProps {
 }
 
 export default function ProductDetailClient({ product }: ProductDetailClientProps) {
-  const [selectedUnit, setSelectedUnit] = useState<Product['chitietdonvi'][0] | null>(
-    product.chitietdonvi[0] || null
-  );
+  // Optimized: Use useMemo to avoid unnecessary re-calculation
+  const initialUnit = useMemo(() => product.chitietdonvi[0] || null, [product.chitietdonvi]);
+  const [selectedUnit, setSelectedUnit] = useState(initialUnit);
   const addItem = useCartStore((state) => state.addItem);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
 
-  // Format unit display string with x separator
-  const formatUnitString = (unit: Product['chitietdonvi'][0] | null) => {
-    if (!unit || !unit.donvitinh?.donvitinh) return 'Không xác định';
-    return unit.dinhluong === 1
-      ? unit.donvitinh.donvitinh
-      : `${unit.dinhluong} x ${unit.donvitinh.donvitinh}`;
-  };
+  // Format unit display string with x separator - memoized to prevent unnecessary recalculations
+  const formatUnitString = useMemo(() => {
+    return (unit: Product['chitietdonvi'][0] | null) => {
+      if (!unit || !unit.donvitinh?.donvitinh) return 'Không xác định';
+      return unit.dinhluong === 1
+        ? unit.donvitinh.donvitinh
+        : `${unit.dinhluong} x ${unit.donvitinh.donvitinh}`;
+    };
+  }, []);
 
   const handleUnitChange = (unit: Product['chitietdonvi'][0]) => {
     setSelectedUnit(unit);
@@ -35,19 +38,25 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
       return;
     }
 
-    addItem({
-      id: product.id,
-      name: product.tensanpham,
-      option: formatUnitString(selectedUnit),
-      price: selectedUnit.giaban,
-      image: product.anhsanpham[0]?.url || '/placeholder.png',
-      quantity: 1,
-    });
-    message.success(`${product.tensanpham} (${formatUnitString(selectedUnit)}) đã được thêm vào giỏ hàng!`);
+    setIsAddingToCart(true);
+
+    // Use a setTimeout to allow UI to update before adding item
+    setTimeout(() => {
+      addItem({
+        id: product.id,
+        name: product.tensanpham,
+        option: formatUnitString(selectedUnit),
+        price: selectedUnit.giaban,
+        image: product.anhsanpham[0]?.url || '/placeholder.png',
+        quantity: 1,
+      });
+      message.success(`${product.tensanpham} (${formatUnitString(selectedUnit)}) đã được thêm vào giỏ hàng!`);
+      setIsAddingToCart(false);
+    }, 300);
   };
 
   // Memoize tab items to prevent unnecessary re-renders
-  const items = [
+  const items = useMemo(() => [
     {
       key: '1',
       label: 'Thông tin sản phẩm',
@@ -122,16 +131,39 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
         </div>
       ),
     },
-  ];
+  ], [product]);
 
-  // Debugging: Log data sizes
+  // Improved SEO: Update document head with product details
   useEffect(() => {
-    console.log('Product data:', {
-      images: product.anhsanpham.length,
-      components: product.chitietthanhphan.length,
-      units: product.chitietdonvi.length,
-    });
-  }, [product]);
+    // Add structured data for product (Schema.org)
+    const structuredData = {
+      '@context': 'https://schema.org/',
+      '@type': 'Product',
+      name: product.tensanpham,
+      image: product.anhsanpham[0]?.url || '',
+      description: product.motangan || '',
+      brand: {
+        '@type': 'Brand',
+        name: product.thuonghieu?.tenthuonghieu || '',
+      },
+      offers: {
+        '@type': 'Offer',
+        price: selectedUnit?.giaban || 0,
+        priceCurrency: 'VND',
+        availability: 'https://schema.org/InStock',
+      },
+    };
+
+    // Create and inject JSON-LD script
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.textContent = JSON.stringify(structuredData);
+    document.head.appendChild(script);
+
+    return () => {
+      document.head.removeChild(script);
+    };
+  }, [product, selectedUnit]);
 
   return (
     <div className="container mx-auto py-8">
@@ -183,12 +215,11 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                       <button
                         key={`${unit.dinhluong}-${unit.donvitinh.donvitinh}`}
                         onClick={() => handleUnitChange(unit)}
-                        className={`px-4 py-2 border rounded-md text-sm ${
-                          selectedUnit?.dinhluong === unit.dinhluong &&
-                          selectedUnit?.donvitinh.donvitinh === unit.donvitinh.donvitinh
+                        className={`px-4 py-2 border rounded-md text-sm ${selectedUnit?.dinhluong === unit.dinhluong &&
+                            selectedUnit?.donvitinh.donvitinh === unit.donvitinh.donvitinh
                             ? 'bg-blue-500 text-white border-blue-500'
                             : 'bg-white text-gray-700 border-gray-300'
-                        } hover:bg-blue-100 transition`}
+                          } hover:bg-blue-100 transition`}
                       >
                         {formatUnitString(unit)}
                       </button>
@@ -210,9 +241,10 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                 size="large"
                 onClick={handleAddToCart}
                 className="w-full"
-                disabled={!selectedUnit}
+                disabled={!selectedUnit || isAddingToCart}
+                loading={isAddingToCart}
               >
-                Thêm vào giỏ hàng
+                {isAddingToCart ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
               </Button>
             </div>
 

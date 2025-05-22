@@ -8,6 +8,7 @@ export async function getProducts(): Promise<Product[]> {
     const rawProducts = res.data.data.data;
 
     // Map the raw products to our Product interface
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mappedProducts: Product[] = rawProducts.map((item: any) => ({
       id: item.id,
       masanpham: item.masanpham,

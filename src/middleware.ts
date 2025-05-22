@@ -23,6 +23,9 @@ export async function middleware(request: NextRequest) {
   const isAdmin = userData?.roles?.includes("admin");
   const isStaff = userData?.roles?.includes("staff");
 
+  // Create the response object
+  let response;
+
   // Admin route protection
   if (ADMIN_PROTECTED_PATHS.some((path) => pathname.startsWith(path))) {
     if (!token || !isAdmin) {
@@ -48,11 +51,44 @@ export async function middleware(request: NextRequest) {
     );
   }
 
-  return NextResponse.next();
+  // Proceed with the original request
+  response = NextResponse.next();
+
+  // Add security headers
+  response.headers.set("X-DNS-Prefetch-Control", "on");
+  response.headers.set("X-XSS-Protection", "1; mode=block");
+  response.headers.set("X-Frame-Options", "SAMEORIGIN");
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("Referrer-Policy", "origin-when-cross-origin");
+
+  // Add cache headers for static assets
+  if (
+    pathname.match(/\.(css|js|png|jpg|jpeg|svg|gif|ico|woff|woff2|ttf|eot)$/i)
+  ) {
+    response.headers.set(
+      "Cache-Control",
+      "public, max-age=31536000, immutable"
+    );
+  }
+  // Add cache headers for API responses to prevent caching
+  else if (pathname.startsWith("/api/")) {
+    response.headers.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate"
+    );
+  }
+  // Add reasonable cache for HTML pages
+  else {
+    response.headers.set("Cache-Control", "s-maxage=1, stale-while-revalidate");
+  }
+
+  return response;
 }
 
 export const config = {
   matcher: [
+    // Match all request paths except for the ones starting with:
+    "/((?!_next/static|_next/image|favicon.ico).*)",
     "/management/dashboard/:path*",
     "/management/orders/:path*",
     "/management/login",

@@ -5,7 +5,6 @@ import { useCartStore } from '@/store/cartStore';
 import { message, Spin } from 'antd';
 import { Product } from '@/types/product.types';
 import Link from 'next/link';
-import { useLoading } from '@/context/LoadingContext';
 
 interface ProductCardProps {
   product: Product;
@@ -27,7 +26,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
   );
   const [loading, setLoading] = useState(false);
   const addItem = useCartStore((state) => state.addItem);
-  const { showLoading, hideLoading } = useLoading();
 
   // Format unit string showing unit type and quantity
   const formatUnitString = (unit: UnitDetail | null): string => {
@@ -70,12 +68,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
     }, 500);
   };
 
-  const handleProductClick = () => {
-    showLoading();
-  };
-
   return (
-    <Link href={`/products/${product.slug}`} className="block" onClick={handleProductClick}>
+    <Link href={`/products/${product.slug}`} className="block">
       <Spin spinning={loading}>
         <div className="w-full bg-white rounded-xl shadow-lg p-4 font-sans relative h-full flex flex-col">
           {/* Row 1: Promotion tag (if any) */}
@@ -122,12 +116,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
                             handleUnitChange(unit);
                           }
                         }}
-                        className={`px-3 py-1 border rounded-md text-sm font-medium ${
-                          selectedUnit?.donvitinh.donvitinh === unit.donvitinh.donvitinh &&
+                        className={`px-3 py-1 border rounded-md text-sm font-medium ${selectedUnit?.donvitinh.donvitinh === unit.donvitinh.donvitinh &&
                           selectedUnit?.dinhluong === unit.dinhluong
-                            ? 'bg-blue-500 text-white border-blue-500'
-                            : 'bg-white text-gray-700 border-gray-300'
-                        } hover:bg-blue-100 transition`}
+                          ? 'bg-blue-500 text-white border-blue-500'
+                          : 'bg-white text-gray-700 border-gray-300'
+                          } hover:bg-blue-100 transition`}
                       >
                         {unit.donvitinh.donvitinh}
                       </button>

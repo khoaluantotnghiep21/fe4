@@ -26,11 +26,6 @@ import { Loai } from '@/types/loai.types';
 import { DanhMuc } from '@/types/danhmuc.types';
 import { useLoading } from '@/context/LoadingContext';
 
-interface CustomMenuItem {
-  key: string;
-  label: React.ReactNode;
-  children?: Array<CustomMenuItem | { type: 'group'; label: string; children: CustomMenuItem[] }>;
-}
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
@@ -69,7 +64,7 @@ const Header = () => {
 
   const handleSearch = (): void => {
     if (searchQuery) {
-      showLoading(); // Show loading before navigation
+      showLoading(); 
       window.location.href = `/products?search=${encodeURIComponent(searchQuery)}`;
     }
   };

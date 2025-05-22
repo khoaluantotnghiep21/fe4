@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { Spin } from 'antd';
 import { setGlobalLoadingHandlers } from '../lib/axiosClient';
 
@@ -10,38 +10,53 @@ interface LoadingContextType {
 
 const LoadingContext = createContext<LoadingContextType | undefined>(undefined);
 
+// Maximum loading time (ms) before automatically hiding the loader
+const MAX_LOADING_TIME = 8000;
+
 export const LoadingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingCount, setLoadingCount] = useState(0);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const clearLoadingTimeout = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  };
 
   const showLoading = useCallback(() => {
-    setLoadingCount(prevCount => {
-      const newCount = prevCount + 1;
-      console.log('Loading started. Count:', newCount);
-      return newCount;
-    });
+    setLoadingCount(prevCount => prevCount + 1);
     setIsLoading(true);
-    console.log('Loading state set to true');
+
+    // Clear any existing timeout
+    clearLoadingTimeout();
+
+    // Set safety timeout to prevent infinite loading
+    timeoutRef.current = setTimeout(() => {
+      console.log('Safety timeout triggered - forcing loading to end');
+      setLoadingCount(0);
+      setIsLoading(false);
+    }, MAX_LOADING_TIME);
   }, []);
 
   const hideLoading = useCallback(() => {
     setLoadingCount(prevCount => {
-      const newCount = prevCount - 1;
-      console.log('Loading ended. Count:', newCount);
+      const newCount = Math.max(0, prevCount - 1);
       if (newCount <= 0) {
         setIsLoading(false);
-        console.log('Loading state set to false');
-        return 0;
+        clearLoadingTimeout();
       }
       return newCount;
     });
   }, []);
 
+  // Clean up timeout on unmount
   useEffect(() => {
-    console.log('Current loading state:', isLoading);
-    console.log('Current loading count:', loadingCount);
-  }, [isLoading, loadingCount]);
+    return () => clearLoadingTimeout();
+  }, []);
 
+  // Set global axios handlers
   useEffect(() => {
     setGlobalLoadingHandlers(showLoading, hideLoading);
   }, [showLoading, hideLoading]);
@@ -50,7 +65,7 @@ export const LoadingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     <LoadingContext.Provider value={{ isLoading, showLoading, hideLoading }}>
       {children}
       {isLoading && (
-        <div className="fixed inset-0 bg-white flex items-center justify-center z-[9999]">
+        <div className="fixed inset-0 bg-white bg-opacity-70 flex items-center justify-center z-[9999]">
           <Spin size="large" />
         </div>
       )}

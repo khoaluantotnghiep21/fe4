@@ -11,7 +11,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
     try {
         // Fetch initial data on the server
         const products = await getProducts();
-        const foundProduct = products.find(p => p.slug === params.slug);
+        const pSlug = await params.slug;
+        const foundProduct = products.find(async p => p.slug === pSlug);
         
         if (!foundProduct) {
             return <div className="container mx-auto py-8 text-center">Sản phẩm không tồn tại</div>;
