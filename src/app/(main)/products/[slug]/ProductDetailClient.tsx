@@ -6,6 +6,8 @@ import Image from 'next/image';
 import { Button, Tabs, message } from 'antd';
 import { useCartStore } from '@/store/cartStore';
 import ClientErrorDisplay from '@/components/common/ClientErrorDisplay';
+import { useUser } from '@/context/UserContext';
+import { useRouter } from 'next/navigation';
 
 interface ProductDetailClientProps {
   product: Product;
@@ -18,6 +20,8 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
   const addItem = useCartStore((state) => state.addItem);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string>('');
+  const { user } = useUser();
+  const router = useRouter();
 
   // Sort product images to show isMain first
   const sortedImages = useMemo(() => {
@@ -47,7 +51,13 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
     setSelectedUnit(unit);
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
+    if (!user) {
+      message.info("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng");
+      router.push('/login');
+      return;
+    }
+
     if (!product || !selectedUnit) {
       message.error('Vui lòng chọn đơn vị tính!');
       return;
@@ -55,9 +65,8 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
 
     setIsAddingToCart(true);
 
-    // Use a setTimeout to allow UI to update before adding item
-    setTimeout(() => {
-      addItem({
+    try {
+      await addItem({
         id: product.id,
         name: product.tensanpham,
         option: formatUnitString(selectedUnit),
@@ -66,8 +75,9 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
         quantity: 1,
       });
       message.success(`${product.tensanpham} (${formatUnitString(selectedUnit)}) đã được thêm vào giỏ hàng!`);
+    } finally {
       setIsAddingToCart(false);
-    }, 300);
+    }
   };
 
   // Memoize tab items to prevent unnecessary re-renders

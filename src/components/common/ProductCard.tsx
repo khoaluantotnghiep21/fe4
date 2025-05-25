@@ -4,6 +4,8 @@ import Image from 'next/image';
 import { useCartStore } from '@/store/cartStore';
 import { message, Spin } from 'antd';
 import { Product } from '@/types/product.types';
+import { useUser } from '@/context/UserContext';
+import { useRouter } from 'next/navigation';
 
 interface ProductCardProps {
   product: Product;
@@ -32,6 +34,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const addItem = useCartStore((state) => state.addItem);
+  const { user } = useUser();
+  const router = useRouter();
 
   const mainImage = product.anhsanpham.find(img => img.isMain)?.url || product.anhsanpham[0]?.url || '/placeholder.png';
   const additionalImages = product.anhsanpham.filter(img => !img.isMain).slice(0, 2).map(img => img.url);
@@ -78,16 +82,23 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
     setSelectedUnit(unit);
   };
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
+    
+    if (!user) {
+      message.info("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng");
+      router.push('/login');
+      return;
+    }
+
     if (!selectedUnit) {
       message.error('Vui lòng chọn đơn vị tính!');
       return;
     }
 
     setLoading(true);
-    setTimeout(() => {
-      addItem({
+    try {
+      await addItem({
         id: product.id,
         name: product.tensanpham,
         option: selectedUnit.donvitinh.donvitinh,
@@ -95,16 +106,22 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
         image: mainImage,
         quantity: 1,
       });
-      setLoading(false);
       message.success(
         `${product.tensanpham} (${formatUnitString(selectedUnit)}) đã được thêm vào giỏ hàng!`
       );
-    }, 500);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const goToDetails = (e: React.MouseEvent) => {
     e.stopPropagation();
-    window.location.href = `/products/${product.slug}`;
+    try {
+      window.location.href = `/products/${product.slug}`;
+      console.log('Đã chuyển hướng đến trang chi tiết sản phẩm');
+    } catch (error) {
+      console.error('Error navigating to product details:', error);
+    }
   };
 
   return (
@@ -120,6 +137,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
         <div
           className={`w-full h-full transition-all duration-500 ${isFlipped ? 'card-flipped' : ''}`}
           style={{ transformStyle: 'preserve-3d', position: 'relative' }}
+
         >
           {/* Front of card */}
           <div className="w-full h-full bg-white rounded-xl shadow-lg p-4 font-sans flex flex-col"
@@ -183,7 +201,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
               left: 0,
               zIndex: isFlipped ? 1 : 0
             }}
-            onClick={(e) => e.stopPropagation()}
+
           >
             <h2 className="text-lg font-semibold text-gray-800 text-center mb-2">
               {product.tensanpham}

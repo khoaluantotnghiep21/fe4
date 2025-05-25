@@ -33,7 +33,7 @@ const Header = () => {
   const [loais, setLoais] = useState<Loai[]>([]);
   const [danhMucByLoai, setDanhMucByLoai] = useState<Record<string, DanhMuc[]>>({});
   const cartItems = useCartStore((state) => state.items);
-  const cartItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const cartItemCount = cartItems.length;
   const { user, logout } = useUser();
   const router = useRouter();
   const { showLoading } = useLoading();

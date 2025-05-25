@@ -11,28 +11,28 @@ interface CategoryPageProps {
     };
 }
 
-export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
-    const { slug } = params;
-    const category = await getDanhMucBySlug(slug);
+// export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
+//     const { slug } = params;
+//     const category = await getDanhMucBySlug(slug);
 
-    if (!category) {
-        return {
-            title: 'Danh mục không tồn tại - Long Châu E-Commerce',
-            description: 'Danh mục không tồn tại hoặc đã bị xóa.',
-        };
-    }
+//     if (!category) {
+//         return {
+//             title: 'Danh mục không tồn tại - Long Châu E-Commerce',
+//             description: 'Danh mục không tồn tại hoặc đã bị xóa.',
+//         };
+//     }
 
-    return {
-        title: `${category.tendanhmuc} - Long Châu E-Commerce`,
-        description: `Xem tất cả sản phẩm trong danh mục ${category.tendanhmuc} tại Nhà thuốc Long Châu.`,
-        openGraph: {
-            title: `${category.tendanhmuc} - Long Châu`,
-            description: `Mua sắm sản phẩm thuộc danh mục ${category.tendanhmuc} tại Long Châu.`,
-            url: `https://longchau.com.vn/categories/${slug}`,
-            images: ['/assets/images/logo.png'],
-        },
-    };
-}
+//     return {
+//         title: `${category.tendanhmuc} - Long Châu E-Commerce`,
+//         description: `Xem tất cả sản phẩm trong danh mục ${category.tendanhmuc} tại Nhà thuốc Long Châu.`,
+//         openGraph: {
+//             title: `${category.tendanhmuc} - Long Châu`,
+//             description: `Mua sắm sản phẩm thuộc danh mục ${category.tendanhmuc} tại Long Châu.`,
+//             url: `https://longchau.com.vn/categories/${slug}`,
+//             images: ['/assets/images/logo.png'],
+//         },
+//     };
+// }
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
     const { slug } = params;

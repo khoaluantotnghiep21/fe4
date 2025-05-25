@@ -1,57 +1,54 @@
 'use client';
 import { useCartStore } from '@/store/cartStore';
+import { useUser } from '@/context/UserContext';
 import Image from 'next/image';
-import { Button, InputNumber, Spin } from 'antd';
+import { Button, InputNumber, Spin, Alert } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useLoading } from '@/context/LoadingContext';
+import { useRouter } from 'next/navigation';
 
 export default function Cart() {
-  const { items, removeItem, updateQuantity, clearCart } = useCartStore();
+  const { items, removeItem, updateQuantity, clearCart, loadUserCart, isLoading: cartLoading } = useCartStore();
   const [loading, setLoading] = useState(true);
   const { showLoading, hideLoading } = useLoading();
+  const { user, isUserLoaded } = useUser();
+  const router = useRouter();
 
-  // Simulate loading when component mounts
   useEffect(() => {
-    // Show loading when cart page loads
-    setLoading(true);
+    const initCart = async () => {
+      if (isUserLoaded) {
+        if (!user) {
+          setLoading(false);
+          return;
+        }
+        await loadUserCart();
+        setLoading(false);
+      }
+    };
 
-    // Hide loading after a short delay (simulating data fetching)
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 800);
-
-    return () => clearTimeout(timer);
-  }, []);
+    initCart();
+  }, [isUserLoaded, user, loadUserCart]);
 
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  const handleRemoveItem = (id: string, option: string) => {
+  const handleRemoveItem = async (id: string, option: string) => {
     showLoading();
-    // Simulate API call to remove item
-    setTimeout(() => {
-      removeItem(id, option);
-      hideLoading();
-    }, 500);
+    await removeItem(id, option);
+    hideLoading();
   };
 
-  const handleUpdateQuantity = (id: string, option: string, value: number) => {
+  const handleUpdateQuantity = async (id: string, option: string, value: number) => {
     setLoading(true);
-    // Simulate API call to update quantity
-    setTimeout(() => {
-      updateQuantity(id, option, value);
-      setLoading(false);
-    }, 300);
+    await updateQuantity(id, option, value);
+    setLoading(false);
   };
 
-  const handleClearCart = () => {
+  const handleClearCart = async () => {
     showLoading();
-    // Simulate API call to clear cart
-    setTimeout(() => {
-      clearCart();
-      hideLoading();
-    }, 500);
+    await clearCart();
+    hideLoading();
   };
 
   const handleCheckout = () => {
@@ -62,6 +59,34 @@ export default function Cart() {
       alert('Đã chuyển tới trang thanh toán');
     }, 1000);
   };
+
+  if (!isUserLoaded || loading || cartLoading) {
+    return (
+      <div className="container mx-auto py-8 flex justify-center items-center min-h-[400px]">
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="container mx-auto py-8">
+        <Alert
+          message="Đăng nhập để xem giỏ hàng"
+          description={
+            <div className="mt-4">
+              <p>Vui lòng đăng nhập để xem và quản lý giỏ hàng của bạn.</p>
+              <Button type="primary" onClick={() => router.push('/login')} className="mt-4">
+                Đăng nhập ngay
+              </Button>
+            </div>
+          }
+          type="info"
+          showIcon
+        />
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (
@@ -83,7 +108,6 @@ export default function Cart() {
         <h1 className="text-3xl font-bold mb-6">Giỏ hàng</h1>
         <div className="grid grid-cols-1 gap-6">
           {items.map((item) => (
-
             <div
               key={`${item.id}-${item.option}`}
               className="flex items-center bg-white rounded-xl shadow-lg p-4"
@@ -98,12 +122,11 @@ export default function Cart() {
               <div className="flex-grow">
                 <h2 className="text-lg font-semibold">{item.name}</h2>
                 <p className="text-gray-600">Loại: {item.option}</p>
-                {(() => { console.log('Option value:', item.option); return null; })()}
                 <p className="text-red-500 font-bold">
                   {(item.price * item.quantity).toLocaleString('vi-VN')} VNĐ
                 </p>
               </div>
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center gap-4">
                 <InputNumber
                   min={1}
                   value={item.quantity}
