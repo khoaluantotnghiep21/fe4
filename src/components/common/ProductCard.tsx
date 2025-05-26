@@ -37,9 +37,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
   const { user } = useUser();
   const router = useRouter();
 
-  const mainImage = product.anhsanpham.find(img => img.isMain)?.url || product.anhsanpham[0]?.url || '/placeholder.png';
-  const additionalImages = product.anhsanpham.filter(img => !img.isMain).slice(0, 2).map(img => img.url);
+  const mainImage = product.anhsanpham.find(img => img.ismain)?.url || '/placeholder.png';
+  const additionalImages = product.anhsanpham.filter(img => !img.ismain).slice(0, 2).map(img => img.url);
 
+
+  const sp = product.masanpham == 'SP24407388';
+
+  if (sp) {
+    console.log(sp, mainImage);
+  }
   // Get short description, safely handling potentially missing properties
   const shortDescription = (() => {
     // Cast to unknown first, then to Record to satisfy TypeScript
@@ -123,6 +129,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
       console.error('Error navigating to product details:', error);
     }
   };
+  const checkKhuyenMai = (product: Product) => {
+    if (product.khuyenmai?.tenchuongtrinh === "Không khuyến mãi") {
+      return null;
+    }
+    return product.khuyenmai.tenchuongtrinh;
+  };
 
   return (
     <div
@@ -147,9 +159,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
               zIndex: isFlipped ? 0 : 1
             }}>
             {/* Row 1: Promotion tag (if any) */}
-            {product.khuyenmai?.tenchuongtrinh && (
+            {checkKhuyenMai(product) != null && (
               <div className="absolute -top-3 -left-3 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full z-10">
-                {product.khuyenmai.tenchuongtrinh}
+                {checkKhuyenMai(product)}
               </div>
             )}
 

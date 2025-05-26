@@ -36,6 +36,7 @@ export async function getProducts(): Promise<Product[]> {
       chitietthanhphan: item.chitietthanhphan,
     }));
 
+    console.log(mappedProducts);
     return mappedProducts;
   } catch (err) {
     if (typeof window !== "undefined") {

@@ -29,7 +29,7 @@ export interface Product {
   };
   anhsanpham: {
     url: string;
-    isMain: boolean;
+    ismain: boolean;
   }[];
   chitietdonvi: {
     dinhluong: number;

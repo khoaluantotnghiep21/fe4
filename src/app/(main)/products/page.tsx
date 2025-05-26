@@ -9,12 +9,6 @@ import { Select, Spin } from 'antd';
 import { Product } from '@/types/product.types';
 import { DanhMuc } from '@/types/danhmuc.types';
 
-export async function generateMetadata(): Promise<Metadata> {
-  return {
-    title: 'Sản phẩm - Long Châu E-Commerce',
-    description: 'Khám phá tất cả sản phẩm tại Long Châu E-Commerce',
-  };
-}
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);

@@ -23,11 +23,11 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
   const { user } = useUser();
   const router = useRouter();
 
-  // Sort product images to show isMain first
+  // Sort product images to show ismain first
   const sortedImages = useMemo(() => {
     return [...product.anhsanpham].sort((a, b) => {
-      if (a.isMain && !b.isMain) return -1;
-      if (!a.isMain && b.isMain) return 1;
+      if (a.ismain && !b.ismain) return -1;
+      if (!a.ismain && b.ismain) return 1;
       return 0;
     });
   }, [product.anhsanpham]);
@@ -237,7 +237,7 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                     loading="lazy" // Lazy-load thumbnails
                     quality={50} // Lower quality for thumbnails
                   />
-                  {image.isMain && (
+                  {image.ismain && (
                     <div className="absolute top-0 left-0 bg-blue-500 text-white text-xs px-1">Chính</div>
                   )}
                 </div>
