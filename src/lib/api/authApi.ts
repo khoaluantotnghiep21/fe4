@@ -1,6 +1,11 @@
 // src/lib/api/authApi.ts
 
-import { User, LoginCredentials, RegisterData, UpdateData } from "@/types/user.types";
+import {
+  User,
+  LoginCredentials,
+  RegisterData,
+  UpdateData,
+} from "@/types/user.types";
 import { message } from "antd";
 import axiosClient from "../axiosClient";
 
@@ -73,7 +78,10 @@ export async function getUserByPhone(dienthoai: string): Promise<User | null> {
     console.log("getUserByPhone response:", response.data);
 
     if (response.data && response.data.data) {
-      localStorage.setItem("user_information", JSON.stringify(response.data.data));
+      localStorage.setItem(
+        "user_information",
+        JSON.stringify(response.data.data)
+      );
       return response.data.data;
     } else if (response.data) {
       return response.data;
@@ -145,8 +153,18 @@ export async function register(data: RegisterData): Promise<User> {
 }
 
 export async function update(data: UpdateData): Promise<User> {
-  let user : User = {}
-  const response = await axiosClient.put(`/identityuser/updateUser/${data.sodienthoai}`, data);
+  let user: User = {
+    id: "",
+    hoten: "",
+    sodienthoai: "",
+    matkhau: "",
+    email: "",
+    roles: []
+  };
+  const response = await axiosClient.put(
+    `/identityuser/updateUser/${data.sodienthoai}`,
+    data
+  );
   if (response.data.statusCode === 200) {
     user = response.data.data;
   }
