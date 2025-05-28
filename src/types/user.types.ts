@@ -30,3 +30,12 @@ export interface RegisterData {
   ngaysinh?: string;
   diachi?: string;
 }
+
+export interface UpdateData {
+  sodienthoai: string;
+  hoten: string;
+  email: string;
+  gioitinh?: string;
+  ngaysinh?: string;
+  diachi?: string;
+}

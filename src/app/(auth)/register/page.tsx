@@ -1,41 +1,74 @@
 "use client";
 
 import Image from 'next/image';
-import { Form, Input, Button, message } from 'antd';
+import { Form, Input, Button, message, Radio } from 'antd';
 import { useRouter } from 'next/navigation';
-import { register, getUserByPhone } from '@/lib/api/authApi';
+import { register, getUserByPhone, login } from '@/lib/api/authApi';
 import { useUser } from '@/context/UserContext';
 import styles from './register.module.css';
+import { useState } from 'react';
+
+interface RegisterFormValues {
+  hoten: string;
+  dienthoai: string;
+  gioitinh: string;
+  diachi: string;
+  email?: string;
+  matkhau: string;
+  xacnhanmatkhau: string;
+}
 
 export default function Register() {
   const router = useRouter();
   const [messageApi, contextHolder] = message.useMessage();
   const { setUser } = useUser();
+  const [loading, setLoading] = useState(false);
 
-  const onFinish = async (values: { hoten: string; dienthoai: string; email: string; matkhau: string; xacnhanmatkhau: string }) => {
+  const onFinish = async (values: RegisterFormValues) => {
     if (values.matkhau !== values.xacnhanmatkhau) {
       messageApi.error('Mật khẩu xác nhận không khớp!');
       return;
     }
+
     try {
+      setLoading(true);
       const existed = await getUserByPhone(values.dienthoai);
       if (existed) {
         messageApi.error('Số điện thoại đã tồn tại!');
         return;
       }
-      const user = await register({
-        hoten: values.hoten,
+
+      const registerData = {
         sodienthoai: values.dienthoai,
         matkhau: values.matkhau,
-        email: values.email,
+        hoten: values.hoten,
+        gioitinh: values.gioitinh,
+        diachi: values.diachi,
+        email: values.email || '' // Sử dụng chuỗi rỗng thay vì null
+      };
+
+      // Đăng ký tài khoản
+      await register(registerData);
+      
+      // Tự động đăng nhập sau khi đăng ký thành công
+      const loginResult = await login({
+        sodienthoai: values.dienthoai,
+        matkhau: values.matkhau
       });
-      localStorage.setItem('user', JSON.stringify(user));
-      setUser(user);
-      messageApi.success('Đăng ký thành công!');
-      router.push('/');
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
+
+      if (loginResult) {
+        setUser(loginResult);
+        messageApi.success('Đăng ký và đăng nhập thành công!');
+        router.push('/');
+      } else {
+        messageApi.error('Đăng ký thành công nhưng đăng nhập thất bại. Vui lòng đăng nhập lại!');
+        router.push('/login');
+      }
+    } catch (err) {
+      console.error('Error during registration:', err);
       messageApi.error('Đã có lỗi xảy ra, vui lòng thử lại');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -66,12 +99,99 @@ export default function Register() {
           layout="vertical"
           className={styles.form}
         >
-          <Form.Item label="Họ và tên" name="hoten" rules={[{ required: true, message: 'Vui lòng nhập họ tên!' }]}> <Input className={styles.input} /> </Form.Item>
-          <Form.Item label="Số điện thoại" name="dienthoai" rules={[{ required: true, message: 'Vui lòng nhập số điện thoại!' }, { pattern: /^[0-9]{10}$/, message: 'Số điện thoại phải có 10 chữ số!' }]}> <Input className={styles.input} /> </Form.Item>
-          <Form.Item label="Email" name="email" rules={[{ required: true, message: 'Vui lòng nhập email!' }, { type: 'email', message: 'Email không hợp lệ!' }]}> <Input className={styles.input} /> </Form.Item>
-          <Form.Item label="Mật khẩu" name="matkhau" rules={[{ required: true, message: 'Vui lòng nhập mật khẩu!' }]}> <Input.Password className={styles.input} /> </Form.Item>
-          <Form.Item label="Xác nhận mật khẩu" name="xacnhanmatkhau" dependencies={["matkhau"]} rules={[{ required: true, message: 'Vui lòng xác nhận mật khẩu!' }]}> <Input.Password className={styles.input} /> </Form.Item>
-          <Form.Item> <Button type="primary" htmlType="submit" className={styles.submitButton}>Đăng ký</Button> </Form.Item>
+          <Form.Item 
+            label="Họ và tên" 
+            name="hoten" 
+            rules={[{ required: true, message: 'Vui lòng nhập họ tên!' }]}
+          >
+            <Input className={styles.input} />
+          </Form.Item>
+
+          <Form.Item 
+            label="Số điện thoại" 
+            name="dienthoai" 
+            rules={[
+              { required: true, message: 'Vui lòng nhập số điện thoại!' },
+              { pattern: /^[0-9]{10}$/, message: 'Số điện thoại phải có 10 chữ số!' }
+            ]}
+          >
+            <Input className={styles.input} />
+          </Form.Item>
+
+          <Form.Item 
+            label="Email" 
+            name="email" 
+            rules={[
+              { type: 'email', message: 'Email không hợp lệ!' }
+            ]}
+          >
+            <Input className={styles.input} placeholder="Không bắt buộc" />
+          </Form.Item>
+
+          <Form.Item 
+            label="Giới tính" 
+            name="gioitinh"
+            rules={[{ required: true, message: 'Vui lòng chọn giới tính!' }]}
+          >
+            <Radio.Group className="w-full flex justify-between">
+              <Radio value="Nam">Nam</Radio>
+              <Radio value="Nữ">Nữ</Radio>
+              <Radio value="Khác">Khác</Radio>
+            </Radio.Group>
+          </Form.Item>
+
+          <Form.Item 
+            label="Địa chỉ" 
+            name="diachi"
+            rules={[{ required: true, message: 'Vui lòng nhập địa chỉ!' }]}
+          >
+            <Input.TextArea 
+              className={styles.input} 
+              placeholder="Nhập địa chỉ chi tiết"
+              autoSize={{ minRows: 2, maxRows: 4 }}
+            />
+          </Form.Item>
+
+          <Form.Item 
+            label="Mật khẩu" 
+            name="matkhau" 
+            rules={[
+              { required: true, message: 'Vui lòng nhập mật khẩu!' },
+              { min: 6, message: 'Mật khẩu phải có ít nhất 6 ký tự!' }
+            ]}
+          >
+            <Input.Password className={styles.input} />
+          </Form.Item>
+
+          <Form.Item 
+            label="Xác nhận mật khẩu" 
+            name="xacnhanmatkhau" 
+            dependencies={["matkhau"]} 
+            rules={[
+              { required: true, message: 'Vui lòng xác nhận mật khẩu!' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('matkhau') === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error('Mật khẩu xác nhận không khớp!'));
+                },
+              }),
+            ]}
+          >
+            <Input.Password className={styles.input} />
+          </Form.Item>
+
+          <Form.Item>
+            <Button 
+              type="primary" 
+              htmlType="submit" 
+              className={styles.submitButton}
+              loading={loading}
+            >
+              Đăng ký
+            </Button>
+          </Form.Item>
         </Form>
       </div>
     </div>
