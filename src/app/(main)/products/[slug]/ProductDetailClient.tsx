@@ -14,7 +14,6 @@ interface ProductDetailClientProps {
 }
 
 export default function ProductDetailClient({ product }: ProductDetailClientProps) {
-  // Optimized: Use useMemo to avoid unnecessary re-calculation
   const initialUnit = useMemo(() => product.chitietdonvi[0] || null, [product.chitietdonvi]);
   const [selectedUnit, setSelectedUnit] = useState(initialUnit);
   const addItem = useCartStore((state) => state.addItem);
@@ -23,7 +22,6 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
   const { user } = useUser();
   const router = useRouter();
 
-  // Sort product images to show ismain first
   const sortedImages = useMemo(() => {
     return [...product.anhsanpham].sort((a, b) => {
       if (a.ismain && !b.ismain) return -1;
@@ -31,15 +29,12 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
       return 0;
     });
   }, [product.anhsanpham]);
-
-  // Set the initial selected image to the main image
   useEffect(() => {
     if (sortedImages.length > 0) {
       setSelectedImage(sortedImages[0].url);
     }
   }, [sortedImages]);
 
-  // Format unit display string with x separator - memoized to prevent unnecessary recalculations
   const formatUnitString = useMemo(() => {
     return (unit: Product['chitietdonvi'][0] | null) => {
       if (!unit || !unit.donvitinh?.donvitinh) return 'Không xác định';
@@ -80,7 +75,11 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
     }
   };
 
-  // Memoize tab items to prevent unnecessary re-renders
+  const handleContact = () => {
+    // Replace with actual contact logic, e.g., redirect to contact page or open a modal
+    router.push('/contact');
+  };
+
   const items = useMemo(() => [
     {
       key: '1',
@@ -172,9 +171,7 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
     },
   ], [product]);
 
-  // Improved SEO: Update document head with product details
   useEffect(() => {
-    // Add structured data for product (Schema.org)
     const structuredData = {
       '@context': 'https://schema.org/',
       '@type': 'Product',
@@ -193,7 +190,6 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
       },
     };
 
-    // Create and inject JSON-LD script
     const script = document.createElement('script');
     script.type = 'application/ld+json';
     script.textContent = JSON.stringify(structuredData);
@@ -217,8 +213,8 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                 fill
                 className="object-contain"
                 sizes="(max-width: 768px) 100vw, 50vw"
-                priority // Optimize main image loading
-                quality={75} // Reduce image quality for faster loading
+                priority 
+                quality={75} 
               />
             </div>
             <div className="grid grid-cols-4 gap-2">
@@ -234,8 +230,8 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                     fill
                     className="object-contain"
                     sizes="(max-width: 768px) 25vw, 12.5vw"
-                    loading="lazy" // Lazy-load thumbnails
-                    quality={50} // Lower quality for thumbnails
+                    loading="lazy" 
+                    quality={50} 
                   />
                   {image.ismain && (
                     <div className="absolute top-0 left-0 bg-blue-500 text-white text-xs px-1">Chính</div>
@@ -282,16 +278,26 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                   : 'Liên hệ'}
               </div>
 
-              <Button
-                type="primary"
-                size="large"
-                onClick={handleAddToCart}
-                className="w-full"
-                disabled={!selectedUnit || isAddingToCart}
-                loading={isAddingToCart}
-              >
-                {isAddingToCart ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
-              </Button>
+              <div className="flex gap-4">
+                <Button
+                  type="primary"
+                  size="large"
+                  onClick={handleAddToCart}
+                  className="flex-1"
+                  disabled={!selectedUnit || isAddingToCart}
+                  loading={isAddingToCart}
+                >
+                  {isAddingToCart ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
+                </Button>
+                <Button
+                  type="default"
+                  size="large"
+                  onClick={handleContact}
+                  className="flex-1"
+                >
+                  Liên hệ
+                </Button>
+              </div>
             </div>
 
             <Tabs items={items} defaultActiveKey="1" />

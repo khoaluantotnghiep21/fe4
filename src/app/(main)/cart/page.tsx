@@ -163,7 +163,9 @@ export default function Cart() {
             className="object-contain rounded-lg"
           />
           <div>
-            <h3 className="font-medium text-gray-900">{record.name}</h3>
+            <Link href={`/products/${record.slug}`}>
+              <h3 className="font-medium text-gray-900 hover:text-blue-500">{record.name}</h3>
+            </Link>
           </div>
         </div>
       ),
@@ -213,8 +215,6 @@ export default function Cart() {
           value={option}
           style={{ width: '100%', borderRadius: '8px' }}
           onChange={(value) => {
-            // Có thể thêm logic cập nhật đơn vị tính ở đây
-            console.log('Update unit:', value);
           }}
         >
           <Option value="cái">Cái</Option>

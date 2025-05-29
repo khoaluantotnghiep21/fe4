@@ -46,9 +46,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
   if (sp) {
     console.log(sp, mainImage);
   }
-  // Get short description, safely handling potentially missing properties
   const shortDescription = (() => {
-    // Cast to unknown first, then to Record to satisfy TypeScript
     const productAsRecord = product as unknown as Record<string, unknown>;
     const shortDesc = productAsRecord.motangan;
     const fullDesc = productAsRecord.mota;
@@ -304,7 +302,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
                   e.stopPropagation();
                   handleAddToCart(e);
                 }}
-                className="w-full bg-green-500 text-white py-2 rounded-md hover:bg-green-600 transition"
+                className="w-full bg-blue-500 !text-white py-2 rounded-md hover:bg-blue-600 transition"
                 disabled={loading || !selectedUnit}
               >
                 {loading ? 'Đang xử lý...' : buttonText}
