@@ -1,17 +1,19 @@
-"use client";
+'use client';
 
 import Image from 'next/image';
-import { Form, Input, Button, message, Radio, AutoComplete } from 'antd';
+import { Form, Input, Button, message, Radio, AutoComplete, DatePicker } from 'antd';
 import { useRouter } from 'next/navigation';
 import { register, getUserByPhone, login } from '@/lib/api/authApi';
 import { useUser } from '@/context/UserContext';
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import styles from './register.module.css';
+import moment from 'moment';
 
 interface RegisterFormValues {
   hoten: string;
   dienthoai: string;
+  ngaysinh: moment.Moment | null;
   gioitinh: string;
   thanhpho: string;
   quan: string;
@@ -49,6 +51,17 @@ export default function Register() {
   
   const [form] = Form.useForm();
 
+  // Get phone number from query parameter
+  const query = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const initialPhone = query.get('phone') || '';
+
+  // Set initial phone number
+  useEffect(() => {
+    if (initialPhone) {
+      form.setFieldsValue({ dienthoai: initialPhone });
+    }
+  }, [initialPhone, form]);
+
   // Fetch all cities on component mount
   useEffect(() => {
     const fetchCities = async () => {
@@ -68,7 +81,7 @@ export default function Register() {
       }
     };
     fetchCities();
-  }, []);
+  }, [messageApi]);
 
   // Debounce function
   // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
@@ -135,7 +148,7 @@ export default function Register() {
     setSelectedDistrictCode(null);
     
     // Reset dependent fields
-    form.setFieldsValue({ quan: '', phuong: '' });
+    form.setFieldsValue({ quan_random: '', phuong_random: '' });
     setDistrictOptions([]);
     setWardOptions([]);
     setAllDistricts([]);
@@ -166,7 +179,7 @@ export default function Register() {
     setSelectedDistrictCode(districtCode);
     
     // Reset dependent fields
-    form.setFieldsValue({ phuong: '' });
+    form.setFieldsValue({ phuong_random: '' });
     setWardOptions([]);
     setAllWards([]);
 
@@ -188,34 +201,56 @@ export default function Register() {
     }
   };
 
-  const onFinish = async (values: RegisterFormValues) => {
-    if (values.matkhau !== values.xacnhanmatkhau) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const onFinish = async (values: any) => {
+    // Map randomized field names back to expected structure
+    const mappedValues: RegisterFormValues = {
+      hoten: values.hoten_random,
+      dienthoai: values.dienthoai,
+      ngaysinh: values.ngaysinh_random,
+      gioitinh: values.gioitinh,
+      thanhpho: values.thanhpho_random,
+      quan: values.quan_random,
+      phuong: values.phuong_random,
+      diachi: values.diachi_random,
+      email: values.email_random,
+      matkhau: values.matkhau_random,
+      xacnhanmatkhau: values.xacnhanmatkhau_random,
+    };
+
+    if (mappedValues.matkhau !== mappedValues.xacnhanmatkhau) {
       messageApi.error('Mật khẩu xác nhận không khớp!');
+      return;
+    }
+
+    if (!mappedValues.ngaysinh) {
+      messageApi.error('Vui lòng chọn ngày sinh!');
       return;
     }
 
     try {
       setLoading(true);
-      const existed = await getUserByPhone(values.dienthoai);
+      const existed = await getUserByPhone(mappedValues.dienthoai);
       if (existed) {
         messageApi.error('Số điện thoại đã tồn tại!');
         return;
       }
 
       const registerData = {
-        sodienthoai: values.dienthoai,
-        matkhau: values.matkhau,
-        hoten: values.hoten,
-        gioitinh: values.gioitinh,
-        diachi: `${values.thanhpho}, ${values.quan}, ${values.phuong}, ${values.diachi}`,
-        email: values.email || '',
+        sodienthoai: mappedValues.dienthoai,
+        matkhau: mappedValues.matkhau,
+        hoten: mappedValues.hoten,
+        ngaysinh: mappedValues.ngaysinh.format('YYYY-MM-DD'),
+        gioitinh: mappedValues.gioitinh,
+        diachi: `${mappedValues.thanhpho}, ${mappedValues.quan}, ${mappedValues.phuong}, ${mappedValues.diachi}`,
+        email: mappedValues.email || '',
       };
 
       await register(registerData);
 
       const loginResult = await login({
-        sodienthoai: values.dienthoai,
-        matkhau: values.matkhau,
+        sodienthoai: mappedValues.dienthoai,
+        matkhau: mappedValues.matkhau,
       });
 
       if (loginResult) {
@@ -256,16 +291,28 @@ export default function Register() {
           onFinish={onFinish}
           layout="vertical"
           className={styles.form}
+          autoComplete="off"
         >
+          {/* Hidden input to trick autofill */}
+          <input
+            type="text"
+            name="hidden_field"
+            style={{ display: 'none' }}
+            autoComplete="new-password"
+          />
+          
           {/* Row 1: Name and Phone */}
           <div className={styles.formRow}>
             <Form.Item
               label="Họ và tên"
-              name="hoten"
+              name="hoten_random"
               rules={[{ required: true, message: 'Vui lòng nhập họ tên!' }]}
               className={styles.formItem}
             >
-              <Input className={styles.input} />
+              <Input
+                className={styles.input}
+                autoComplete="off"
+              />
             </Form.Item>
 
             <Form.Item
@@ -277,21 +324,45 @@ export default function Register() {
               ]}
               className={styles.formItem}
             >
-              <Input className={styles.input} />
+              <Input
+                className={styles.input}
+                disabled={!!initialPhone}
+                autoComplete="off"
+              />
             </Form.Item>
           </div>
 
-          {/* Row 2: Email and Gender */}
+          {/* Row 2: Email, Date of Birth, and Gender */}
           <div className={styles.formRow}>
             <Form.Item
               label="Email"
-              name="email"
+              name="email_random"
               rules={[{ type: 'email', message: 'Email không hợp lệ!' }]}
               className={styles.formItem}
             >
-              <Input className={styles.input} placeholder="Không bắt buộc" />
+              <Input
+                className={styles.input}
+                placeholder="Không bắt buộc"
+                autoComplete="off"
+              />
             </Form.Item>
 
+            <Form.Item
+              label="Ngày sinh"
+              name="ngaysinh_random"
+              rules={[{ required: true, message: 'Vui lòng chọn ngày sinh!' }]}
+              className={styles.formItem}
+            >
+              <DatePicker
+                className={styles.input}
+                format="DD/MM/YYYY"
+                placeholder="Chọn ngày sinh"
+                autoComplete="off"
+              />
+            </Form.Item>
+          </div>
+
+          <div className={styles.formRow}>
             <Form.Item
               label="Giới tính"
               name="gioitinh"
@@ -301,7 +372,6 @@ export default function Register() {
               <Radio.Group className={styles.radioGroup}>
                 <Radio value="Nam">Nam</Radio>
                 <Radio value="Nữ">Nữ</Radio>
-                <Radio value="Khác">Khác</Radio>
               </Radio.Group>
             </Form.Item>
           </div>
@@ -310,7 +380,7 @@ export default function Register() {
           <div className={styles.formRow}>
             <Form.Item
               label="Tỉnh/Thành phố"
-              name="thanhpho"
+              name="thanhpho_random"
               rules={[{ required: true, message: 'Vui lòng chọn tỉnh/thành phố!' }]}
               className={styles.formItem}
             >
@@ -326,7 +396,7 @@ export default function Register() {
 
             <Form.Item
               label="Quận/Huyện"
-              name="quan"
+              name="quan_random"
               rules={[{ required: true, message: 'Vui lòng chọn quận/huyện!' }]}
               className={styles.formItem}
             >
@@ -346,7 +416,7 @@ export default function Register() {
           <div className={styles.formRow}>
             <Form.Item
               label="Phường/Xã"
-              name="phuong"
+              name="phuong_random"
               rules={[{ required: true, message: 'Vui lòng chọn phường/xã!' }]}
               className={styles.formItem}
             >
@@ -362,13 +432,14 @@ export default function Register() {
 
             <Form.Item
               label="Địa chỉ cụ thể"
-              name="diachi"
+              name="diachi_random"
               rules={[{ required: true, message: 'Vui lòng nhập địa chỉ cụ thể!' }]}
               className={styles.formItem}
             >
               <Input
                 className={styles.input}
                 placeholder="Số nhà, tên đường"
+                autoComplete="off"
               />
             </Form.Item>
           </div>
@@ -377,25 +448,28 @@ export default function Register() {
           <div className={styles.formRow}>
             <Form.Item
               label="Mật khẩu"
-              name="matkhau"
+              name="matkhau_random"
               rules={[
                 { required: true, message: 'Vui lòng nhập mật khẩu!' },
                 { min: 6, message: 'Mật khẩu phải có ít nhất 6 ký tự!' },
               ]}
               className={styles.formItem}
             >
-              <Input.Password className={styles.input} />
+              <Input.Password
+                className={styles.input}
+                autoComplete="new-password"
+              />
             </Form.Item>
 
             <Form.Item
               label="Xác nhận mật khẩu"
-              name="xacnhanmatkhau"
-              dependencies={['matkhau']}
+              name="xacnhanmatkhau_random"
+              dependencies={['matkhau_random']}
               rules={[
                 { required: true, message: 'Vui lòng xác nhận mật khẩu!' },
                 ({ getFieldValue }) => ({
                   validator(_, value) {
-                    if (!value || getFieldValue('matkhau') === value) {
+                    if (!value || getFieldValue('matkhau_random') === value) {
                       return Promise.resolve();
                     }
                     return Promise.reject(new Error('Mật khẩu xác nhận không khớp!'));
@@ -404,7 +478,10 @@ export default function Register() {
               ]}
               className={styles.formItem}
             >
-              <Input.Password className={styles.input} />
+              <Input.Password
+                className={styles.input}
+                autoComplete="new-password"
+              />
             </Form.Item>
           </div>
 

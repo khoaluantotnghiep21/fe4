@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { getProducts } from '@/lib/api/productApi';
 import { getAllDanhMuc } from '@/lib/api/danhMucApi';
 import ProductCard from '@/components/common/ProductCard';
-import { Metadata } from 'next';
+//import { Metadata } from 'next';
 import { Select, Spin } from 'antd';
 import { Product } from '@/types/product.types';
 import { DanhMuc } from '@/types/danhmuc.types';

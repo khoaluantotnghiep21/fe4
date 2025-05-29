@@ -110,6 +110,7 @@ export const useCartStore = create<CartState>((set, get) => ({
       } else {
         message.error("Không thể thêm sản phẩm vào giỏ hàng!");
       }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       message.error("Có lỗi xảy ra khi thêm sản phẩm vào giỏ hàng!");
     } finally {
@@ -135,6 +136,7 @@ export const useCartStore = create<CartState>((set, get) => ({
       } else {
         message.error("Không thể xóa sản phẩm khỏi giỏ hàng!");
       }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       message.error("Có lỗi xảy ra khi xóa sản phẩm khỏi giỏ hàng!");
     } finally {
@@ -162,6 +164,7 @@ export const useCartStore = create<CartState>((set, get) => ({
       } else {
         message.error("Không thể cập nhật số lượng sản phẩm!");
       }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       message.error("Có lỗi xảy ra khi cập nhật số lượng sản phẩm!");
     } finally {
@@ -182,6 +185,7 @@ export const useCartStore = create<CartState>((set, get) => ({
       } else {
         message.error("Không thể xóa giỏ hàng!");
       }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       message.error("Có lỗi xảy ra khi xóa giỏ hàng!");
     } finally {
