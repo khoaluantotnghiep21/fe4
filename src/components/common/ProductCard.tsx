@@ -22,7 +22,6 @@ interface UnitDetail {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
-  // Sort units by unit name to ensure consistent order
   const sortedUnits = [...product.chitietdonvi].sort((a, b) =>
     a.donvitinh.donvitinh.localeCompare(b.donvitinh.donvitinh)
   );
@@ -37,15 +36,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
   const { user } = useUser();
   const router = useRouter();
 
-  const mainImage = product.anhsanpham.find(img => img.ismain)?.url || '/placeholder.png';
+  const mainImage = product.anhsanpham.find(img => img.ismain)?.url || '/assets/images/404.png';
   const additionalImages = product.anhsanpham.filter(img => !img.ismain).slice(0, 2).map(img => img.url);
 
-
-  const sp = product.masanpham == 'SP24407388';
-
-  if (sp) {
-    console.log(sp, mainImage);
-  }
   const shortDescription = (() => {
     const productAsRecord = product as unknown as Record<string, unknown>;
     const shortDesc = productAsRecord.motangan;
@@ -54,17 +47,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
     if (typeof shortDesc === 'string' && shortDesc) {
       return shortDesc;
     } else if (typeof fullDesc === 'string' && fullDesc) {
-      return fullDesc.length > 100 ? fullDesc.substring(0, 100) + '...' : fullDesc;
+      return fullDesc.length > 80 ? fullDesc.substring(0, 80) + '...' : fullDesc;
     }
     return 'Không có mô tả';
   })();
 
-  // Handle mouse leave when user's mouse leaves the document/window
   useEffect(() => {
     const handleMouseLeave = () => {
       setIsFlipped(false);
     };
-
     document.addEventListener('mouseleave', handleMouseLeave);
     return () => {
       document.removeEventListener('mouseleave', handleMouseLeave);
@@ -75,7 +66,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
     if (!unit || !unit.donvitinh?.donvitinh) {
       return 'Không xác định';
     }
-
     if (!unit.dinhluong || unit.dinhluong === 1) {
       return unit.donvitinh.donvitinh;
     }
@@ -88,18 +78,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
-    
     if (!user) {
-      message.info("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng");
+      message.info('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng');
       router.push('/login');
       return;
     }
-
     if (!selectedUnit) {
       message.error('Vui lòng chọn đơn vị tính!');
       return;
     }
-
     setLoading(true);
     try {
       await addItem({
@@ -122,13 +109,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
     e.stopPropagation();
     try {
       window.location.href = `/products/${product.slug}`;
-      console.log('Đã chuyển hướng đến trang chi tiết sản phẩm');
     } catch (error) {
       console.error('Error navigating to product details:', error);
     }
   };
+
   const checkKhuyenMai = (product: Product) => {
-    if (product.khuyenmai?.tenchuongtrinh === "Không khuyến mãi") {
+    if (product.khuyenmai?.tenchuongtrinh === 'Không khuyến mãi') {
       return null;
     }
     return product.khuyenmai.tenchuongtrinh;
@@ -136,7 +123,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
 
   return (
     <div
-      className="block h-full relative cursor-pointer"
+      className="block h-full relative cursor-pointer group"
       ref={cardRef}
       onMouseEnter={() => setIsFlipped(true)}
       onMouseLeave={() => setIsFlipped(false)}
@@ -147,82 +134,83 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
         <div
           className={`w-full h-full transition-all duration-500 ${isFlipped ? 'card-flipped' : ''}`}
           style={{ transformStyle: 'preserve-3d', position: 'relative' }}
-
         >
           {/* Front of card */}
-          <div className="w-full h-full bg-white rounded-xl shadow-lg p-4 font-sans flex flex-col"
+          <div
+            className="w-full h-full bg-white rounded-lg shadow-md p-3 font-sans flex flex-col"
             style={{
               backfaceVisibility: 'hidden',
               position: 'relative',
-              zIndex: isFlipped ? 0 : 1
-            }}>
-            {/* Row 1: Promotion tag (if any) */}
-            {checkKhuyenMai(product) != null && (
-              <div className="absolute -top-3 -left-3 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full z-10">
+              zIndex: isFlipped ? 0 : 1,
+            }}
+          >
+            {/* Promotion tag */}
+            {checkKhuyenMai(product) && (
+              <div className="absolute -top-2 -left-2 bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded-full z-10">
                 {checkKhuyenMai(product)}
               </div>
             )}
 
-            {/* Row 2: Product image */}
-            <div className="flex justify-center mb-3 aspect-square relative">
+            {/* Product image */}
+            <div className="relative aspect-square mb-2">
               <Image
                 src={mainImage}
                 alt={product.tensanpham}
                 fill
-                className="object-contain p-3"
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                className="object-contain p-2 transition-transform duration-300 group-hover:scale-105"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
               />
             </div>
 
-            {/* Row 3: Product name */}
-            <div className="flex flex-col items-center justify-center min-h-[2.5rem]">
-              <h2 className="text-lg font-semibold text-gray-800 text-center mb-2 line-clamp-2">
+            {/* Product name */}
+            <div className="flex flex-col items-center justify-center min-h-[2rem] mb-2">
+              <h2 className="text-base font-semibold text-gray-800 text-center line-clamp-2">
                 {product.tensanpham}
               </h2>
             </div>
 
-            {/* Row 4: Price information */}
-            <div className="text-center mt-auto mb-3 flex-grow flex flex-col justify-center">
-              <p className="text-xl font-bold text-red-500">
+            {/* Price and brand */}
+            <div className="text-center mt-auto flex flex-col justify-end flex-grow">
+              <p className="text-lg font-bold text-red-600">
                 {selectedUnit?.giaban
-                  ? `${selectedUnit.giaban.toLocaleString('vi-VN')} đồng/${selectedUnit.donvitinh.donvitinh}`
+                  ? `${selectedUnit.giaban.toLocaleString('vi-VN')}đ/${selectedUnit.donvitinh.donvitinh}`
                   : 'Liên hệ'}
               </p>
-              <p className="text-sm text-gray-500 line-through">
+              <p className="text-xs text-gray-400 line-through">
                 {selectedUnit?.giaban
-                  ? `${(selectedUnit.giaban + 10000).toLocaleString('vi-VN')} đồng`
+                  ? `${(selectedUnit.giaban + 10000).toLocaleString('vi-VN')}đ`
                   : 'Liên hệ'}
               </p>
-              <p className="text-xs text-gray-600 mt-1">{product.thuonghieu?.tenthuonghieu || 'Không xác định'}</p>
-              <div className="mt-3 text-sm text-blue-500">
-                Lật để xem đơn vị tính
-              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {product.thuonghieu?.tenthuonghieu || 'Không xác định'}
+              </p>
+              <p className="text-xs text-blue-500 mt-1">Lật để xem chi tiết</p>
             </div>
           </div>
 
           {/* Back of card */}
           <div
-            className="w-full h-full bg-white rounded-xl shadow-lg p-4 font-sans flex flex-col"
+            className="w-full h-full bg-white rounded-lg shadow-md p-3 font-sans flex flex-col"
             style={{
               backfaceVisibility: 'hidden',
               transform: 'rotateY(180deg)',
               position: 'absolute',
               top: 0,
               left: 0,
-              zIndex: isFlipped ? 1 : 0
+              zIndex: isFlipped ? 1 : 0,
             }}
-
           >
-            <h2 className="text-lg font-semibold text-gray-800 text-center mb-2">
+            {/* Product name */}
+            <h2 className="text-base font-semibold text-gray-800 text-center line-clamp-2 mb-2">
               {product.tensanpham}
             </h2>
 
-            {/* Unit selection (Hộp, Vỉ, Viên, etc.) */}
+            {/* Unit selection */}
             <div className="flex flex-col gap-1 mb-2">
-              <h3 className="text-md font-medium mb-1 text-center">Đơn vị tính:</h3>
+              <h3 className="text-sm font-medium text-center">Đơn vị tính:</h3>
               {sortedUnits.length > 0 ? (
                 <>
-                  <div className="flex flex-wrap justify-center gap-2 h-10 items-center">
+                  <div className="flex flex-wrap justify-center gap-1.5 h-8 items-center">
                     {sortedUnits.map((unit) => (
                       <button
                         key={`${unit.donvitinh.donvitinh}-${unit.dinhluong}`}
@@ -235,17 +223,18 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
                             handleUnitChange(unit);
                           }
                         }}
-                        className={`px-3 py-1 border rounded-md text-sm font-medium ${selectedUnit?.donvitinh.donvitinh === unit.donvitinh.donvitinh &&
+                        className={`px-2 py-1 border rounded-md text-xs font-medium transition ${
+                          selectedUnit?.donvitinh.donvitinh === unit.donvitinh.donvitinh &&
                           selectedUnit?.dinhluong === unit.dinhluong
-                          ? 'bg-blue-500 text-white border-blue-500'
-                          : 'bg-white text-gray-700 border-gray-300'
-                          } hover:bg-blue-100 transition`}
+                            ? 'bg-blue-500 text-white border-blue-500'
+                            : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50'
+                        }`}
                       >
                         {unit.donvitinh.donvitinh}
                       </button>
                     ))}
                   </div>
-                  <div className="text-center text-sm text-gray-600 flex flex-wrap justify-center gap-1 min-h-[1.8rem]">
+                  <div className="text-center text-xs text-gray-600 flex flex-wrap justify-center gap-1 min-h-[1.5rem]">
                     {sortedUnits.map((unit, index, array) => (
                       <div key={`${unit.donvitinh.donvitinh}-${unit.dinhluong}`}>
                         {unit.dinhluong} {unit.donvitinh.donvitinh}
@@ -255,13 +244,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
                   </div>
                 </>
               ) : (
-                <p className="text-sm text-gray-500 text-center">Không có đơn vị tính</p>
+                <p className="text-xs text-gray-500 text-center">Không có đơn vị tính</p>
               )}
             </div>
 
-            {/* Additional images gallery */}
-            <div className="flex justify-center gap-2 mb-3">
-              <div className="h-16 w-16 relative rounded-md overflow-hidden">
+            {/* Additional images */}
+            <div className="flex justify-center gap-1.5 mb-2">
+              <div className="h-12 w-12 relative rounded overflow-hidden">
                 <Image
                   src={mainImage}
                   alt={product.tensanpham}
@@ -270,7 +259,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
                 />
               </div>
               {additionalImages.map((img, index) => (
-                <div key={index} className="h-16 w-16 relative rounded-md overflow-hidden">
+                <div key={index} className="h-12 w-12 relative rounded overflow-hidden">
                   <Image
                     src={img}
                     alt={`${product.tensanpham} - ${index + 1}`}
@@ -282,27 +271,27 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
             </div>
 
             {/* Product description */}
-            <div className="flex-grow overflow-auto mb-3">
-              <h3 className="text-md font-medium mb-1">Mô tả:</h3>
-              <p className="text-sm text-gray-600">{shortDescription}</p>
+            <div className="flex-grow overflow-auto mb-2">
+              <h3 className="text-sm font-medium mb-1">Mô tả:</h3>
+              <p className="text-xs text-gray-600 line-clamp-3">{shortDescription}</p>
             </div>
 
-            {/* Price on back */}
-            <p className="text-xl font-bold text-red-500 text-center">
+            {/* Price */}
+            <p className="text-lg font-bold text-red-600 text-center">
               {selectedUnit?.giaban
-                ? `${selectedUnit.giaban.toLocaleString('vi-VN')} đồng/${selectedUnit.donvitinh.donvitinh}`
+                ? `${selectedUnit.giaban.toLocaleString('vi-VN')}đ/${selectedUnit.donvitinh.donvitinh}`
                 : 'Liên hệ'}
             </p>
 
             {/* Add to cart button */}
-            <div className="mt-3">
+            <div className="mt-2">
               <button
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   handleAddToCart(e);
                 }}
-                className="w-full bg-blue-500 !text-white py-2 rounded-md hover:bg-blue-600 transition"
+                className="w-full bg-blue-500 text-white py-1.5 rounded-md hover:bg-blue-600 transition text-sm font-medium"
                 disabled={loading || !selectedUnit}
               >
                 {loading ? 'Đang xử lý...' : buttonText}
@@ -312,10 +301,42 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
         </div>
       </Spin>
 
-      {/* CSS for 3D flip effect */}
+      {/* CSS for 3D flip effect and responsive adjustments */}
       <style jsx>{`
         .card-flipped {
           transform: rotateY(180deg);
+        }
+        .group:hover .shadow-md {
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        @media (max-width: 1024px) {
+          .text-lg {
+            font-size: 0.95rem;
+          }
+          .text-base {
+            font-size: 0.9rem;
+          }
+          .text-sm {
+            font-size: 0.8rem;
+          }
+          .text-xs {
+            font-size: 0.7rem;
+          }
+          .h-12 {
+            height: 2.5rem;
+            width: 2.5rem;
+          }
+          .h-8 {
+            height: 1.75rem;
+          }
+          .py-1\.5 {
+            padding-top: 0.3rem;
+            padding-bottom: 0.3rem;
+          }
+          .px-2 {
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+          }
         }
       `}</style>
     </div>
