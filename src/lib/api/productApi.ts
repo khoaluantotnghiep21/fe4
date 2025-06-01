@@ -2,6 +2,19 @@ import { Product } from "@/types/product.types";
 import { message } from "antd";
 import axiosClient from "../axiosClient";
 
+export interface Meta {
+  total: number;
+  page: number;
+  take: number;
+  pageCount: number;
+}
+
+export interface ProductListResponse {
+  data: Product[];
+  meta: Meta;
+}
+
+
 export async function getProducts(): Promise<Product[]> {
   try {
     const res = await axiosClient.get("/product/getAllProducts");
@@ -112,6 +125,21 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
       console.error("Lỗi khi fetch chi tiết sản phẩm:", err);
     }
     return null;
+  }
+}
+
+export async function getProductBySearch(
+  query: string,
+  page = 1,
+  take = 12
+): Promise<ProductListResponse> {
+  try {
+    const res = await axiosClient.get("/product/search", {
+      params: { query, page, take },
+    });
+    return res.data.data;
+  } catch (err) {
+    return { data: [], meta: { total: 0, page, take, pageCount: 0 } };
   }
 }
 

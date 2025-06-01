@@ -35,20 +35,20 @@ export default function Register() {
   const [messageApi, contextHolder] = message.useMessage();
   const { setUser } = useUser();
   const [loading, setLoading] = useState(false);
-  
+
   // Address autocomplete states
   const [cityOptions, setCityOptions] = useState<AddressOption[]>([]);
   const [districtOptions, setDistrictOptions] = useState<AddressOption[]>([]);
   const [wardOptions, setWardOptions] = useState<AddressOption[]>([]);
-  
+
   // Full address data
   const [allCities, setAllCities] = useState<AddressOption[]>([]);
   const [allDistricts, setAllDistricts] = useState<AddressOption[]>([]);
   const [allWards, setAllWards] = useState<AddressOption[]>([]);
-  
+
   const [selectedCityCode, setSelectedCityCode] = useState<number | null>(null);
   const [selectedDistrictCode, setSelectedDistrictCode] = useState<number | null>(null);
-  
+
   const [form] = Form.useForm();
 
   // Get phone number from query parameter
@@ -146,7 +146,7 @@ export default function Register() {
     const cityCode = option.code;
     setSelectedCityCode(cityCode);
     setSelectedDistrictCode(null);
-    
+
     // Reset dependent fields
     form.setFieldsValue({ quan_random: '', phuong_random: '' });
     setDistrictOptions([]);
@@ -177,7 +177,7 @@ export default function Register() {
   const handleDistrictSelect = async (value: string, option: any) => {
     const districtCode = option.code;
     setSelectedDistrictCode(districtCode);
-    
+
     // Reset dependent fields
     form.setFieldsValue({ phuong_random: '' });
     setWardOptions([]);
@@ -236,16 +236,19 @@ export default function Register() {
         return;
       }
 
-      const registerData = {
+      const registerData: any = {
         sodienthoai: mappedValues.dienthoai,
         matkhau: mappedValues.matkhau,
         hoten: mappedValues.hoten,
         ngaysinh: mappedValues.ngaysinh.format('YYYY-MM-DD'),
         gioitinh: mappedValues.gioitinh,
         diachi: `${mappedValues.thanhpho}, ${mappedValues.quan}, ${mappedValues.phuong}, ${mappedValues.diachi}`,
-        email: mappedValues.email || '',
       };
+      if (mappedValues.email) {
+        registerData.email = mappedValues.email;
+      }
 
+      console.log('registerData:', registerData);
       await register(registerData);
 
       const loginResult = await login({
@@ -254,7 +257,10 @@ export default function Register() {
       });
 
       if (loginResult) {
-        setUser(loginResult);
+        const userInfo = await getUserByPhone(mappedValues.dienthoai);
+        if (userInfo) {
+          setUser(userInfo);
+        }
         messageApi.success('Đăng ký và đăng nhập thành công!');
         router.push('/');
       } else {
@@ -282,7 +288,7 @@ export default function Register() {
           priority
         />
       </div>
-      
+
       <div className={styles.formContainer}>
         <h1 className={styles.title}>Đăng ký</h1>
         <Form
@@ -300,7 +306,7 @@ export default function Register() {
             style={{ display: 'none' }}
             autoComplete="new-password"
           />
-          
+
           {/* Row 1: Name and Phone */}
           <div className={styles.formRow}>
             <Form.Item

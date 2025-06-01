@@ -1,17 +1,22 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getProducts } from '@/lib/api/productApi';
+import { getProductBySearch, getProducts, Meta } from '@/lib/api/productApi';
 import { getAllDanhMuc } from '@/lib/api/danhMucApi';
 import ProductCard from '@/components/common/ProductCard';
 //import { Metadata } from 'next';
 import { Select, Spin } from 'antd';
 import { Product } from '@/types/product.types';
 import { DanhMuc } from '@/types/danhmuc.types';
+import { useSearchParams } from 'next/navigation';
 
 
 export default function ProductsPage() {
+
+  const searchParams = useSearchParams();
+  const query = searchParams.get('query') || '';
   const [products, setProducts] = useState<Product[]>([]);
+  const [meta, setMeta] = useState<Meta | null>(null);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<DanhMuc[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -21,12 +26,22 @@ export default function ProductsPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        // Fetch all products
-        const allProducts = await getProducts();
-        setProducts(allProducts);
-        setFilteredProducts(allProducts);
+        let productRes;
+        if (query) {
+          productRes = await getProductBySearch(query);
+        } else {
+          productRes = await getProducts();
+        }
+        if (Array.isArray(productRes)) {
+          setProducts(productRes);
+          setMeta(null);
+          setFilteredProducts(productRes);
+        } else {
+          setProducts(productRes.data);
+          setMeta(productRes.meta);
+          setFilteredProducts(productRes.data);
+        }
 
-        // Fetch all categories
         const allCategories = await getAllDanhMuc();
         setCategories(allCategories);
       } catch (error) {
@@ -37,23 +52,29 @@ export default function ProductsPage() {
     };
 
     fetchData();
-  }, []);
-
-  // Filter products when category changes
-  useEffect(() => {
-    if (!selectedCategory) {
-      setFilteredProducts(products);
-    } else {
-      const filtered = products.filter(
-        product => product.madanhmuc === selectedCategory
-      );
-      setFilteredProducts(filtered);
-    }
-  }, [selectedCategory, products]);
+  }, [query]);
 
   const handleCategoryChange = (value: string) => {
-    setSelectedCategory(value === 'all' ? null : value);
-  };
+  setSelectedCategory(value === 'all' ? null : value);
+  if (value === 'all') {
+    setFilteredProducts(products);
+  } else {
+    setFilteredProducts(
+      products.filter((p) => p.danhmuc && p.danhmuc.slug === value || p.madanhmuc === value)
+    );
+  }
+};
+
+// Khi products hoặc selectedCategory thay đổi, tự động lọc lại
+useEffect(() => {
+  if (!selectedCategory || selectedCategory === 'all') {
+    setFilteredProducts(products);
+  } else {
+    setFilteredProducts(
+      products.filter((p) => p.danhmuc && (p.danhmuc.slug === selectedCategory || p.madanhmuc === selectedCategory))
+    );
+  }
+}, [products, selectedCategory]);
 
   return (
     <div className="container mx-auto py-8">

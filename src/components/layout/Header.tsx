@@ -1,5 +1,3 @@
-// src/components/layout/Header.tsx
-
 'use client';
 
 import Image from 'next/image';
@@ -26,10 +24,12 @@ import { Loai } from '@/types/loai.types';
 import { DanhMuc } from '@/types/danhmuc.types';
 import { useLoading } from '@/context/LoadingContext';
 
-
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [isComposing, setIsComposing] = useState<boolean>(false); // Track IME composition
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false); // Track Dropdown state
   const [loais, setLoais] = useState<Loai[]>([]);
   const [danhMucByLoai, setDanhMucByLoai] = useState<Record<string, DanhMuc[]>>({});
   const cartItems = useCartStore((state) => state.items);
@@ -37,6 +37,99 @@ const Header = () => {
   const { user, logout } = useUser();
   const router = useRouter();
   const { showLoading } = useLoading();
+
+  // Load search history from localStorage
+  useEffect(() => {
+    const loadHistory = () => {
+      if (typeof window !== 'undefined') {
+        try {
+          const userKey = user?.id ? `searchHistory_${user.id}` : 'searchHistory_guest';
+          const history = JSON.parse(localStorage.getItem(userKey) || '[]');
+          setSearchHistory(history);
+        } catch (error) {
+          console.error('Error parsing search history:', error);
+          setSearchHistory([]);
+        }
+      }
+    };
+
+    loadHistory();
+  }, [user]);
+
+  // Save search history to localStorage
+  const saveHistory = (history: string[]) => {
+    if (typeof window !== 'undefined') {
+      try {
+        const userKey = user?.id ? `searchHistory_${user.id}` : 'searchHistory_guest';
+        localStorage.setItem(userKey, JSON.stringify(history));
+      } catch (error) {
+        console.error('Error saving search history:', error);
+      }
+    }
+  };
+
+  // Handle input change
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (!isComposing) {
+      setSearchQuery(e.target.value);
+    }
+  };
+
+  // Handle search
+  const handleSearch = () => {
+    if (!searchQuery.trim()) return;
+
+    const newHistory = [
+      searchQuery,
+      ...searchHistory.filter((q) => q !== searchQuery).slice(0, 9), // Limit to 10 items
+    ];
+    setSearchHistory(newHistory);
+    saveHistory(newHistory);
+
+    showLoading();
+    router.push(`/products?query=${encodeURIComponent(searchQuery)}`);
+    setIsDropdownOpen(false); // Close Dropdown after search
+  };
+
+  // Clear search history
+  const clearHistory = () => {
+    setSearchHistory([]);
+    saveHistory([]);
+  };
+
+  // Dropdown menu for search history
+  const filteredHistory = searchQuery
+    ? searchHistory.filter((q) => q.toLowerCase().includes(searchQuery.toLowerCase()))
+    : searchHistory;
+
+  const searchHistoryMenu: MenuProps['items'] = filteredHistory.length > 0 ? [
+    ...filteredHistory.map((item, idx) => ({
+      key: idx,
+      label: (
+        <div
+          className="cursor-pointer"
+          onClick={() => {
+            setSearchQuery(item);
+            setTimeout(() => handleSearch(), 0);
+          }}
+        >
+          {item}
+        </div>
+      ),
+    })),
+    { type: 'divider' },
+    {
+      key: 'clear',
+      label: 'Xóa lịch sử',
+      onClick: clearHistory,
+    },
+  ] : [
+    {
+      key: 'empty',
+      label: <div className="px-4 py-2 text-gray-400">Không có lịch sử</div>,
+      disabled: true,
+    },
+  ];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -62,25 +155,13 @@ const Header = () => {
     setIsMenuOpen(!isMenuOpen);
   };
 
-  const handleSearch = (): void => {
-    if (searchQuery) {
-      showLoading();
-      window.location.href = `/products?search=${encodeURIComponent(searchQuery)}`;
-    }
-  };
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-  };
-
-  // Handle navigation to cart with loading
   const handleNavigateToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     showLoading();
     router.push('/cart');
   };
 
-  const menuItems: MenuProps['items'] = loais.map(loai => {
+  const menuItems: MenuProps['items'] = loais.map((loai) => {
     const danhMucs = danhMucByLoai[loai.maloai] || [];
 
     return {
@@ -90,12 +171,12 @@ const Header = () => {
         {
           type: 'group',
           label: loai.tenloai,
-          children: danhMucs.map(danhmuc => ({
+          children: danhMucs.map((danhmuc) => ({
             key: danhmuc.madanhmuc,
-            label: <Link href={`/categories/${danhmuc.slug}`} onClick={() => showLoading()}>{danhmuc.tendanhmuc}</Link>
-          }))
-        }
-      ] : undefined
+            label: <Link href={`/categories/${danhmuc.slug}`} onClick={() => showLoading()}>{danhmuc.tendanhmuc}</Link>,
+          })),
+        },
+      ] : undefined,
     };
   });
 
@@ -108,31 +189,31 @@ const Header = () => {
   const userMenuItems: MenuProps['items'] = [
     ...(user && user.roles && user.roles.includes('admin')
       ? [
-        {
-          key: 'admin',
-          label: <Link href='/admin' onClick={() => showLoading()}>Trang quản trị</Link>,
-        },
-        {
-          key: 'account-management',
-          label: <Link href='/admin/accounts' onClick={() => showLoading()}>Quản lý tài khoản</Link>,
-        }
-      ]
+          {
+            key: 'admin',
+            label: <Link href='/admin' onClick={() => showLoading()}>Trang quản trị</Link>,
+          },
+          {
+            key: 'account-management',
+            label: <Link href='/admin/accounts' onClick={() => showLoading()}>Quản lý tài khoản</Link>,
+          },
+        ]
       : []),
     ...(user && user.roles && user.roles.includes('staff')
       ? [
-        {
-          key: 'order-management',
-          label: <Link href='/staff/orders' onClick={() => showLoading()}>Quản lý đơn hàng</Link>,
-        }
-      ]
+          {
+            key: 'order-management',
+            label: <Link href='/staff/orders' onClick={() => showLoading()}>Quản lý đơn hàng</Link>,
+          },
+        ]
       : []),
     ...(user && user.roles && user.roles.includes('customer')
       ? [
-        {
-          key: 'profile',
-          label: <Link href='/profile' onClick={() => showLoading()}>Hồ sơ</Link>,
-        }
-      ]
+          {
+            key: 'profile',
+            label: <Link href='/profile' onClick={() => showLoading()}>Hồ sơ</Link>,
+          },
+        ]
       : []),
     {
       key: 'logout',
@@ -216,20 +297,36 @@ const Header = () => {
             </div>
 
             <div className='flex basis-[60%] items-center px-4 mt-3'>
-              <Input
-                placeholder='Tìm kiếm sản phẩm...'
-                value={searchQuery}
-                onChange={handleChange}
-                suffix={
-                  <Button
-                    icon={<SearchOutlined />}
-                    onClick={handleSearch}
-                    type='text'
-                  />
-                }
-                className='custom-search-bar'
-                style={{ borderRadius: '30px' }}
-              />
+              <Dropdown
+                menu={{ items: searchHistoryMenu }}
+                trigger={['click']}
+                overlayClassName="search-history-dropdown"
+                open={isDropdownOpen && searchHistory.length > 0}
+                onOpenChange={(open) => setIsDropdownOpen(open)}
+              >
+                <Input
+                  placeholder='Tìm kiếm sản phẩm...'
+                  value={searchQuery}
+                  onChange={handleChange}
+                  onPressEnter={handleSearch}
+                  onCompositionStart={() => setIsComposing(true)}
+                  onCompositionEnd={(e) => {
+                    setIsComposing(false);
+                    setSearchQuery((e.target as HTMLInputElement).value);
+                  }}
+                  onFocus={() => setIsDropdownOpen(true)} // Open Dropdown on focus
+                  suffix={
+                    <Button
+                      icon={<SearchOutlined />}
+                      onClick={handleSearch}
+                      type='text'
+                    />
+                  }
+                  className='custom-search-bar'
+                  style={{ borderRadius: '30px' }}
+                  autoComplete="off"
+                />
+              </Dropdown>
             </div>
             <div className='flex basis-[25%] justify-evenly'>
               <div className='text-white custom-cart'>
@@ -298,6 +395,38 @@ const Header = () => {
         closeIcon={<CloseOutlined />}
         width={300}
       >
+        <div className='mb-4'>
+          <Dropdown
+            menu={{ items: searchHistoryMenu }}
+            trigger={['click']}
+            overlayClassName="search-history-dropdown"
+            open={isDropdownOpen && searchHistory.length > 0}
+            onOpenChange={(open) => setIsDropdownOpen(open)}
+          >
+            <Input
+              placeholder='Tìm kiếm sản phẩm...'
+              value={searchQuery}
+              onChange={handleChange}
+              onPressEnter={handleSearch}
+              onCompositionStart={() => setIsComposing(true)}
+              onCompositionEnd={(e) => {
+                setIsComposing(false);
+                setSearchQuery((e.target as HTMLInputElement).value);
+              }}
+              onFocus={() => setIsDropdownOpen(true)}
+              suffix={
+                <Button
+                  icon={<SearchOutlined />}
+                  onClick={handleSearch}
+                  type='text'
+                />
+              }
+              className='custom-search-bar'
+              style={{ borderRadius: '30px' }}
+              autoComplete="off"
+            />
+          </Dropdown>
+        </div>
         <div className='flex items-center custom-ant-menu mb-4'>
           {user ? (
             <Dropdown menu={{ items: userMenuItems }} trigger={['click']}>
