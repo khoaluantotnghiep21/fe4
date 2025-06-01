@@ -285,7 +285,7 @@ export default function Profile() {
                                             </Col>
                                         </Row>
 
-                                        <div className="mt-6">
+                                        <div className="flex justify-center">
                                             <Button type="primary" onClick={handleEdit}>
                                                 Chỉnh sửa thông tin
                                             </Button>
@@ -388,7 +388,7 @@ export default function Profile() {
                                             </Col>
                                         </Row>
 
-                                        <div className="flex gap-2 justify-end mt-6">
+                                        <div className="flex justify-content-center mt-6">
                                             <Button onClick={handleCancel}>
                                                 Hủy
                                             </Button>
@@ -423,13 +423,13 @@ export default function Profile() {
 
     return (
         <>
-            <div className="container mx-auto py-8 text-center">
-                <Row style={{ height: "100%" }}>
+            <div className="container mx-auto py-8">
+                <Row style={{ height: "100%"}}>
                     <Col span={6}>
                         <Menu
                             mode="inline"
                             defaultSelectedKeys={["1"]}
-                            style={{ height: "100%", borderRight: 0 }}
+                            style={{ height: "100%", borderRight: 0, borderRadius: "8px" }}
                             onClick={({ key }) => handleMenuClick(key)}
                         >
                             <Menu.Item key="1" icon={<UserOutlined />}>
@@ -453,7 +453,7 @@ export default function Profile() {
                         </Menu>
                     </Col>
                     <Col span={18}>
-                        <div style={{ margin: "24px 16px 0", padding: 24, background: "#f0f2f5" }}>
+                        <div className="px-4">
                             <Row gutter={16}>
                                 <Col span={24}>
                                     {renderContent()}
