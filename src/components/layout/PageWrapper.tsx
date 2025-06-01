@@ -14,7 +14,7 @@ export default function PageWrapper({
   const isStaffPage = pathname.includes('/management')
 
   if (isAuthPage || isStaffPage) {
-    return <div className="auth-container">{children}</div>
+    return <div className="auth-layout">{children}</div>
   }
 
   return (

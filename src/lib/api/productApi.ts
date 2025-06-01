@@ -2,12 +2,26 @@ import { Product } from "@/types/product.types";
 import { message } from "antd";
 import axiosClient from "../axiosClient";
 
+export interface Meta {
+  total: number;
+  page: number;
+  take: number;
+  pageCount: number;
+}
+
+export interface ProductListResponse {
+  data: Product[];
+  meta: Meta;
+}
+
+
 export async function getProducts(): Promise<Product[]> {
   try {
     const res = await axiosClient.get("/product/getAllProducts");
     const rawProducts = res.data.data.data;
 
     // Map the raw products to our Product interface
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mappedProducts: Product[] = rawProducts.map((item: any) => ({
       id: item.id,
       masanpham: item.masanpham,
@@ -35,12 +49,36 @@ export async function getProducts(): Promise<Product[]> {
       chitietthanhphan: item.chitietthanhphan,
     }));
 
+    console.log(mappedProducts);
     return mappedProducts;
   } catch (err) {
     if (typeof window !== "undefined") {
       message.error("Lỗi khi fetch sản phẩm");
     } else {
       console.error("Lỗi khi fetch sản phẩm:", err);
+    }
+    return [];
+  }
+}
+
+export async function getProductsByCategory(
+  categorySlug: string
+): Promise<Product[]> {
+  try {
+    // First get all products
+    const allProducts = await getProducts();
+
+    // Then filter by category slug
+    const filteredProducts = allProducts.filter(
+      (product) => product.danhmuc && product.danhmuc.slug === categorySlug
+    );
+
+    return filteredProducts;
+  } catch (err) {
+    if (typeof window !== "undefined") {
+      message.error("Lỗi khi lấy sản phẩm theo danh mục");
+    } else {
+      console.error("Lỗi khi lấy sản phẩm theo danh mục:", err);
     }
     return [];
   }
@@ -87,6 +125,21 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
       console.error("Lỗi khi fetch chi tiết sản phẩm:", err);
     }
     return null;
+  }
+}
+
+export async function getProductBySearch(
+  query: string,
+  page = 1,
+  take = 12
+): Promise<ProductListResponse> {
+  try {
+    const res = await axiosClient.get("/product/search", {
+      params: { query, page, take },
+    });
+    return res.data.data;
+  } catch (err) {
+    return { data: [], meta: { total: 0, page, take, pageCount: 0 } };
   }
 }
 
