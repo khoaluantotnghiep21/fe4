@@ -4,9 +4,11 @@ import { Form, Input, Button, message } from 'antd';
 import { useRouter } from 'next/navigation';
 import { login, getUserByPhone } from '@/lib/api/authApi';
 import { useUser } from '@/context/UserContext';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import styles from './login.module.css';
+import { useLoading } from '@/context/LoadingContext';
+
 
 export default function Login() {
   const router = useRouter();
@@ -15,6 +17,15 @@ export default function Login() {
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
+  const { showLoading, hideLoading } = useLoading();
+
+  useEffect(() => {
+    if (loading) {
+      showLoading();
+    } else {
+      hideLoading();
+    }
+  }, [loading]);
 
   const handlePhoneSubmit = async (values: { dienthoai: string }) => {
     setLoading(true);
@@ -24,11 +35,13 @@ export default function Login() {
       if (user) {
         setPhone(values.dienthoai);
         setStep('password');
+        setLoading(false);
       } else {
         messageApi.error('Số điện thoại chưa đăng ký!');
         router.push(`/register?phone=${encodeURIComponent(values.dienthoai)}`);
+        setLoading(false);
       }
-    } finally {
+    } catch {
       setLoading(false);
     }
   };
@@ -63,7 +76,7 @@ export default function Login() {
           priority
         />
       </div>
-      
+
       <div className={styles.formContainer}>
         <h1 className={styles.title}>Đăng nhập</h1>
         {step === 'phone' && (
