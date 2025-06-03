@@ -21,7 +21,7 @@ export default function RoleLogin({ role, redirectPath }: RoleLoginProps) {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
-    const roleName = role === 'admin' ? 'Quản trị viên' : 'Nhân viên';
+    const roleName = role === 'admin' ? 'quản trị viên' : 'nhân viên';
     const roleTitle = role === 'admin' ? 'quản trị' : 'bán hàng';
 
     const handlePhoneSubmit = async (values: { dienthoai: string }) => {
@@ -29,29 +29,23 @@ export default function RoleLogin({ role, redirectPath }: RoleLoginProps) {
         setError('');
         try {
             const user = await getUserByPhone(values.dienthoai);
-            console.log('User data:', user);
 
             if (user) {
                 const userRole = await getUserRole(user.id);
-                console.log('User role:', userRole);
 
                 if (userRole && userRole.roles && userRole.roles.includes(role)) {
-                    console.log(`User has ${role} role, proceeding to password step`);
+
                     setPhone(values.dienthoai);
                     setStep('password');
-                    // Fallback to user.roles if available
                 } else if (user.roles && user.roles.includes(role)) {
-                    console.log(`Using user.roles directly, user has ${role} role`);
                     setPhone(values.dienthoai);
                     setStep('password');
                 } else {
-                    console.log(`User doesn't have ${role} role`);
                     setError(`Tài khoản không có quyền truy cập khu vực ${roleTitle}!`);
                 }
             } else {
                 setError('Số điện thoại không tồn tại!');
             }
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
             setError('Có lỗi xảy ra khi kiểm tra số điện thoại.');
         } finally {
@@ -69,28 +63,20 @@ export default function RoleLogin({ role, redirectPath }: RoleLoginProps) {
 
             if (user) {
                 const userRole = await getUserRole(user.id);
-                console.log('Login user role:', userRole);
-
-                // Check if userRole has the required role
                 if (userRole && userRole.roles && userRole.roles.includes(role)) {
-                    console.log(`Login: User has ${role} role from userRole`);
                     setSuccess('Đăng nhập thành công!');
-                    setUser({ ...user, roles: userRole.roles }); // Make sure user has the roles
+                    setUser({ ...user, roles: userRole.roles });
                     router.push(redirectPath);
-                    // Fallback to user.roles if available
                 } else if (user.roles && user.roles.includes(role)) {
-                    console.log(`Login: User has ${role} role from user object`);
                     setSuccess('Đăng nhập thành công!');
                     setUser(user);
                     router.push(redirectPath);
                 } else {
-                    console.log(`Login: User doesn't have ${role} role`);
                     setError(`Tài khoản không có quyền truy cập khu vực ${roleTitle}!`);
                 }
             } else {
                 setError('Mật khẩu không đúng!');
             }
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
             setError('Có lỗi xảy ra khi đăng nhập.');
         } finally {
@@ -99,9 +85,8 @@ export default function RoleLogin({ role, redirectPath }: RoleLoginProps) {
     };
 
     return (
-        <div className="w-full">
-            <h1 className="text-xl font-semibold mb-6 text-center">Đăng nhập {roleName}</h1>
-
+        <div className="w-full text-white">
+            <h1 className="text-xl font-semibold mb-6 text-center text-white">Đăng nhập {roleName}</h1>
             {error && (
                 <div className="mb-4">
                     <Alert
@@ -133,14 +118,14 @@ export default function RoleLogin({ role, redirectPath }: RoleLoginProps) {
                     layout="vertical"
                 >
                     <Form.Item
-                        label="Số điện thoại"
+                        label={<span className="text-white">Số điện thoại</span>}
                         name="dienthoai"
                         rules={[
                             { required: true, message: 'Vui lòng nhập số điện thoại!' },
-                            { pattern: /^[0-9]{10}$/, message: 'Số điện thoại phải có 10 chữ số!' },
+                            { pattern: /^[0-9]{10}$/, message: 'Số điện thoại phải gồm 10 chữ số!' },
                         ]}
                     >
-                        <Input placeholder="Nhập số điện thoại" />
+                        <Input placeholder="Nhập số điện thoại" className="text-white" />
                     </Form.Item>
                     <Form.Item>
                         <Button type="primary" htmlType="submit" className="w-full" loading={loading}>
@@ -155,15 +140,20 @@ export default function RoleLogin({ role, redirectPath }: RoleLoginProps) {
                     onFinish={handleLogin}
                     layout="vertical"
                 >
-                    <Form.Item label="Số điện thoại">
-                        <Input value={phone} disabled />
+                    <Form.Item label={<span className="text-white">Số điện thoại</span>}>
+                        <Input
+                            value={phone}
+                            disabled
+                            className="text-white bg-transparent"
+                            style={{ color: 'white' }}
+                        />
                     </Form.Item>
                     <Form.Item
-                        label="Mật khẩu"
+                        label={<span className="text-white">Mật khẩu</span>}
                         name="matkhau"
                         rules={[{ required: true, message: 'Vui lòng nhập mật khẩu!' }]}
                     >
-                        <Input.Password placeholder="Nhập mật khẩu" />
+                        <Input.Password placeholder="Nhập mật khẩu" className='text-white' />
                     </Form.Item>
                     <Form.Item>
                         <Button type="primary" htmlType="submit" className="w-full" loading={loading}>
