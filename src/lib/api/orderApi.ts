@@ -26,10 +26,17 @@ export interface CreatePurchaseOrderResponse {
     data: {
         id: string;
         madonhang: string;
-        tongtien: number;
-        thanhtien: number;
+        ngaymuahang: string;
+        userid: string;
         trangthai: string;
-        ngaydat: string;
+        phuongthucthanhtoan: string;
+        hinhthucnhanhang: string;
+        mavoucher: string;
+        tongtien: number;
+        giamgiatructiep: number;
+        thanhtien: number;
+        phivanchuyen: number;
+        machinhanh: string | null;
     };
 }
 
@@ -49,7 +56,7 @@ export async function createPurchaseOrder(orderData: CreatePurchaseOrderRequest)
     try {
         const response = await axiosClient.post('/purchase-order/createNewPurchaseOrder', orderData);
         
-        if (response.data && response.data.statusCode === 200) {
+        if (response.data && response.data.statusCode == 201) {
             message.success("Đặt hàng thành công!");
             return response.data;
         } else {

@@ -3,6 +3,7 @@ import { message } from "antd";
 
 export interface CartItem {
   id: string;
+  code: string;
   name: string;
   option: string;
   price: number;
@@ -26,6 +27,7 @@ const saveToStorage = (userId: string, items: CartItem[]) => {
   try {
     const allCarts = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "{}");
     allCarts[userId] = items;
+
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(allCarts));
     return true;
   } catch (error) {

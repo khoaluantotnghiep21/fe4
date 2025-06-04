@@ -63,6 +63,7 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
     try {
       await addItem({
         id: product.id,
+        code: product.masanpham,
         name: product.tensanpham,
         option: formatUnitString(selectedUnit),
         price: selectedUnit.giaban,

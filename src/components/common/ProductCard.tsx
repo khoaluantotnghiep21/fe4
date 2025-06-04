@@ -91,6 +91,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
     try {
       await addItem({
         id: product.id,
+        code: product.masanpham,
         name: product.tensanpham,
         option: selectedUnit.donvitinh.donvitinh,
         price: selectedUnit.giaban,

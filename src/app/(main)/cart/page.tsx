@@ -90,42 +90,19 @@ export default function Cart() {
       return;
     }
 
-    showLoading();
+    // Prepare checkout data
+    const checkoutData = {
+      items: selectedCartItems,
+      subtotal,
+      directDiscount,
+      voucherDiscount,
+      totalSavings,
+      finalTotal
+    };
 
-    try {
-      const orderData: CreatePurchaseOrderRequest = {
-        phuongthucthanhtoan: 'COD',
-        hinhthucnhanhang: 'delivery',
-        mavoucher: 'VC00000',
-        tongtien: subtotal,
-        giamgiatructiep: directDiscount,
-        thanhtien: finalTotal,
-        phivanchuyen: 0,
-        machinhhanh: 'default',
-        details: selectedCartItems.map(item => ({
-          masanpham: item.id,
-          soluong: item.quantity,
-          giaban: item.price,
-          donvitinh: item.option || 'cái'
-        }))
-      };
-
-      const result = await createPurchaseOrder(orderData);
-
-      if (result) {
-        // Remove only selected items from cart
-        for (const item of selectedCartItems) {
-          await removeItem(item.id, item.option);
-        }
-        setSelectedItems([]);
-
-        router.push(`/order-confirmation?orderId=${result.data.id}&orderCode=${result.data.madonhang}`);
-      }
-    } catch (error) {
-      console.error('Checkout error:', error);
-    } finally {
-      hideLoading();
-    }
+    // Navigate to checkout page with the data
+    const queryString = encodeURIComponent(JSON.stringify(checkoutData));
+    router.push(`/checkout?data=${queryString}`);
   };
 
   const columns: any[] = [
