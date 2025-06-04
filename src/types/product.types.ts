@@ -45,3 +45,22 @@ export interface Product {
     };
   }[];
 }
+
+export interface UpdateProductRequest {
+  tensanpham?: string;
+  dangbaoche?: string;
+  congdung?: string;
+  chidinh?: string;
+  chongchidinh?: string;
+  thuockedon?: boolean;
+  motangan?: string;
+  doituongsudung?: string;
+  luuy?: string;
+  ngaysanxuat?: string;
+  hansudung?: number;
+  gianhap?: number;
+  mathuonghieu?: string;
+  madanhmuc?: string;
+  machuongtrinh?: string;
+}
+

@@ -1,4 +1,4 @@
-import { Product } from "@/types/product.types";
+import { Product, UpdateProductRequest } from "@/types/product.types";
 import { message } from "antd";
 import axiosClient from "../axiosClient";
 
@@ -14,11 +14,29 @@ export interface ProductListResponse {
   meta: Meta;
 }
 
-
-export async function getProducts(): Promise<Product[]> {
+export async function getProducts(page = 1, take = 12): Promise<ProductListResponse> {
   try {
-    const res = await axiosClient.get("/product/getAllProducts");
-    const rawProducts = res.data.data.data;
+    const res = await axiosClient.get("/product/getAllProducts", {
+      params: { page, take }
+    });
+    console.log('API response:', res.data); // Debug log
+    
+    if (!res.data?.data?.data) {
+      console.error('Invalid API response structure:', res.data);
+      return { 
+        data: [], 
+        meta: { total: 0, page, take, pageCount: 0 } 
+      };
+    }
+    
+    const rawProducts = res.data.data;
+    const meta = res.data.data.meta || { 
+      total: rawProducts.length, 
+      page, 
+      take, 
+      pageCount: Math.ceil(rawProducts.length / take) 
+    };
+    console.log('Raw products:', rawProducts); // Debug log
 
     // Map the raw products to our Product interface
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -47,17 +65,21 @@ export async function getProducts(): Promise<Product[]> {
       anhsanpham: item.anhsanpham,
       chitietdonvi: item.chitietdonvi,
       chitietthanhphan: item.chitietthanhphan,
-    }));
-
-    console.log(mappedProducts);
-    return mappedProducts;
+    }));    console.log(mappedProducts);
+    return {
+      data: mappedProducts,
+      meta: meta
+    };
   } catch (err) {
     if (typeof window !== "undefined") {
       message.error("Lỗi khi fetch sản phẩm");
     } else {
       console.error("Lỗi khi fetch sản phẩm:", err);
     }
-    return [];
+    return { 
+      data: [], 
+      meta: { total: 0, page, take, pageCount: 0 } 
+    };
   }
 }
 
@@ -66,10 +88,10 @@ export async function getProductsByCategory(
 ): Promise<Product[]> {
   try {
     // First get all products
-    const allProducts = await getProducts();
+    const productsResponse = await getProducts();
 
     // Then filter by category slug
-    const filteredProducts = allProducts.filter(
+    const filteredProducts = productsResponse.data.filter(
       (product) => product.danhmuc && product.danhmuc.slug === categorySlug
     );
 
@@ -100,6 +122,36 @@ export async function getProductByCode(
   }
 }
 
+/**
+ * Xóa sản phẩm theo mã sản phẩm
+ * @param masanpham Mã sản phẩm cần xóa
+ * @returns Kết quả xóa sản phẩm
+ */
+export async function deleteProductByMaSanPham(masanpham: string): Promise<boolean> {
+  try {
+    const response = await axiosClient.delete(`/product/deleteProduct/${masanpham}`);
+    
+    console.log('Delete response:', response);
+    
+    // Kiểm tra kết quả trả về từ API
+    if (response.data && response.data.success) {
+      return true;
+    }
+    
+    return response.status === 200 || response.status === 204;
+  } catch (err: any) {
+    const errorMessage = err.response?.data?.message || 'Lỗi khi xóa sản phẩm';
+    
+    if (typeof window !== "undefined") {
+      console.error('Delete API error:', errorMessage, err);
+    } else {
+      console.error("Lỗi khi xóa sản phẩm:", err);
+    }
+    
+    throw err; // Ném lỗi để hàm gọi có thể bắt và xử lý
+  }
+}
+
 export async function getProductById(id: string): Promise<Product | null> {
   try {
     const res = await axiosClient.get(`/product/getProductById/${id}`);
@@ -114,6 +166,21 @@ export async function getProductById(id: string): Promise<Product | null> {
   }
 }
 
+export async function getProductByMaSanPham(masanpham: string): Promise<Product | null> {
+  try {
+    const res = await axiosClient.get(`/product/findProduct/${masanpham}`);
+    return res.data.data;
+  } catch (err) {
+    if (typeof window !== "undefined") {
+      message.error("Lỗi khi fetch chi tiết sản phẩm");
+    } else {
+      console.error("Lỗi khi fetch chi tiết sản phẩm:", err);
+    }
+    return null;
+  }
+}
+ 
+
 export async function getProductBySlug(slug: string): Promise<Product | null> {
   try {
     const res = await axiosClient.get(`/product/getProductBySlug/${slug}`);
@@ -123,6 +190,39 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
       message.error("Lỗi khi fetch chi tiết sản phẩm");
     } else {
       console.error("Lỗi khi fetch chi tiết sản phẩm:", err);
+    }
+    return null;
+  }
+}
+
+export async function updateProduct(
+  masanpham: string, 
+  productData: UpdateProductRequest
+): Promise<Product | null> {
+  try {
+    const res = await axiosClient.put(`/product/updateProduct/${masanpham}`, productData, {
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    
+    // Thêm console.log để debug
+    console.log('API raw response:', res);
+    
+    if (res.data) {
+
+      return res.data.data || res.data;
+    } else {
+      console.error('Không có dữ liệu trả về');
+      return null;
+    }
+  } catch (err: any) {
+    const errorMessage = err.response?.data?.message || 'Lỗi khi cập nhật sản phẩm';
+    
+    if (typeof window !== "undefined") {
+      console.error('API error:', errorMessage, err);
+    } else {
+      console.error("Lỗi khi cập nhật sản phẩm:", err);
     }
     return null;
   }

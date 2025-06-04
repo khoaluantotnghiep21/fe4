@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/context/UserContext';
 import { Layout, Menu, Button, Card, Statistic, Row, Col, Typography } from 'antd';
+import ProductManagement from '../product/ProductManagement';
 import {
     DashboardOutlined,
     UserOutlined,
@@ -19,6 +20,7 @@ const { Title } = Typography;
 export default function AdminDashboard() {
     const { user, isUserLoaded, logout } = useUser();
     const router = useRouter();
+    const [selectedKey, setSelectedKey] = useState('dashboard');
 
     useEffect(() => {
         if (isUserLoaded && (!user || !user?.roles || !user.roles?.includes('admin'))) {
@@ -46,11 +48,11 @@ export default function AdminDashboard() {
                     <Title level={4} style={{ color: 'white', margin: 0 }}>
                         Quản trị hệ thống
                     </Title>
-                </div>
-                <Menu
+                </div>                <Menu
                     theme="dark"
                     mode="inline"
-                    defaultSelectedKeys={['dashboard']}
+                    selectedKeys={[selectedKey]}
+                    onClick={({key}) => setSelectedKey(key)}
                     items={[
                         {
                             key: 'dashboard',
@@ -88,9 +90,12 @@ export default function AdminDashboard() {
             </Sider>
             <Layout>
                 <Header style={{ background: '#fff', padding: '0 24px' }}>
-                    <div className="flex justify-between items-center">
-                        <Title level={3} style={{ margin: 0 }}>
-                            Tổng quan
+                    <div className="flex justify-between items-center">                        <Title level={3} style={{ margin: 0 }}>
+                            {selectedKey === 'dashboard' && 'Tổng quan'}
+                            {selectedKey === 'products' && 'Quản lý sản phẩm'}
+                            {selectedKey === 'users' && 'Quản lý người dùng'}
+                            {selectedKey === 'orders' && 'Quản lý đơn hàng'}
+                            {selectedKey === 'settings' && 'Cài đặt hệ thống'}
                         </Title>
                         <div className="flex items-center">
                             <span className="mr-4">Xin chào, {user.hoten}</span>
@@ -99,53 +104,57 @@ export default function AdminDashboard() {
                             </Button>
                         </div>
                     </div>
-                </Header>
-                <Content style={{ margin: '24px 16px', padding: 24, background: '#fff' }}>
-                    <Row gutter={16}>
-                        <Col span={6}>
-                            <Card>
-                                <Statistic
-                                    title="Tổng người dùng"
-                                    value={1280}
-                                    valueStyle={{ color: '#3f8600' }}
-                                />
-                            </Card>
-                        </Col>
-                        <Col span={6}>
-                            <Card>
-                                <Statistic
-                                    title="Sản phẩm"
-                                    value={356}
-                                    valueStyle={{ color: '#1890ff' }}
-                                />
-                            </Card>
-                        </Col>
-                        <Col span={6}>
-                            <Card>
-                                <Statistic
-                                    title="Đơn hàng hôm nay"
-                                    value={28}
-                                    valueStyle={{ color: '#722ed1' }}
-                                />
-                            </Card>
-                        </Col>
-                        <Col span={6}>
-                            <Card>
-                                <Statistic
-                                    title="Doanh thu hôm nay"
-                                    value={12560000}
-                                    valueStyle={{ color: '#cf1322' }}
-                                    suffix="đ"
-                                />
-                            </Card>
-                        </Col>
-                    </Row>
-                    <div className="mt-8">
-                        <Title level={4}>Hoạt động gần đây</Title>
-                        <Card>
-                            <p>Không có hoạt động nào gần đây</p>
-                        </Card>
-                    </div>
+                </Header>                <Content style={{ margin: '24px 16px', minHeight: 280 }}>
+                    {selectedKey === 'dashboard' && (
+                        <>
+                            <Row gutter={16}>
+                                <Col span={6}>
+                                    <Card>
+                                        <Statistic
+                                            title="Tổng người dùng"
+                                            value={1280}
+                                            valueStyle={{ color: '#3f8600' }}
+                                        />
+                                    </Card>
+                                </Col>
+                                <Col span={6}>
+                                    <Card>
+                                        <Statistic
+                                            title="Sản phẩm"
+                                            value={356}
+                                            valueStyle={{ color: '#1890ff' }}
+                                        />
+                                    </Card>
+                                </Col>
+                                <Col span={6}>
+                                    <Card>
+                                        <Statistic
+                                            title="Đơn hàng hôm nay"
+                                            value={28}
+                                            valueStyle={{ color: '#722ed1' }}
+                                        />
+                                    </Card>
+                                </Col>
+                                <Col span={6}>
+                                    <Card>
+                                        <Statistic
+                                            title="Doanh thu hôm nay"
+                                            value={12560000}
+                                            valueStyle={{ color: '#cf1322' }}
+                                            suffix="đ"
+                                        />
+                                    </Card>
+                                </Col>
+                            </Row>
+                            <div className="mt-8">
+                                <Title level={4}>Hoạt động gần đây</Title>
+                                <Card>
+                                    <p>Không có hoạt động nào gần đây</p>
+                                </Card>
+                            </div>
+                        </>
+                    )}
+                    {selectedKey === 'products' && <ProductManagement />}
                 </Content>
             </Layout>
         </Layout>
