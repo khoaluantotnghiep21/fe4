@@ -14,41 +14,30 @@ export interface ProductListResponse {
   meta: Meta;
 }
 
+export async function createProduct(data: any): Promise<any> {
+  try {
+    const res = await axiosClient.post('/product/createProduct', data);
+    return res.data;
+  } catch (err) {
+    message.error('Lỗi khi thêm sản phẩm');
+    throw err;
+  }
+}
+
 export async function getProducts(page = 1, take = 12): Promise<ProductListResponse> {
   try {
     const res = await axiosClient.get("/product/getAllProducts", {
       params: { page, take }
     });
-    console.log('API response:', res.data); // Debug log
-
-    if (!res.data?.data?.data) {
-      console.error('Invalid API response structure:', res.data);
-      return {
-        data: [],
-        meta: { total: 0, page, take, pageCount: 0 }
-      };
-    }
-
-    const rawProducts = Array.isArray(res.data.data)
-      ? res.data.data
-      : Array.isArray(res.data.data?.products)
-        ? res.data.data.products
-        : [];
-
-    const meta = res.data.data.meta || {
+    const rawProducts = Array.isArray(res.data.data?.data)
+      ? res.data.data.data
+      : [];
+    const meta = res.data.data?.meta || {
       total: rawProducts.length,
       page,
       take,
       pageCount: Math.ceil(rawProducts.length / take)
     };
-
-    if (!Array.isArray(rawProducts)) {
-      console.error('API trả về không phải mảng:', rawProducts);
-      return { data: [], meta };
-    }
-
-    // Map the raw products to our Product interface
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mappedProducts: Product[] = rawProducts.map((item: any) => ({
       id: item.id,
       masanpham: item.masanpham,
