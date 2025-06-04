@@ -53,46 +53,7 @@ export default function Cart() {
   };
 
   const handleCheckout = async () => {
-    if (!user || items.length === 0) {
-      return;
-    }
-
-    showLoading();
-    
-    try {
-      // Chuẩn bị dữ liệu đơn hàng
-      const orderData: CreatePurchaseOrderRequest = {
-        phuongthucthanhtoan: 'COD', // Có thể để người dùng chọn sau
-        hinhthucnhanhang: 'delivery', // Có thể để người dùng chọn sau
-        mavoucher: 'VC00000', // Sử dụng mã voucher mặc định
-        tongtien: total,
-        giamgiatructiep: 0, // Tạm thời để 0, có thể thêm logic giảm giá sau
-        thanhtien: total, // Tổng tiền sau khi giảm giá và cộng phí vận chuyển
-        phivanchuyen: 0, // Tạm thời miễn phí vận chuyển
-        machinhhanh: 'default', // Có thể để người dùng chọn chi nhánh
-        details: items.map(item => ({
-          masanpham: item.id,
-          soluong: item.quantity,
-          giaban: item.price,
-          donvitinh: item.option || 'cái' // Sử dụng option làm đơn vị tính
-        }))
-      };
-
-      // Gọi API tạo đơn hàng
-      const result = await createPurchaseOrder(orderData);
-      
-      if (result) {
-        // Xóa giỏ hàng sau khi đặt hàng thành công
-        await clearCart();
-        
-        // Chuyển đến trang xác nhận đơn hàng với thông tin đơn hàng
-        router.push(`/order-confirmation?orderId=${result.data.id}&orderCode=${result.data.madonhang}`);
-      }
-    } catch (error) {
-      console.error('Checkout error:', error);
-    } finally {
-      hideLoading();
-    }
+    router.push('/cart/checkout');
   };
 
   if (!isUserLoaded || loading || cartLoading) {
@@ -192,7 +153,7 @@ export default function Cart() {
               onClick={handleCheckout}
               disabled={items.length === 0}
             >
-              Thanh toán
+              Mua hàng
             </Button>
           </div>
         </div>
