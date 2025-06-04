@@ -23,8 +23,9 @@ interface CartState {
 const CART_STORAGE_KEY = "user_cart";
 
 const saveToStorage = (userId: string, items: CartItem[]) => {
+  if (typeof window === 'undefined') return false;
   try {
-    const allCarts = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "{}");
+    const allCarts = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) ?? "{}");
     allCarts[userId] = items;
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(allCarts));
     return true;
@@ -35,9 +36,10 @@ const saveToStorage = (userId: string, items: CartItem[]) => {
 };
 
 const loadFromStorage = (userId: string): CartItem[] => {
+  if (typeof window === 'undefined') return [];
   try {
-    const allCarts = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "{}");
-    return allCarts[userId] || [];
+    const allCarts = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) ?? "{}");
+    return allCarts[userId] ?? [];
   } catch (error) {
     console.error("Error loading cart from storage:", error);
     return [];
@@ -46,6 +48,7 @@ const loadFromStorage = (userId: string): CartItem[] => {
 
 // Load initial cart data
 const getInitialCartData = () => {
+  if (typeof window === 'undefined') return [];
   try {
     const userInfo = localStorage.getItem("user_information");
     if (!userInfo) return [];
@@ -56,6 +59,13 @@ const getInitialCartData = () => {
     console.error("Error loading initial cart data:", error);
     return [];
   }
+};
+
+const handleError = (err: unknown, customMessage: string) => {
+  if (err instanceof Error) {
+    console.error(customMessage, err.message);
+  }
+  message.error(customMessage);
 };
 
 export const useCartStore = create<CartState>((set, get) => ({
@@ -109,9 +119,10 @@ export const useCartStore = create<CartState>((set, get) => ({
         set({ items: newItems });
       } else {
         message.error("Không thể thêm sản phẩm vào giỏ hàng!");
+      }    } catch (err: unknown) {
+      if (err instanceof Error) {
+        console.error("Error adding item to cart:", err.message);
       }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
       message.error("Có lỗi xảy ra khi thêm sản phẩm vào giỏ hàng!");
     } finally {
       set({ isLoading: false });
