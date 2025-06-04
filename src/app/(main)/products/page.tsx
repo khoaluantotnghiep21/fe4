@@ -10,6 +10,7 @@ import { Product } from '@/types/product.types';
 import { DanhMuc } from '@/types/danhmuc.types';
 import { useSearchParams } from 'next/navigation';
 
+import { Pagination } from 'antd';
 
 export default function ProductsPage() {
 
@@ -21,6 +22,14 @@ export default function ProductsPage() {
   const [categories, setCategories] = useState<DanhMuc[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 12;
+
+  const pagedProducts = filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filteredProducts]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -55,26 +64,25 @@ export default function ProductsPage() {
   }, [query]);
 
   const handleCategoryChange = (value: string) => {
-  setSelectedCategory(value === 'all' ? null : value);
-  if (value === 'all') {
-    setFilteredProducts(products);
-  } else {
-    setFilteredProducts(
-      products.filter((p) => p.danhmuc && p.danhmuc.slug === value || p.madanhmuc === value)
-    );
-  }
-};
+    setSelectedCategory(value === 'all' ? null : value);
+    if (value === 'all') {
+      setFilteredProducts(products);
+    } else {
+      setFilteredProducts(
+        products.filter((p) => p.danhmuc && p.danhmuc.slug === value || p.madanhmuc === value)
+      );
+    }
+  };
 
-// Khi products hoặc selectedCategory thay đổi, tự động lọc lại
-useEffect(() => {
-  if (!selectedCategory || selectedCategory === 'all') {
-    setFilteredProducts(products);
-  } else {
-    setFilteredProducts(
-      products.filter((p) => p.danhmuc && (p.danhmuc.slug === selectedCategory || p.madanhmuc === selectedCategory))
-    );
-  }
-}, [products, selectedCategory]);
+  useEffect(() => {
+    if (!selectedCategory || selectedCategory === 'all') {
+      setFilteredProducts(products);
+    } else {
+      setFilteredProducts(
+        products.filter((p) => p.danhmuc && (p.danhmuc.slug === selectedCategory || p.madanhmuc === selectedCategory))
+      );
+    }
+  }, [products, selectedCategory]);
 
   return (
     <div className="container mx-auto py-8">
@@ -101,21 +109,32 @@ useEffect(() => {
           <Spin size="large" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {filteredProducts.length > 0 ? (
-            filteredProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                buttonText="Thêm vào giỏ"
-              />
-            ))
-          ) : (
-            <div className="col-span-full text-center p-8 bg-gray-100 rounded-lg">
-              <p className="text-lg">Không có sản phẩm nào trong danh mục này.</p>
-            </div>
-          )}
-        </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+            {pagedProducts.length > 0 ? (
+              pagedProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  buttonText="Thêm vào giỏ"
+                />
+              ))
+            ) : (
+              <div className="col-span-full text-center p-8 bg-gray-100 rounded-lg">
+                <p className="text-lg">Không có sản phẩm nào trong danh mục này.</p>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-center mt-8">
+            <Pagination
+              current={currentPage}
+              pageSize={pageSize}
+              total={filteredProducts.length}
+              onChange={setCurrentPage}
+              showSizeChanger={false}
+            />
+          </div>
+        </>
       )}
     </div>
   );

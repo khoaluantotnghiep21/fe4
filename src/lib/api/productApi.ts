@@ -24,19 +24,19 @@ export async function createProduct(data: any): Promise<any> {
   }
 }
 
-export async function getProducts(page = 1, take = 12): Promise<ProductListResponse> {
+export async function getProducts(params?: { page?: number; take?: number }): Promise<ProductListResponse> {
   try {
     const res = await axiosClient.get("/product/getAllProducts", {
-      params: { page, take }
+      params: params || {},
     });
     const rawProducts = Array.isArray(res.data.data?.data)
       ? res.data.data.data
       : [];
     const meta = res.data.data?.meta || {
       total: rawProducts.length,
-      page,
-      take,
-      pageCount: Math.ceil(rawProducts.length / take)
+      page: params?.page ?? 1,
+      take: params?.take ?? rawProducts.length,
+      pageCount: Math.ceil(rawProducts.length / (params?.take ?? rawProducts.length)),
     };
     const mappedProducts: Product[] = rawProducts.map((item: any) => ({
       id: item.id,
@@ -63,10 +63,10 @@ export async function getProducts(page = 1, take = 12): Promise<ProductListRespo
       anhsanpham: item.anhsanpham,
       chitietdonvi: item.chitietdonvi,
       chitietthanhphan: item.chitietthanhphan,
-    })); console.log(mappedProducts);
+    }));
     return {
       data: mappedProducts,
-      meta: meta
+      meta: meta,
     };
   } catch (err) {
     if (typeof window !== "undefined") {
@@ -76,7 +76,7 @@ export async function getProducts(page = 1, take = 12): Promise<ProductListRespo
     }
     return {
       data: [],
-      meta: { total: 0, page, take, pageCount: 0 }
+      meta: { total: 0, page: params?.page ?? 1, take: params?.take ?? 0, pageCount: 0 },
     };
   }
 }
@@ -228,16 +228,23 @@ export async function updateProduct(
 
 export async function getProductBySearch(
   query: string,
-  page = 1,
-  take = 12
+  params?: { page?: number; take?: number }
 ): Promise<ProductListResponse> {
   try {
     const res = await axiosClient.get("/product/search", {
-      params: { query, page, take },
+      params: { query, ...(params || {}) },
     });
     return res.data.data;
   } catch (err) {
-    return { data: [], meta: { total: 0, page, take, pageCount: 0 } };
+    return {
+      data: [],
+      meta: {
+        total: 0,
+        page: params?.page ?? 1,
+        take: params?.take ?? 0,
+        pageCount: 0,
+      },
+    };
   }
 }
 

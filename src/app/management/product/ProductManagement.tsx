@@ -99,9 +99,9 @@ export default function ProductManagement() {
       let response;
       if (searchQuery) {
         // GỌI API SEARCH ĐÚNG
-        response = await getProductBySearch(searchQuery, page, pageSize);
+        response = await getProductBySearch(searchQuery, { page, take: pageSize });
       } else {
-        response = await getProducts(page, pageSize);
+        response = await getProducts({ page, take: pageSize });
       }
       console.log('Product response:', response);
       if (Array.isArray(response.data)) {
@@ -145,8 +145,8 @@ export default function ProductManagement() {
 
       setSearchLoading(true);
       try {
-        const response = await getProductBySearch(value, 1, 10); // Lấy tối đa 10 kết quả
-        if (response.data) {
+        const response = await getProductBySearch(value, { page: 1, take: 12 });
+        if (Array.isArray(response.data)) {
           const normalizedProducts = response.data.map((product: any) => ({
             ...product,
             khuyenmai: product.khuyenmai
