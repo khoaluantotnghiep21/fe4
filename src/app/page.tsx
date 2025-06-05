@@ -21,7 +21,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function Home() {
-  const products = await getProducts();
+  const productsResponse = await getProducts();
+  const products = productsResponse.data;
   const carouselItems = await getCarouselItems();
   const sliderItems = await getSliderItems();
 

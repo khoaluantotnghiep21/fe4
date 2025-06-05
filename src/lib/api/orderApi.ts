@@ -52,10 +52,22 @@ export interface OrderItem {
     tongtien: number;
 }
 
+
+export async function getAllOrders(status?: string) {
+    const res = await axiosClient.get('/purchase-order/getAllOrders', {
+        params: status && status !== 'all' ? { trangthai: status } : {},
+    });
+    return Array.isArray(res.data?.data) ? res.data.data : [];
+}
+
+export async function updateOrderStatus(madonhang: string, trangthai: string) {
+    return axiosClient.patch(`/purchase-order/updateStatus/${madonhang}`, { trangthai });
+}
+
 export async function createPurchaseOrder(orderData: CreatePurchaseOrderRequest): Promise<CreatePurchaseOrderResponse | null> {
     try {
         const response = await axiosClient.post('/purchase-order/createNewPurchaseOrder', orderData);
-        
+
         if (response.data && response.data.statusCode == 201) {
             message.success("Đặt hàng thành công!");
             return response.data;
@@ -63,10 +75,10 @@ export async function createPurchaseOrder(orderData: CreatePurchaseOrderRequest)
             message.error("Đặt hàng thất bại!");
             return null;
         }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
         console.error("Error creating purchase order:", error);
-        
+
         if (error.response?.data?.message) {
             message.error(`Lỗi: ${error.response.data.message}`);
         } else {
