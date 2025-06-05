@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { useCartStore } from '@/store/cartStore';
-import { message, Spin } from 'antd';
+import { Button, message, Spin } from 'antd';
 import { Product } from '@/types/product.types';
 import { useUser } from '@/context/UserContext';
 import { useRouter } from 'next/navigation';
@@ -213,7 +213,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
                 <>
                   <div className="flex flex-wrap justify-center gap-1.5 h-8 items-center">
                     {sortedUnits.map((unit) => (
-                      <button
+                      <Button
                         key={`${unit.donvitinh.donvitinh}-${unit.dinhluong}`}
                         onClick={(e) => {
                           e.preventDefault();
@@ -232,7 +232,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
                         }`}
                       >
                         {unit.donvitinh.donvitinh}
-                      </button>
+                      </Button>
                     ))}
                   </div>
                   <div className="text-center text-xs text-gray-600 flex flex-wrap justify-center gap-1 min-h-[1.5rem]">
@@ -286,17 +286,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
 
             {/* Add to cart button */}
             <div className="mt-2">
-              <button
+              <Button
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   handleAddToCart(e);
                 }}
-                className="w-full bg-blue-500 text-white py-1.5 rounded-md hover:bg-blue-600 transition text-sm font-medium"
-                disabled={loading || !selectedUnit}
+                className="w-full"
+                type="primary"
+                loading={loading}
+                disabled={!selectedUnit}
               >
                 {loading ? 'Đang xử lý...' : buttonText}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
