@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useUser } from '@/context/UserContext';
 import { Layout, Menu, Button, Card, Statistic, Row, Col, Typography } from 'antd';
 import ProductManagement from '../product/ProductManagement';
+import PromotionManagement from '../promotion/PromotionManagement';
 import {
     DashboardOutlined,
     UserOutlined,
@@ -12,6 +13,7 @@ import {
     AppstoreOutlined,
     SettingOutlined,
     LogoutOutlined,
+    TagsOutlined,
 } from '@ant-design/icons';
 
 const { Header, Sider, Content } = Layout;
@@ -68,6 +70,10 @@ export default function AdminDashboard() {
                             key: 'products',
                             icon: <AppstoreOutlined />,
                             label: 'Quản lý sản phẩm',
+                        },                        {
+                            key: 'promotions',
+                            icon: <TagsOutlined />,
+                            label: 'Quản lý khuyến mãi',
                         },
                         {
                             key: 'orders',
@@ -89,11 +95,11 @@ export default function AdminDashboard() {
                 />
             </Sider>
             <Layout>
-                <Header style={{ background: '#fff', padding: '0 24px' }}>
-                    <div className="flex justify-between items-center">                        <Title level={3} style={{ margin: 0 }}>
+                <Header style={{ background: '#fff', padding: '0 24px' }}>                    <div className="flex justify-between items-center">                        <Title level={3} style={{ margin: 0 }}>
                             {selectedKey === 'dashboard' && 'Tổng quan'}
                             {selectedKey === 'products' && 'Quản lý sản phẩm'}
                             {selectedKey === 'users' && 'Quản lý người dùng'}
+                            {selectedKey === 'promotions' && 'Quản lý khuyến mãi'}
                             {selectedKey === 'orders' && 'Quản lý đơn hàng'}
                             {selectedKey === 'settings' && 'Cài đặt hệ thống'}
                         </Title>
@@ -155,6 +161,8 @@ export default function AdminDashboard() {
                         </>
                     )}
                     {selectedKey === 'products' && <ProductManagement />}
+                    {selectedKey === 'promotions' && <PromotionManagement />}
+
                 </Content>
             </Layout>
         </Layout>

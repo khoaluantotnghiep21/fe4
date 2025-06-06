@@ -17,8 +17,11 @@ export interface ProductListResponse {
 export async function createProduct(data: any): Promise<any> {
   try {
     const res = await axiosClient.post('/product/createProduct', data);
-    return res.data;
+    console.log('API response from createProduct:', res);
+    // Return the data directly, could be in res.data or res.data.data depending on API structure
+    return res.data.data || res.data;
   } catch (err) {
+    console.error('Error in createProduct API:', err);
     message.error('Lỗi khi thêm sản phẩm');
     throw err;
   }
@@ -127,24 +130,36 @@ export async function getProductByCode(
  */
 export async function deleteProductByMaSanPham(masanpham: string): Promise<boolean> {
   try {
+    console.log(`Calling API to delete product with masanpham: ${masanpham}`);
     const response = await axiosClient.delete(`/product/deleteProduct/${masanpham}`);
 
-    console.log('Delete response:', response);
+    console.log('Delete API response:', response);
 
     // Kiểm tra kết quả trả về từ API
     if (response.data && response.data.success) {
+      console.log('API indicated success');
       return true;
     }
 
-    return response.status === 200 || response.status === 204;
-  } catch (err: any) {
+    // Nếu không có response.data.success, kiểm tra mã trạng thái
+    const success = response.status === 200 || response.status === 204;
+    console.log(`API status code ${response.status}, success: ${success}`);
+    return success;  } catch (err: any) {
     const errorMessage = err.response?.data?.message || 'Lỗi khi xóa sản phẩm';
+    
+    console.error('Delete API error details:', {
+      message: errorMessage,
+      status: err.response?.status,
+      data: err.response?.data,
+      error: err.message
+    });
 
     if (typeof window !== "undefined") {
-      console.error('Delete API error:', errorMessage, err);
-    } else {
-      console.error("Lỗi khi xóa sản phẩm:", err);
+      message.error(errorMessage);
     }
+    
+    // Luôn throw lỗi để component xử lý
+    throw err;
 
     throw err; // Ném lỗi để hàm gọi có thể bắt và xử lý
   }
