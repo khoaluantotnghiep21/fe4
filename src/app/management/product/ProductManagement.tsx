@@ -187,17 +187,22 @@ export default function ProductManagement() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
-
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchText(value);
-    debouncedSearch(value);
+    
+    if (value.trim().length > 1) {
+      debouncedSearch(value);
+    } else {
+      setSearchResults([]);
+      setShowSearchResults(false);
+    }
   };
-
   const handleSearch = (value: string) => {
     setSearchText(value);
     setShowSearchResults(false);
     setCurrentPage(1);
+    fetchProducts(1); // Fetch products with the current search text immediately
   };
 
   const viewProductDetail = async (masanpham: string) => {
@@ -250,54 +255,82 @@ export default function ProductManagement() {
     setEditMode(false);
     fetchProducts(currentPage);
     message.success('Cập nhật sản phẩm thành công!');
+  };  // Hàm thực hiện xóa sản phẩm - tách riêng để dễ debug
+  const executeDeleteProduct = async (masanpham: string) => {
+    try {
+      setDeleteLoading(true);
+      console.log('Executing delete for product:', masanpham);
+
+      // Gọi API xóa sản phẩm
+      const result = await deleteProductByMaSanPham(masanpham);
+
+      console.log('Delete API result:', result);
+
+      // Đóng modal chi tiết nếu đang mở
+      setDetailModalVisible(false);
+
+      // Hiển thị thông báo thành công
+      message.success('Xóa sản phẩm thành công!');
+      setNotification({
+        visible: true,
+        type: 'success',
+        message: 'Xóa sản phẩm thành công!'
+      });
+
+      // Tải lại danh sách sản phẩm
+      setTimeout(() => {
+        fetchProducts(currentPage);
+      }, 1000);
+      
+      return true;
+    } catch (error) {
+      console.error('Lỗi khi xóa sản phẩm:', error);
+
+      // Hiển thị thông báo lỗi
+      message.error('Có lỗi xảy ra khi xóa sản phẩm!');
+      setNotification({
+        visible: true,
+        type: 'error',
+        message: error instanceof Error
+          ? `Lỗi khi xóa sản phẩm: ${error.message}`
+          : 'Có lỗi xảy ra khi xóa sản phẩm!'
+      });
+      
+      return false;
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
-  const handleDeleteProduct = async (masanpham: string, productName: string) => {
+  const handleDeleteProduct = (masanpham: string, productName: string) => {
+    console.log('handleDeleteProduct called with:', masanpham, productName);
+    
+    // Sử dụng trực tiếp confirm từ window để kiểm tra
+    if (window.confirm(`Bạn có chắc chắn muốn xóa sản phẩm "${productName}" không?`)) {
+      console.log('User confirmed deletion');
+      executeDeleteProduct(masanpham);
+    } else {
+      console.log('Delete operation canceled by user');
+    }
+    
+    // COMMENTED OUT: Ant Design Modal.confirm code to debug
+    /*
     Modal.confirm({
       title: 'Xác nhận xóa sản phẩm',
       content: `Bạn có chắc chắn muốn xóa sản phẩm "${productName}" không?`,
       okText: 'Xóa',
       okType: 'danger',
       cancelText: 'Hủy',
+      centered: true,
+      maskClosable: false,
       onOk: async () => {
-        try {
-          setDeleteLoading(true);
-
-          // Gọi API xóa sản phẩm
-          const result = await deleteProductByMaSanPham(masanpham);
-
-          console.log('Delete result:', result);
-
-          // Đóng modal chi tiết nếu đang mở
-          setDetailModalVisible(false);
-
-          // Hiển thị thông báo thành công
-          setNotification({
-            visible: true,
-            type: 'success',
-            message: 'Xóa sản phẩm thành công!'
-          });
-
-          // Tải lại danh sách sản phẩm
-          setTimeout(() => {
-            fetchProducts(currentPage);
-          }, 1000);
-        } catch (error) {
-          console.error('Lỗi khi xóa sản phẩm:', error);
-
-          // Hiển thị thông báo lỗi
-          setNotification({
-            visible: true,
-            type: 'error',
-            message: error instanceof Error
-              ? `Lỗi khi xóa sản phẩm: ${error.message}`
-              : 'Có lỗi xảy ra khi xóa sản phẩm!'
-          });
-        } finally {
-          setDeleteLoading(false);
-        }
+        return executeDeleteProduct(masanpham);
+      },
+      onCancel() {
+        console.log('Delete operation canceled');
       }
     });
+    */
   };
 
   const columns: ColumnsType<Product> = [
@@ -345,7 +378,7 @@ export default function ProductManagement() {
     {
       title: 'Thao tác',
       key: 'action',
-      width: 300,
+      width: 400,
       align: 'center',
       render: (_, record) => (
         <Space size="large">
@@ -368,13 +401,16 @@ export default function ProductManagement() {
             }}
           >
             Sửa
-          </Button>
-          <Button
+          </Button>          <Button
             type="default"
             danger
             size="large"
             icon={<DeleteOutlined />}
-            onClick={() => handleDeleteProduct(record.masanpham, record.tensanpham)}
+            onClick={(e) => {
+              e.stopPropagation(); // Ngăn chặn sự kiện lan tỏa
+              console.log('Delete button clicked for:', record.masanpham);
+              handleDeleteProduct(record.masanpham, record.tensanpham);
+            }}
           >
             Xóa
           </Button>
@@ -384,12 +420,19 @@ export default function ProductManagement() {
   ];
 
   const modalFooter = selectedProduct && (
-    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-      <Button
+    <div style={{ display: 'flex', justifyContent: 'space-between' }}>      <Button
         danger
         icon={<DeleteOutlined />}
         size="large"
-        onClick={() => handleDeleteProduct(selectedProduct.masanpham, selectedProduct.tensanpham)}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('Modal delete button clicked for:', selectedProduct.masanpham);
+          // Thử sử dụng function trực tiếp thay vì thông qua handleDeleteProduct
+          if (window.confirm(`Bạn có chắc chắn muốn xóa sản phẩm "${selectedProduct.tensanpham}" không?`)) {
+            executeDeleteProduct(selectedProduct.masanpham);
+          }
+        }}
         loading={deleteLoading}
       >
         Xóa sản phẩm
@@ -404,8 +447,7 @@ export default function ProductManagement() {
       </Button>
     </div>
   );
-
-  // Thêm hàm handleResultClick để xử lý khi người dùng chọn một kết quả
+  // Xử lý khi người dùng chọn một kết quả từ dropdown
   const handleResultClick = (product: Product) => {
     setShowSearchResults(false);
     viewProductDetail(product.masanpham);
@@ -417,7 +459,11 @@ export default function ProductManagement() {
       <CustomNotification
         type={notification.type}
         message={notification.message}
-        onClose={() => setNotification(null)}
+        duration={3000}
+        onClose={() => {
+          console.log('Notification closed');
+          setNotification(null);
+        }}
       />
       )}
 
@@ -472,12 +518,12 @@ export default function ProductManagement() {
                     shape="square"
                     size={40}
                   />
-                  }
-                  title={item.tensanpham}
+                  }                  title={<span className="search-result-title">{item.tensanpham}</span>}
                   description={
                   <div>
-                    <div>Mã: {item.masanpham}</div>
-                    <div>Danh mục: {item.danhmuc?.tendanhmuc}</div>
+                    <div><Text strong>Mã:</Text> {item.masanpham}</div>
+                    <div><Text strong>Danh mục:</Text> {item.danhmuc?.tendanhmuc}</div>
+                    <div className="search-result-hint">Nhấn để xem chi tiết</div>
                   </div>
                   }
                 />
@@ -502,7 +548,13 @@ export default function ProductManagement() {
           Thêm sản phẩm mới
           </Button>
           
-        </div>
+        </div>        {searchText.trim() !== '' && products.length > 0 && (
+          <div className="search-result-info mb-3">
+            <Tag color="blue">Kết quả tìm kiếm cho: "{searchText}"</Tag>
+            <span className="ml-2">Tìm thấy {totalItems} sản phẩm</span>
+          </div>
+        )}
+        
         <Table
           columns={columns}
           dataSource={products}
@@ -530,14 +582,14 @@ export default function ProductManagement() {
       </Tabs>
       )}
 
-      {/* Modal thêm sản phẩm */}
-      <Modal
+      {/* Modal thêm sản phẩm */}      <Modal
       title="Thêm sản phẩm mới"
       open={addModalVisible}
       onCancel={() => setAddModalVisible(false)}
       footer={null}
-      width={800}
+      width={1200}
       destroyOnClose
+      style={{ top: 20 }}
       >
       <AddProductForm
         onSuccess={() => {
@@ -751,9 +803,7 @@ export default function ProductManagement() {
         </div>
         )
       )}
-      </Modal>
-
-      <style jsx global>{`
+      </Modal>      <style jsx global>{`
       .product-table .ant-table-cell {
         padding: 12px 16px;
         vertical-align: middle;
@@ -765,6 +815,13 @@ export default function ProductManagement() {
       
       .ant-descriptions-item-label {
         background-color: #fafafa;
+      }
+      
+      .search-result-info {
+        padding: 8px 12px;
+        background-color: #f0f7ff;
+        border-radius: 4px;
+        border-left: 3px solid #1890ff;
       }
       
       /* Thêm CSS cho dropdown kết quả tìm kiếm */
@@ -787,9 +844,20 @@ export default function ProductManagement() {
         cursor: pointer;
         transition: background-color 0.3s;
       }
+        .search-result-item:hover {
+        background-color: #f0f8ff;
+      }
       
-      .search-result-item:hover {
-        background-color: #f5f5f5;
+      .search-result-title {
+        font-weight: 600;
+        color: #1890ff;
+      }
+      
+      .search-result-hint {
+        font-style: italic;
+        color: #52c41a;
+        font-size: 12px;
+        margin-top: 4px;
       }
       
       .empty-results, .search-loading {
