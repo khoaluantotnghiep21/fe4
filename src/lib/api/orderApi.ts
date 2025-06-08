@@ -48,8 +48,15 @@ export interface OrderItem {
     dongia: number;
     trangthai: string;
     ngaydat: string;
-    madonhang: string;
-    tongtien: number;
+    madonhang?: string;
+    ngaymuahang?: string;
+    giamgiatructiep?: number;
+    hoten?: string;
+    diachi?:string;
+    sodienthoai?:string;
+    thanhtien? : number;
+    tongtien?: number;
+    phuongthucthanhtoan?: string;
 }
 
 
@@ -105,6 +112,23 @@ export async function getUserOrders(phoneNumber: string): Promise<OrderItem[]> {
     }
 }
 
+export async function getOderByUserId(id: string): Promise<OrderItem[]> {
+    try {
+        const response = await axiosClient.get(`/purchase-order/getOderByUserId/${id}`);
+        if (response.data && response.data.data) {
+            return response.data.data;
+        }
+        return [];
+    } catch (error) {
+        if (typeof window !== "undefined") {
+            message.error("Lỗi khi lấy danh sách đơn hàng");
+        } else {
+            console.error("Error fetching user orders:", error);
+        }
+        return [];
+    }
+}
+
 export async function cancelOrder(orderId: string): Promise<boolean> {
     try {
         const response = await axiosClient.put(`/order/cancelOrder/${orderId}`);
@@ -120,5 +144,22 @@ export async function cancelOrder(orderId: string): Promise<boolean> {
             console.error("Error canceling order:", error);
         }
         return false;
+    }
+}
+
+export async function getOderByMaDonHang(madonhang: string): Promise<OrderItem[]> {
+    try {
+        const response = await axiosClient.get(`/purchase-order/getOrderByMadonhang/${madonhang}`);
+        if (response.data && response.data.data) {
+            return response.data.data;
+        }
+        return [];
+    } catch (error) {
+        if (typeof window !== "undefined") {
+            message.error("Lỗi khi lấy danh sách đơn hàng");
+        } else {
+            console.error("Error fetching user orders:", error);
+        }
+        return [];
     }
 }
