@@ -14,15 +14,21 @@ import {
     SettingOutlined,
     LogoutOutlined,
     TagsOutlined,
+    ExclamationCircleTwoTone,
+    WarningTwoTone,
+    MenuFoldOutlined, MenuUnfoldOutlined
 } from '@ant-design/icons';
+import UserManagement from '../info-user/UserManagement';
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
 
 export default function AdminDashboard() {
     const { user, isUserLoaded, logout } = useUser();
+    const [collapsed, setCollapsed] = useState(false);
     const router = useRouter();
     const [selectedKey, setSelectedKey] = useState('dashboard');
+    const [expiredStatus, setExpiredStatus] = useState({ hasExpired: false, hasWarning: false });
 
     useEffect(() => {
         if (isUserLoaded && (!user || !user?.roles || !user.roles?.includes('admin'))) {
@@ -45,16 +51,28 @@ export default function AdminDashboard() {
 
     return (
         <Layout style={{ minHeight: '100vh' }}>
-            <Sider width={250} theme="dark">
+            <Sider
+                width={250}
+                theme="dark"
+                collapsible
+                collapsed={collapsed}
+                onCollapse={setCollapsed}
+                breakpoint="md"
+                collapsedWidth={60}
+                style={{ minHeight: '100vh' }}
+            >
                 <div className="p-4 h-16 flex items-center justify-center border-b border-gray-700">
-                    <Title level={4} style={{ color: 'white', margin: 0 }}>
-                        Quản trị hệ thống
-                    </Title>
-                </div>                <Menu
+                    {!collapsed && (
+                        <Title level={4} style={{ color: 'white', margin: 0 }}>
+                            Quản trị hệ thống
+                        </Title>
+                    )}
+                </div>
+                <Menu
                     theme="dark"
                     mode="inline"
                     selectedKeys={[selectedKey]}
-                    onClick={({key}) => setSelectedKey(key)}
+                    onClick={({ key }) => setSelectedKey(key)}
                     items={[
                         {
                             key: 'dashboard',
@@ -70,7 +88,7 @@ export default function AdminDashboard() {
                             key: 'products',
                             icon: <AppstoreOutlined />,
                             label: 'Quản lý sản phẩm',
-                        },                        {
+                        }, {
                             key: 'promotions',
                             icon: <TagsOutlined />,
                             label: 'Quản lý khuyến mãi',
@@ -95,14 +113,36 @@ export default function AdminDashboard() {
                 />
             </Sider>
             <Layout>
-                <Header style={{ background: '#fff', padding: '0 24px' }}>                    <div className="flex justify-between items-center">                        <Title level={3} style={{ margin: 0 }}>
-                            {selectedKey === 'dashboard' && 'Tổng quan'}
-                            {selectedKey === 'products' && 'Quản lý sản phẩm'}
-                            {selectedKey === 'users' && 'Quản lý người dùng'}
-                            {selectedKey === 'promotions' && 'Quản lý khuyến mãi'}
-                            {selectedKey === 'orders' && 'Quản lý đơn hàng'}
-                            {selectedKey === 'settings' && 'Cài đặt hệ thống'}
-                        </Title>
+                <Header style={{ background: '#fff', padding: '0 24px', position: 'sticky', top: 0, zIndex: 10 }}>
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center">
+                            <Title level={3} style={{ margin: 0 }}>
+                                {selectedKey === 'dashboard' && 'Tổng quan'}
+                                {selectedKey === 'products' && (
+                                    <>
+                                        Quản lý sản phẩm
+                                        {expiredStatus.hasExpired && (
+                                            <ExclamationCircleTwoTone
+                                                twoToneColor="#ff4d4f"
+                                                style={{ marginLeft: 12, fontSize: 24, verticalAlign: 'middle' }}
+                                                title="Có thuốc đã hết hạn!"
+                                            />
+                                        )}
+                                        {!expiredStatus.hasExpired && expiredStatus.hasWarning && (
+                                            <WarningTwoTone
+                                                twoToneColor="#faad14"
+                                                style={{ marginLeft: 12, fontSize: 24, verticalAlign: 'middle' }}
+                                                title="Có thuốc sắp hết hạn!"
+                                            />
+                                        )}
+                                    </>
+                                )}
+                                {selectedKey === 'users' && 'Quản lý người dùng'}
+                                {selectedKey === 'promotions' && 'Quản lý khuyến mãi'}
+                                {selectedKey === 'orders' && 'Quản lý đơn hàng'}
+                                {selectedKey === 'settings' && 'Cài đặt hệ thống'}
+                            </Title>
+                        </div>
                         <div className="flex items-center">
                             <span className="mr-4">Xin chào, {user.hoten}</span>
                             <Button type="primary" danger onClick={handleLogout}>
@@ -110,7 +150,8 @@ export default function AdminDashboard() {
                             </Button>
                         </div>
                     </div>
-                </Header>                <Content style={{ margin: '24px 16px', minHeight: 280 }}>
+                </Header>
+                <Content style={{ margin: '24px 16px', minHeight: 280 }}>
                     {selectedKey === 'dashboard' && (
                         <>
                             <Row gutter={16}>
@@ -160,11 +201,41 @@ export default function AdminDashboard() {
                             </div>
                         </>
                     )}
-                    {selectedKey === 'products' && <ProductManagement />}
+                    {selectedKey === 'products' && (
+                        <ProductManagement onExpiredStatusChange={setExpiredStatus} />
+                    )}
+                    {selectedKey === 'users' && <UserManagement />}
                     {selectedKey === 'promotions' && <PromotionManagement />}
-
                 </Content>
             </Layout>
+             <style jsx global>{`
+                @media (max-width: 900px) {
+                    .ant-layout-sider {
+                        position: fixed !important;
+                        z-index: 1001;
+                        height: 100vh !important;
+                        left: 0;
+                        top: 0;
+                    }
+                    .ant-layout-content {
+                        margin-left: 0 !important;
+                    }
+                }
+                @media (max-width: 768px) {
+                    .ant-layout-sider {
+                        width: 60px !important;
+                        min-width: 60px !important;
+                        max-width: 60px !important;
+                    }
+                    .ant-layout-header {
+                        padding-left: 16px !important;
+                        padding-right: 16px !important;
+                    }
+                    .ant-typography {
+                        font-size: 18px !important;
+                    }
+                }
+            `}</style>
         </Layout>
     );
 } 

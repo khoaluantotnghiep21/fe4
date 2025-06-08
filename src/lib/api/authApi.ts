@@ -18,19 +18,12 @@ export const AuthErrors = {
 };
 
 export async function getUsers(): Promise<User[]> {
-  const response = await axiosClient.get("/users");
+  const response = await axiosClient.get("/identityuser/all");
+  console.log("getUsers response:", response.data);
   return response.data;
 }
 
-export async function getUserById(id: string): Promise<User | null> {
-  try {
-    const response = await axiosClient.get(`/users/${id}`);
-    return response.data;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (error) {
-    return null;
-  }
-}
+
 
 export async function getUserRole(id: string): Promise<User | null> {
   try {
@@ -177,3 +170,6 @@ export async function logout(): Promise<void> {
   localStorage.removeItem("user");
   return Promise.resolve();
 }
+
+
+
