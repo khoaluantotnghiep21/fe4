@@ -56,7 +56,7 @@ import CustomNotification from '@/components/common/CustomNotificationProps';
 const { TextArea } = Input;
 const { Title, Text } = Typography;
 const { Option } = Select;
-const { TabPane } = Tabs;
+// Removed TabPane import - using items prop instead
 
 interface EditProductFormProps {
   product: any;
@@ -560,555 +560,565 @@ export default function EditProductForm({ product, onCancel, onSuccess }: EditPr
         </div>
       </div>
       
-      <Spin spinning={loading}>
-        <Tabs 
+      <Spin spinning={loading}>        <Tabs 
           activeKey={activeTab} 
           onChange={setActiveTab}
           type="card"
           className="product-edit-tabs"
-        >
-          <TabPane tab="Thông tin cơ bản" key="1">
-            <Form
-              form={form}
-              layout="vertical"
-              onFinish={handleSubmit}
-              initialValues={{
-                ...product,
-                ngaysanxuat: product.ngaysanxuat ? dayjs(product.ngaysanxuat) : undefined,
-              }}
-            >
-              <Row gutter={24}>
-                <Col xs={24} md={12}>
-                  <Card title="Thông tin cơ bản" bordered={false} className="mb-6">
-                    <Form.Item 
-                      name="tensanpham" 
-                      label="Tên sản phẩm" 
-                      rules={[{ required: true, message: 'Vui lòng nhập tên sản phẩm' }]}
-                    >
-                      <Input placeholder="Nhập tên sản phẩm" />
-                    </Form.Item>
-                    
-                    <Form.Item 
-                      name="dangbaoche"
-                      label="Dạng bào chế" 
-                      rules={[{ required: true, message: 'Vui lòng nhập dạng bào chế' }]}
-                    >
-                      <Input placeholder="Nhập dạng bào chế" />
-                    </Form.Item>
-                    
-                    <Form.Item 
-                      name="motangan" 
-                      label="Mô tả ngắn"
-                      rules={[{ required: true, message: 'Vui lòng nhập mô tả ngắn' }]}
-                    >
-                      <TextArea rows={4} placeholder="Nhập mô tả ngắn" />
-                    </Form.Item>
-                    
-                    <Row gutter={16}>
-                      <Col span={12}>
-                        <Form.Item 
-                          name="gianhap" 
-                          label="Giá nhập"
-                          rules={[{ required: true, message: 'Vui lòng nhập giá nhập' }]}
-                        >
-                          <InputNumber
-                            style={{ width: '100%' }}
-                            formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                            placeholder="Nhập giá nhập"
-                            min={0}
-                          />
-                        </Form.Item>
-                      </Col>
-                      <Col span={12}>
-                        <Form.Item 
-                          name="thuockedon" 
-                          label="Thuốc kê đơn" 
-                          valuePropName="checked"
-                        >
-                          <Switch checkedChildren="Có" unCheckedChildren="Không" />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-
-                    <Row gutter={16}>
-                      <Col span={12}>
-                        <Form.Item 
-                          name="madanhmuc" 
-                          label="Danh mục"
-                          rules={[{ required: true, message: 'Vui lòng chọn danh mục' }]}
-                        >
-                          <Select
-                            showSearch
-                            placeholder="Chọn danh mục"
-                            optionFilterProp="children"
-                            loading={loadingDanhMuc}
-                            filterOption={(input, option) => 
-                              (option?.label?.toString().toLowerCase() || '').includes(input.toLowerCase())
-                            }
-                            options={danhMucList.map(dm => ({
-                              value: dm.madanhmuc,
-                              label: dm.tendanhmuc,
-                            }))}
-                          />
-                        </Form.Item>
-                      </Col>
-                      <Col span={12}>
-                        <Form.Item 
-                          name="mathuonghieu" 
-                          label="Thương hiệu"
-                          rules={[{ required: true, message: 'Vui lòng chọn thương hiệu' }]}
-                        >
-                          <Select
-                            showSearch
-                            placeholder="Chọn thương hiệu"
-                            optionFilterProp="children"
-                            loading={loadingThuongHieu}
-                            filterOption={(input, option) => 
-                              (option?.label?.toString().toLowerCase() || '').includes(input.toLowerCase())
-                            }
-                            options={thuongHieuList.map(th => ({
-                              value: th.mathuonghieu,
-                              label: th.tenthuonghieu,
-                            }))}
-                          />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-
-                    <Form.Item 
-                      name="machuongtrinh" 
-                      label="Chương trình khuyến mãi"
-                    >
-                      <Select
-                        showSearch
-                        placeholder="Chọn chương trình khuyến mãi"
-                        optionFilterProp="children"
-                        loading={loadingKhuyenMai}
-                        allowClear
-                        filterOption={(input, option) => 
-                          (option?.label?.toString().toLowerCase() || '').includes(input.toLowerCase())
-                        }
-                        options={khuyenMaiList.map(km => ({
-                          value: km.machuongtrinh,
-                          label: km.tenchuongtrinh,
-                        }))}
-                      />
-                    </Form.Item>
-                  </Card>
-                  
-                  <Card title="Thông tin thời gian" bordered={false}>
-                    <Row gutter={16}>
-                      <Col span={12}>
-                        <Form.Item 
-                          name="ngaysanxuat" 
-                          label="Ngày sản xuất"
-                          rules={[{ required: true, message: 'Vui lòng chọn ngày sản xuất' }]}
-                        >
-                          <DatePicker 
-                            style={{ width: '100%' }}
-                            format={datetimeFormat}
-                            placeholder="Chọn ngày sản xuất"
-                          />
-                        </Form.Item>
-                      </Col>
-                      <Col span={12}>
-                        <Form.Item 
-                          name="hansudung" 
-                          label="Hạn sử dụng (tháng)"
-                          rules={[{ required: true, message: 'Vui lòng nhập hạn sử dụng' }]}
-                        >
-                          <InputNumber
-                            style={{ width: '100%' }}
-                            placeholder="Nhập hạn sử dụng (tháng)"
-                            min={1}
-                          />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                  </Card>
-                </Col>
-                
-                <Col xs={24} md={12}>
-                  <Card title="Thông tin chi tiết" bordered={false}>
-                    <Form.Item 
-                      name="congdung" 
-                      label="Công dụng"
-                      rules={[{ required: true, message: 'Vui lòng nhập công dụng' }]}
-                    >
-                      <TextArea rows={4} placeholder="Nhập công dụng" />
-                    </Form.Item>
-                    
-                    <Form.Item 
-                      name="chidinh" 
-                      label="Chỉ định"
-                      rules={[{ required: true, message: 'Vui lòng nhập chỉ định' }]}
-                    >
-                      <TextArea rows={4} placeholder="Nhập chỉ định" />
-                    </Form.Item>
-                    
-                    <Form.Item 
-                      name="chongchidinh" 
-                      label="Chống chỉ định"
-                    >
-                      <TextArea rows={4} placeholder="Nhập chống chỉ định" />
-                    </Form.Item>
-                    
-                    <Form.Item 
-                      name="doituongsudung" 
-                      label="Đối tượng sử dụng"
-                    >
-                      <TextArea rows={4} placeholder="Nhập đối tượng sử dụng" />
-                    </Form.Item>
-                    
-                    <Form.Item 
-                      name="luuy" 
-                      label="Lưu ý"
-                    >
-                      <TextArea rows={4} placeholder="Nhập lưu ý khi sử dụng" />
-                    </Form.Item>
-                  </Card>
-                </Col>
-              </Row>
-            </Form>
-          </TabPane>
-          
-          <TabPane tab="Ảnh sản phẩm" key="2">
-            <Card 
-              title={<Title level={5}>Quản lý ảnh sản phẩm</Title>}
-              bordered={false}
-            >
-              <div className="product-info-summary mb-4">
-                <Title level={5}>Thông tin sản phẩm:</Title>
-                <div className="flex flex-wrap gap-4">
-                  <div><Text strong>Mã sản phẩm:</Text> {product.masanpham}</div>
-                  <div><Text strong>Tên sản phẩm:</Text> {product.tensanpham}</div>
-                </div>
-              </div>
-              
-              <Divider />
-              
-              <div className="mb-4">
-                <Text type="secondary" className="text-guide">
-                  Tải lên ảnh sản phẩm (tối đa 5 ảnh). Nhấn vào biểu tượng sao để đặt làm ảnh chính.
-                </Text>
-              </div>
-              
-              <Upload
-                listType="picture-card"
-                fileList={fileList}
-                onChange={handleFileChange}
-                onPreview={handlePreview}
-                beforeUpload={() => false}
-                multiple
-                maxCount={5}
-                className="upload-container"
-              >
-                {fileList.length >= 5 ? null : (
-                  <div>
-                    <PlusOutlined />
-                    <div style={{ marginTop: 8 }}>Chọn ảnh</div>
-                  </div>
-                )}
-              </Upload>
-
-              {fileList.length > 0 && (
-                <div className="image-list-container mt-4">
-                  <Title level={5}>Danh sách ảnh đã chọn:</Title>
-                  <div className="image-list">
-                    {fileList.map((file, index) => (
-                      <div key={file.uid} className="image-item">
-                        <img 
-                          src={file.url || (file.preview as string)} 
-                          alt={`Image ${index + 1}`}
-                          style={{ width: '120px', height: '120px', objectFit: 'cover' }}
-                        />
-                        <div className="image-actions">
-                          <Tooltip title="Xem trước">
-                            <Button 
-                              icon={<EyeOutlined />} 
-                              size="middle" 
-                              onClick={() => handlePreview(file)}
-                            />
-                          </Tooltip>
-                          <Tooltip title={mainImageIndex === index ? 'Ảnh chính' : 'Đặt làm ảnh chính'}>
-                            <Button 
-                              icon={mainImageIndex === index ? <StarFilled style={{ color: '#faad14' }} /> : <StarOutlined />} 
-                              size="middle" 
-                              onClick={() => setMainImage(index)}
-                            />
-                          </Tooltip>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <Modal
-                open={previewOpen}
-                title={previewTitle}
-                footer={null}
-                onCancel={() => setPreviewOpen(false)}
-              >
-                <img alt="Preview" style={{ width: '100%' }} src={previewImage} />
-              </Modal>
-              
-              <div className="mt-4 flex justify-end">
-                <Button 
-                  type="primary" 
-                  onClick={handleUploadImages}
-                  icon={<UploadOutlined />}
-                  disabled={!imageChanged || fileList.length === 0}
+          items={[
+            {
+              key: "1",
+              label: "Thông tin cơ bản",
+              children: (
+                <Form
+                  form={form}
+                  layout="vertical"
+                  onFinish={handleSubmit}
+                  initialValues={{
+                    ...product,
+                    ngaysanxuat: product.ngaysanxuat ? dayjs(product.ngaysanxuat) : undefined,
+                  }}
                 >
-                  {imageChanged ? 'Lưu thay đổi ảnh' : 'Không có thay đổi'}
-                </Button>
-              </div>
-            </Card>
-          </TabPane>
-          
-          <TabPane tab="Đơn vị tính & Thành phần" key="3">
-            <div className="unit-ingredient-container">
-              <Row gutter={24}>
-                <Col xs={24} md={12}>
-                  <Card 
-                    title={<Title level={5}>Quản lý đơn vị tính</Title>}
-                    bordered={false}
-                    className="product-card mb-4"
-                  >
-                    <div className="product-info-summary mb-4">
-                      <div className="flex flex-wrap gap-4">
-                        <div><Text strong>Mã sản phẩm:</Text> {product.masanpham}</div>
-                        <div><Text strong>Tên sản phẩm:</Text> {product.tensanpham}</div>
-                      </div>
-                    </div>
-
-                    <Form
-                      form={unitForm}
-                      layout="vertical"
-                      onFinish={handleAddUnit}
-                    >
-                      <Form.Item
-                        name="madonvitinh"
-                        label="Đơn vị tính"
-                        rules={[{ required: true, message: 'Vui lòng chọn đơn vị tính' }]}
-                      >
-                        <Select
-                          showSearch
-                          placeholder="Chọn đơn vị tính"
-                          optionFilterProp="children"
-                          loading={loadingUnits}
-                          filterOption={(input, option) => 
-                            (option?.label?.toString().toLowerCase() || '').includes(input.toLowerCase())
-                          }
-                          options={unitList.map(unit => ({
-                            value: unit.madonvitinh,
-                            label: unit.donvitinh,
-                          }))}
-                        />
-                      </Form.Item>
-                      
-                      <Form.Item
-                        name="giaban"
-                        label="Giá bán"
-                        rules={[{ required: true, message: 'Vui lòng nhập giá bán' }]}
-                      >
-                        <InputNumber
-                          className="form-input"
-                          style={{ width: '100%' }}
-                          formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                          placeholder="Nhập giá bán"
-                          min={0}
-                        />
-                      </Form.Item>
-                      
-                      <Form.Item
-                        name="dinhluong"
-                        label="Định lượng"
-                        rules={[{ required: true, message: 'Vui lòng nhập định lượng' }]}
-                      >
-                        <InputNumber
-                          className="form-input"
-                          style={{ width: '100%' }}
-                          placeholder="Nhập định lượng"
-                          min={0}
-                        />
-                      </Form.Item>
-                      
-                      <Form.Item>
-                        <Button 
-                          type="primary" 
-                          htmlType="submit"
-                          icon={<PlusOutlined />}
+                  <Row gutter={24}>
+                    <Col xs={24} md={12}>
+                      <Card title="Thông tin cơ bản" bordered={false} className="mb-6">
+                        <Form.Item 
+                          name="tensanpham" 
+                          label="Tên sản phẩm" 
+                          rules={[{ required: true, message: 'Vui lòng nhập tên sản phẩm' }]}
                         >
-                          Thêm đơn vị tính
-                        </Button>
-                      </Form.Item>
-                    </Form>
+                          <Input placeholder="Nhập tên sản phẩm" />
+                        </Form.Item>
+                        
+                        <Form.Item 
+                          name="dangbaoche"
+                          label="Dạng bào chế" 
+                          rules={[{ required: true, message: 'Vui lòng nhập dạng bào chế' }]}
+                        >
+                          <Input placeholder="Nhập dạng bào chế" />
+                        </Form.Item>
+                        
+                        <Form.Item 
+                          name="motangan" 
+                          label="Mô tả ngắn"
+                          rules={[{ required: true, message: 'Vui lòng nhập mô tả ngắn' }]}
+                        >
+                          <TextArea rows={4} placeholder="Nhập mô tả ngắn" />
+                        </Form.Item>
+                        
+                        <Row gutter={16}>
+                          <Col span={12}>
+                            <Form.Item 
+                              name="gianhap" 
+                              label="Giá nhập"
+                              rules={[{ required: true, message: 'Vui lòng nhập giá nhập' }]}
+                            >
+                              <InputNumber
+                                style={{ width: '100%' }}
+                                formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                placeholder="Nhập giá nhập"
+                                min={0}
+                              />
+                            </Form.Item>
+                          </Col>
+                          <Col span={12}>
+                            <Form.Item 
+                              name="thuockedon" 
+                              label="Thuốc kê đơn" 
+                              valuePropName="checked"
+                            >
+                              <Switch checkedChildren="Có" unCheckedChildren="Không" />
+                            </Form.Item>
+                          </Col>
+                        </Row>
+
+                        <Row gutter={16}>
+                          <Col span={12}>
+                            <Form.Item 
+                              name="madanhmuc" 
+                              label="Danh mục"
+                              rules={[{ required: true, message: 'Vui lòng chọn danh mục' }]}
+                            >
+                              <Select
+                                showSearch
+                                placeholder="Chọn danh mục"
+                                optionFilterProp="children"
+                                loading={loadingDanhMuc}
+                                filterOption={(input, option) => 
+                                  (option?.label?.toString().toLowerCase() || '').includes(input.toLowerCase())
+                                }
+                                options={danhMucList.map(dm => ({
+                                  value: dm.madanhmuc,
+                                  label: dm.tendanhmuc,
+                                }))}
+                              />
+                            </Form.Item>
+                          </Col>
+                          <Col span={12}>
+                            <Form.Item 
+                              name="mathuonghieu" 
+                              label="Thương hiệu"
+                              rules={[{ required: true, message: 'Vui lòng chọn thương hiệu' }]}
+                            >
+                              <Select
+                                showSearch
+                                placeholder="Chọn thương hiệu"
+                                optionFilterProp="children"
+                                loading={loadingThuongHieu}
+                                filterOption={(input, option) => 
+                                  (option?.label?.toString().toLowerCase() || '').includes(input.toLowerCase())
+                                }
+                                options={thuongHieuList.map(th => ({
+                                  value: th.mathuonghieu,
+                                  label: th.tenthuonghieu,
+                                }))}
+                              />
+                            </Form.Item>
+                          </Col>
+                        </Row>
+
+                        <Form.Item 
+                          name="machuongtrinh" 
+                          label="Chương trình khuyến mãi"
+                        >
+                          <Select
+                            showSearch
+                            placeholder="Chọn chương trình khuyến mãi"
+                            optionFilterProp="children"
+                            loading={loadingKhuyenMai}
+                            allowClear
+                            filterOption={(input, option) => 
+                              (option?.label?.toString().toLowerCase() || '').includes(input.toLowerCase())
+                            }
+                            options={khuyenMaiList.map(km => ({
+                              value: km.machuongtrinh,
+                              label: km.tenchuongtrinh,
+                            }))}
+                          />
+                        </Form.Item>
+                      </Card>
+                      
+                      <Card title="Thông tin thời gian" bordered={false}>
+                        <Row gutter={16}>
+                          <Col span={12}>
+                            <Form.Item 
+                              name="ngaysanxuat" 
+                              label="Ngày sản xuất"
+                              rules={[{ required: true, message: 'Vui lòng chọn ngày sản xuất' }]}
+                            >
+                              <DatePicker 
+                                style={{ width: '100%' }}
+                                format={datetimeFormat}
+                                placeholder="Chọn ngày sản xuất"
+                              />
+                            </Form.Item>
+                          </Col>
+                          <Col span={12}>
+                            <Form.Item 
+                              name="hansudung" 
+                              label="Hạn sử dụng (tháng)"
+                              rules={[{ required: true, message: 'Vui lòng nhập hạn sử dụng' }]}
+                            >
+                              <InputNumber
+                                style={{ width: '100%' }}
+                                placeholder="Nhập hạn sử dụng (tháng)"
+                                min={1}
+                              />
+                            </Form.Item>
+                          </Col>
+                        </Row>
+                      </Card>
+                    </Col>
                     
-                    {productUnits.length > 0 && (
-                      <div className="mt-4">
-                        <Divider orientation="left">Đơn vị tính đã thêm</Divider>
-                        <Table
-                          dataSource={productUnits}
-                          columns={[
-                            {
-                              title: 'Đơn vị tính',
-                              dataIndex: 'donvitinh',
-                              key: 'donvitinh'
-                            },
-                            {
-                              title: 'Giá bán',
-                              dataIndex: 'giaban',
-                              key: 'giaban',
-                              render: (giaban) => `${giaban.toLocaleString('vi-VN')} đ`
-                            },
-                            {
-                              title: 'Định lượng',
-                              dataIndex: 'dinhluong',
-                              key: 'dinhluong'
-                            },
-                            {
-                              title: 'Thao tác',
-                              key: 'action',
-                              render: (_, record) => (
-                                <Space size="middle">
-                                  <Button 
-                                    type="text" 
-                                    icon={<EditOutlined />}
-                                    onClick={() => handleEditUnit(record)}
-                                  />
-                                  <Button 
-                                    type="text" 
-                                    danger 
-                                    icon={<DeleteOutlined />}
-                                    onClick={() => handleDeleteUnit(record)}
-                                  />
-                                </Space>
-                              ),
-                            },
-                          ]}
-                          pagination={false}
-                          size="small"
-                        />
+                    <Col xs={24} md={12}>
+                      <Card title="Thông tin chi tiết" bordered={false}>
+                        <Form.Item 
+                          name="congdung" 
+                          label="Công dụng"
+                          rules={[{ required: true, message: 'Vui lòng nhập công dụng' }]}
+                        >
+                          <TextArea rows={4} placeholder="Nhập công dụng" />
+                        </Form.Item>
+                        
+                        <Form.Item 
+                          name="chidinh" 
+                          label="Chỉ định"
+                          rules={[{ required: true, message: 'Vui lòng nhập chỉ định' }]}
+                        >
+                          <TextArea rows={4} placeholder="Nhập chỉ định" />
+                        </Form.Item>
+                        
+                        <Form.Item 
+                          name="chongchidinh" 
+                          label="Chống chỉ định"
+                        >
+                          <TextArea rows={4} placeholder="Nhập chống chỉ định" />
+                        </Form.Item>
+                        
+                        <Form.Item 
+                          name="doituongsudung" 
+                          label="Đối tượng sử dụng"
+                        >
+                          <TextArea rows={4} placeholder="Nhập đối tượng sử dụng" />
+                        </Form.Item>
+                        
+                        <Form.Item 
+                          name="luuy" 
+                          label="Lưu ý"
+                        >
+                          <TextArea rows={4} placeholder="Nhập lưu ý khi sử dụng" />
+                        </Form.Item>
+                      </Card>
+                    </Col>
+                  </Row>
+                </Form>
+              )
+            },
+            {
+              key: "2",
+              label: "Ảnh sản phẩm",
+              children: (
+                <Card 
+                  title={<Title level={5}>Quản lý ảnh sản phẩm</Title>}
+                  bordered={false}
+                >
+                  <div className="product-info-summary mb-4">
+                    <Title level={5}>Thông tin sản phẩm:</Title>
+                    <div className="flex flex-wrap gap-4">
+                      <div><Text strong>Mã sản phẩm:</Text> {product.masanpham}</div>
+                      <div><Text strong>Tên sản phẩm:</Text> {product.tensanpham}</div>
+                    </div>
+                  </div>
+                  
+                  <Divider />
+                  
+                  <div className="mb-4">
+                    <Text type="secondary" className="text-guide">
+                      Tải lên ảnh sản phẩm (tối đa 5 ảnh). Nhấn vào biểu tượng sao để đặt làm ảnh chính.
+                    </Text>
+                  </div>
+                  
+                  <Upload
+                    listType="picture-card"
+                    fileList={fileList}
+                    onChange={handleFileChange}
+                    onPreview={handlePreview}
+                    beforeUpload={() => false}
+                    multiple
+                    maxCount={5}
+                    className="upload-container"
+                  >
+                    {fileList.length >= 5 ? null : (
+                      <div>
+                        <PlusOutlined />
+                        <div style={{ marginTop: 8 }}>Chọn ảnh</div>
                       </div>
                     )}
-                  </Card>
-                </Col>
+                  </Upload>
 
-                <Col xs={24} md={12}>
-                  <Card 
-                    title={<Title level={5}>Quản lý thành phần sản phẩm</Title>}
-                    bordered={false}
-                    className="product-card"
-                  >
-                    <div className="product-info-summary mb-4">
-                      <div className="flex flex-wrap gap-4">
-                        <div><Text strong>Mã sản phẩm:</Text> {product.masanpham}</div>
-                        <div><Text strong>Tên sản phẩm:</Text> {product.tensanpham}</div>
-                      </div>
-                    </div>
-
-                    <Form
-                      form={ingredientForm}
-                      layout="vertical"
-                      onFinish={handleAddIngredient}
-                    >
-                      <Form.Item
-                        name="mathanhphan"
-                        label="Thành phần"
-                        rules={[{ required: true, message: 'Vui lòng chọn thành phần' }]}
-                      >
-                        <Select
-                          showSearch
-                          placeholder="Chọn thành phần"
-                          optionFilterProp="children"
-                          loading={loadingIngredients}
-                          filterOption={(input, option) => 
-                            (option?.label?.toString().toLowerCase() || '').includes(input.toLowerCase())
-                          }
-                          options={ingredientList.map(ingredient => ({
-                            value: ingredient.mathanhphan,
-                            label: ingredient.tenthanhphan,
-                          }))}
-                          dropdownRender={(menu) => (
-                            <>
-                              {menu}
-                              <Divider style={{ margin: '8px 0' }} />
-                              <div style={{ display: 'flex', padding: '0 8px 4px' }}>
-                                <Input
-                                  placeholder="Tên thành phần mới"
-                                  value={newIngredientName}
-                                  onChange={(e) => setNewIngredientName(e.target.value)}
-                                  style={{ marginRight: 8, flex: 1 }}
-                                />
-                                <Button type="text" icon={<PlusOutlined />} onClick={handleAddNewIngredient}>
-                                  Thêm mới
-                                </Button>
-                              </div>
-                            </>
-                          )}
-                        />
-                      </Form.Item>
-                      
-                      <Form.Item
-                        name="hamluong"
-                        label="Hàm lượng"
-                        rules={[{ required: true, message: 'Vui lòng nhập hàm lượng' }]}
-                      >
-                        <Input placeholder="Nhập hàm lượng (vd: 500mg)" />
-                      </Form.Item>
-                      
-                      <Form.Item>
-                        <Button 
-                          type="primary" 
-                          htmlType="submit"
-                          icon={<PlusOutlined />}
-                        >
-                          Thêm thành phần
-                        </Button>
-                      </Form.Item>
-                    </Form>
-                    
-                    {productIngredients.length > 0 && (
-                      <div className="mt-4">
-                        <Divider orientation="left">Thành phần đã thêm</Divider>
-                        <Table
-                          dataSource={productIngredients}
-                          columns={[
-                            {
-                              title: 'Tên thành phần',
-                              dataIndex: 'tenthanhphan',
-                              key: 'tenthanhphan'
-                            },
-                            {
-                              title: 'Hàm lượng',
-                              dataIndex: 'hamluong',
-                              key: 'hamluong'
-                            },
-                            {
-                              title: 'Thao tác',
-                              key: 'action',
-                              render: (_, record) => (
+                  {fileList.length > 0 && (
+                    <div className="image-list-container mt-4">
+                      <Title level={5}>Danh sách ảnh đã chọn:</Title>
+                      <div className="image-list">
+                        {fileList.map((file, index) => (
+                          <div key={file.uid} className="image-item">
+                            <img 
+                              src={file.url || (file.preview as string)} 
+                              alt={`Image ${index + 1}`}
+                              style={{ width: '120px', height: '120px', objectFit: 'cover' }}
+                            />
+                            <div className="image-actions">
+                              <Tooltip title="Xem trước">
                                 <Button 
-                                  type="text" 
-                                  danger 
-                                  icon={<DeleteOutlined />}
-                                  onClick={() => handleDeleteIngredient(record)}
+                                  icon={<EyeOutlined />} 
+                                  size="middle" 
+                                  onClick={() => handlePreview(file)}
                                 />
-                              ),
-                            },
-                          ]}
-                          pagination={false}
-                          size="small"
-                        />
+                              </Tooltip>
+                              <Tooltip title={mainImageIndex === index ? 'Ảnh chính' : 'Đặt làm ảnh chính'}>
+                                <Button 
+                                  icon={mainImageIndex === index ? <StarFilled style={{ color: '#faad14' }} /> : <StarOutlined />} 
+                                  size="middle" 
+                                  onClick={() => setMainImage(index)}
+                                />
+                              </Tooltip>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    )}
-                  </Card>
-                </Col>
-              </Row>
-            </div>
-          </TabPane>
-        </Tabs>
+                    </div>
+                  )}
+
+                  <Modal
+                    open={previewOpen}
+                    title={previewTitle}
+                    footer={null}
+                    onCancel={() => setPreviewOpen(false)}
+                  >
+                    <img alt="Preview" style={{ width: '100%' }} src={previewImage} />
+                  </Modal>
+                  
+                  <div className="mt-4 flex justify-end">
+                    <Button 
+                      type="primary" 
+                      onClick={handleUploadImages}
+                      icon={<UploadOutlined />}
+                      disabled={!imageChanged || fileList.length === 0}
+                    >
+                      {imageChanged ? 'Lưu thay đổi ảnh' : 'Không có thay đổi'}
+                    </Button>
+                  </div>
+                </Card>
+              )
+            },
+            {
+              key: "3",
+              label: "Đơn vị tính & Thành phần",
+              children: (
+                <div className="unit-ingredient-container">
+                  <Row gutter={24}>
+                    <Col xs={24} md={12}>
+                      <Card 
+                        title={<Title level={5}>Quản lý đơn vị tính</Title>}
+                        bordered={false}
+                        className="product-card mb-4"
+                      >
+                        <div className="product-info-summary mb-4">
+                          <div className="flex flex-wrap gap-4">
+                            <div><Text strong>Mã sản phẩm:</Text> {product.masanpham}</div>
+                            <div><Text strong>Tên sản phẩm:</Text> {product.tensanpham}</div>
+                          </div>
+                        </div>
+
+                        <Form
+                          form={unitForm}
+                          layout="vertical"
+                          onFinish={handleAddUnit}
+                        >
+                          <Form.Item
+                            name="madonvitinh"
+                            label="Đơn vị tính"
+                            rules={[{ required: true, message: 'Vui lòng chọn đơn vị tính' }]}
+                          >
+                            <Select
+                              showSearch
+                              placeholder="Chọn đơn vị tính"
+                              optionFilterProp="children"
+                              loading={loadingUnits}
+                              filterOption={(input, option) => 
+                                (option?.label?.toString().toLowerCase() || '').includes(input.toLowerCase())
+                              }
+                              options={unitList.map(unit => ({
+                                value: unit.madonvitinh,
+                                label: unit.donvitinh,
+                              }))}
+                            />
+                          </Form.Item>
+                          
+                          <Form.Item
+                            name="giaban"
+                            label="Giá bán"
+                            rules={[{ required: true, message: 'Vui lòng nhập giá bán' }]}
+                          >
+                            <InputNumber
+                              className="form-input"
+                              style={{ width: '100%' }}
+                              formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                              placeholder="Nhập giá bán"
+                              min={0}
+                            />
+                          </Form.Item>
+                          
+                          <Form.Item
+                            name="dinhluong"
+                            label="Định lượng"
+                            rules={[{ required: true, message: 'Vui lòng nhập định lượng' }]}
+                          >
+                            <InputNumber
+                              className="form-input"
+                              style={{ width: '100%' }}
+                              placeholder="Nhập định lượng"
+                              min={0}
+                            />
+                          </Form.Item>
+                          
+                          <Form.Item>
+                            <Button 
+                              type="primary" 
+                              htmlType="submit"
+                              icon={<PlusOutlined />}
+                            >
+                              Thêm đơn vị tính
+                            </Button>
+                          </Form.Item>
+                        </Form>
+                        
+                        {productUnits.length > 0 && (
+                          <div className="mt-4">
+                            <Divider orientation="left">Đơn vị tính đã thêm</Divider>
+                            <Table
+                              dataSource={productUnits}
+                              columns={[
+                                {
+                                  title: 'Đơn vị tính',
+                                  dataIndex: 'donvitinh',
+                                  key: 'donvitinh'
+                                },
+                                {
+                                  title: 'Giá bán',
+                                  dataIndex: 'giaban',
+                                  key: 'giaban',
+                                  render: (giaban) => `${giaban.toLocaleString('vi-VN')} đ`
+                                },
+                                {
+                                  title: 'Định lượng',
+                                  dataIndex: 'dinhluong',
+                                  key: 'dinhluong'
+                                },
+                                {
+                                  title: 'Thao tác',
+                                  key: 'action',
+                                  render: (_, record) => (
+                                    <Space size="middle">
+                                      <Button 
+                                        type="text" 
+                                        icon={<EditOutlined />}
+                                        onClick={() => handleEditUnit(record)}
+                                      />
+                                      <Button 
+                                        type="text" 
+                                        danger 
+                                        icon={<DeleteOutlined />}
+                                        onClick={() => handleDeleteUnit(record)}
+                                      />
+                                    </Space>
+                                  ),
+                                },
+                              ]}
+                              pagination={false}
+                              size="small"
+                            />
+                          </div>
+                        )}
+                      </Card>
+                    </Col>
+
+                    <Col xs={24} md={12}>
+                      <Card 
+                        title={<Title level={5}>Quản lý thành phần sản phẩm</Title>}
+                        bordered={false}
+                        className="product-card"
+                      >
+                        <div className="product-info-summary mb-4">
+                          <div className="flex flex-wrap gap-4">
+                            <div><Text strong>Mã sản phẩm:</Text> {product.masanpham}</div>
+                            <div><Text strong>Tên sản phẩm:</Text> {product.tensanpham}</div>
+                          </div>
+                        </div>
+
+                        <Form
+                          form={ingredientForm}
+                          layout="vertical"
+                          onFinish={handleAddIngredient}
+                        >
+                          <Form.Item
+                            name="mathanhphan"
+                            label="Thành phần"
+                            rules={[{ required: true, message: 'Vui lòng chọn thành phần' }]}
+                          >
+                            <Select
+                              showSearch
+                              placeholder="Chọn thành phần"
+                              optionFilterProp="children"
+                              loading={loadingIngredients}
+                              filterOption={(input, option) => 
+                                (option?.label?.toString().toLowerCase() || '').includes(input.toLowerCase())
+                              }
+                              options={ingredientList.map(ingredient => ({
+                                value: ingredient.mathanhphan,
+                                label: ingredient.tenthanhphan,
+                              }))}
+                              dropdownRender={(menu) => (
+                                <>
+                                  {menu}
+                                  <Divider style={{ margin: '8px 0' }} />
+                                  <div style={{ display: 'flex', padding: '0 8px 4px' }}>
+                                    <Input
+                                      placeholder="Tên thành phần mới"
+                                      value={newIngredientName}
+                                      onChange={(e) => setNewIngredientName(e.target.value)}
+                                      style={{ marginRight: 8, flex: 1 }}
+                                    />
+                                    <Button type="text" icon={<PlusOutlined />} onClick={handleAddNewIngredient}>
+                                      Thêm mới
+                                    </Button>
+                                  </div>
+                                </>
+                              )}
+                            />
+                          </Form.Item>
+                          
+                          <Form.Item
+                            name="hamluong"
+                            label="Hàm lượng"
+                            rules={[{ required: true, message: 'Vui lòng nhập hàm lượng' }]}
+                          >
+                            <Input placeholder="Nhập hàm lượng (vd: 500mg)" />
+                          </Form.Item>
+                          
+                          <Form.Item>
+                            <Button 
+                              type="primary" 
+                              htmlType="submit"
+                              icon={<PlusOutlined />}
+                            >
+                              Thêm thành phần
+                            </Button>
+                          </Form.Item>
+                        </Form>
+                        
+                        {productIngredients.length > 0 && (
+                          <div className="mt-4">
+                            <Divider orientation="left">Thành phần đã thêm</Divider>
+                            <Table
+                              dataSource={productIngredients}
+                              columns={[
+                                {
+                                  title: 'Tên thành phần',
+                                  dataIndex: 'tenthanhphan',
+                                  key: 'tenthanhphan'
+                                },
+                                {
+                                  title: 'Hàm lượng',
+                                  dataIndex: 'hamluong',
+                                  key: 'hamluong'
+                                },
+                                {
+                                  title: 'Thao tác',
+                                  key: 'action',
+                                  render: (_, record) => (
+                                    <Button 
+                                      type="text" 
+                                      danger 
+                                      icon={<DeleteOutlined />}
+                                      onClick={() => handleDeleteIngredient(record)}
+                                    />
+                                  ),
+                                },
+                              ]}
+                              pagination={false}
+                              size="small"
+                            />
+                          </div>
+                        )}
+                      </Card>
+                    </Col>
+                  </Row>
+                </div>
+              )
+            }
+          ]}
+        />
       </Spin>
       
       <style jsx global>{`

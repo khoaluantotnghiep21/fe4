@@ -28,7 +28,7 @@ export async function getAllKhuyenMai(): Promise<KhuyenMai[]> {
   try {
     // Sửa lại đường dẫn API từ promition thành promotion cho đúng
     // Dựa vào ảnh bạn chia sẻ, trên BE endpoint vẫn đang là /promition/
-    const res = await axiosClient.get('/promition/getAllPromotion');
+    const res = await axiosClient.get('/promotion/getAllPromotion');
 
     console.log('Get all promotions response:', res);
     
@@ -48,7 +48,7 @@ export async function getAllKhuyenMai(): Promise<KhuyenMai[]> {
  */
 export async function createNewPromotion(data: CreatePromotionRequest): Promise<KhuyenMai | null> {
   try {    console.log('Creating new promotion with data:', data);
-    const response = await axiosClient.post('/promition/createNewPromotion', data);
+    const response = await axiosClient.post('/promotion/createNewPromotion', data);
     
     console.log('Create promotion response:', response);
     
@@ -82,7 +82,7 @@ export async function createNewPromotion(data: CreatePromotionRequest): Promise<
  */
 export async function updatePromotion(machuongtrinh: string, data: Partial<CreatePromotionRequest>): Promise<KhuyenMai | null> {
   try {    console.log(`Updating promotion ${machuongtrinh} with data:`, data);
-    const response = await axiosClient.put(`/promition/updatePromotion/${machuongtrinh}`, data);
+    const response = await axiosClient.put(`/promotion/updatePromotion/${machuongtrinh}`, data);
     
     console.log('Update promotion response:', response);
     
@@ -111,7 +111,7 @@ export async function updatePromotion(machuongtrinh: string, data: Partial<Creat
  */
 export async function deletePromotion(machuongtrinh: string): Promise<boolean> {
   try {    console.log(`Deleting promotion with code: ${machuongtrinh}`);
-    const response = await axiosClient.delete(`/promition/deletePromotion/${machuongtrinh}`);
+    const response = await axiosClient.delete(`/promotion/deletePromotion/${machuongtrinh}`);
     
     console.log('Delete promotion response:', response);
     
@@ -139,7 +139,7 @@ export async function deletePromotion(machuongtrinh: string): Promise<boolean> {
  */
 export async function applyPromotionToProducts(machuongtrinh: string, data: ApplyPromotionRequest): Promise<boolean> {
   try {    console.log(`Applying promotion ${machuongtrinh} to products:`, data.productIds);
-    const response = await axiosClient.post(`/promition/apply/${machuongtrinh}`, data);
+    const response = await axiosClient.post(`/promotion/apply/${machuongtrinh}`, data);
     
     console.log('Apply promotion response:', response);
     
@@ -170,7 +170,7 @@ export async function applyPromotionToProducts(machuongtrinh: string, data: Appl
 export async function removeAllPromotionFromProducts(machuongtrinh: string, data: ApplyPromotionRequest): Promise<boolean> {
   try {
     console.log(`Removing products from promotion ${machuongtrinh}:`, data.productIds);
-    const response = await axiosClient.delete(`/promition/removeAllPromotionFromProducts/${machuongtrinh}`, { data });
+    const response = await axiosClient.delete(`/promotion/removeAllPromotionFromProducts/${machuongtrinh}`, { data });
     
     console.log('Remove products from promotion response:', response);
     
@@ -200,7 +200,7 @@ export async function removeAllPromotionFromProducts(machuongtrinh: string, data
 export async function findAllProductByPromotion(machuongtrinh: string): Promise<Product[]> {
   try {
     console.log(`Fetching all products for promotion: ${machuongtrinh}`);
-    const response = await axiosClient.get(`/promition/findAllProductByPromotion/${machuongtrinh}`);
+    const response = await axiosClient.get(`/promotion/findAllProductByPromotion/${machuongtrinh}`);
     
     console.log('Find all products by promotion response:', response);
     
@@ -216,6 +216,54 @@ export async function findAllProductByPromotion(machuongtrinh: string): Promise<
     const errorMessage = err.response?.data?.message || 'Lỗi khi lấy danh sách sản phẩm theo chương trình khuyến mãi';
     message.error(errorMessage);
     
+    return [];
+  }
+
+}
+
+/**
+ * Xóa một sản phẩm cụ thể khỏi chương trình khuyến mãi
+ * @param machuongtrinh Mã chương trình khuyến mãi
+ * @param masanpham Mã sản phẩm hoặc ID sản phẩm cần xóa khỏi chương trình khuyến mãi
+ * @returns true nếu xóa thành công, false nếu thất bại
+ */
+export async function deleteProductFromPromotion(machuongtrinh: string, masanpham: string): Promise<boolean> {
+  try {
+    console.log(`Deleting product ${masanpham} from promotion ${machuongtrinh}`);
+    const response = await axiosClient.delete(`/promotion/deleteProductFromPromotion/${machuongtrinh}/${masanpham}`);
+    
+    console.log('Delete product from promotion response:', response);
+    
+    if (response.status >= 200 && response.status < 300) {
+      message.success('Xóa sản phẩm khỏi chương trình khuyến mãi thành công!');
+      return true;
+    }
+    
+    return false;
+  } catch (err: any) {
+    console.error('Error deleting product from promotion:', err);
+    
+    // Hiển thị lỗi chi tiết từ backend nếu có
+    const serverErrorMessage = err.response?.data?.message;
+    const errorMessage = `Lỗi khi xóa sản phẩm khỏi chương trình khuyến mãi: ${serverErrorMessage ?? err.message}`;
+    message.error(errorMessage);
+    
+    throw err;
+  }
+}
+
+export async function getProductNoPromotion(): Promise<any[]> {
+  try {
+
+    const res = await axiosClient.get('/promotion/getProductWithNoPromotion');
+
+    console.log('Get all product no promotions response:', res);
+    
+    const data = res.data?.data;
+    return Array.isArray(data) ? data : [];
+  } catch (err) {
+    console.error('Error fetching promotions:', err);
+    message.error('Lỗi khi tải danh sách khuyến mãi');
     return [];
   }
 }

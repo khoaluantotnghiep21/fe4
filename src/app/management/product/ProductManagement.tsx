@@ -6,6 +6,7 @@ import {
   Card, Typography, Row, Col, message, Dropdown, Menu, List, Avatar, InputRef
 } from 'antd';
 import { SearchOutlined, PlusOutlined, EyeOutlined, EditOutlined, CloseCircleOutlined, DeleteOutlined, LoadingOutlined } from '@ant-design/icons';
+import CategoryManagement from './CategoryManagement';
 import type { ColumnsType } from 'antd/es/table';
 import { getProducts, getProductBySearch, getProductByMaSanPham, deleteProductByMaSanPham } from '@/lib/api/productApi';
 
@@ -499,8 +500,7 @@ export default function ProductManagement({
           onCancel={handleCancelEdit}
           onSuccess={handleEditSuccess}
         />
-      ) : (
-        <Tabs defaultActiveKey="1" type="card">
+      ) : (        <Tabs defaultActiveKey="1" type="card">
           <TabPane
             tab={
               <span>
@@ -523,98 +523,100 @@ export default function ProductManagement({
                   onSearch={handleSearch}
                   enterButton={<Button type="primary" icon={<SearchOutlined />}>Tìm kiếm</Button>}
                   size="middle"
-                  onFocus={() => {
-                    if (searchResults.length > 0) {
-                      setShowSearchResults(true);
-                    }
-                  }}
-                />
+                      onFocus={() => {
+                        if (searchResults.length > 0) {
+                          setShowSearchResults(true);
+                        }
+                      }}
+                    />
 
-                {/* Dropdown kết quả tìm kiếm */}
-                {showSearchResults && (
-                  <div className="search-results-dropdown">
-                    {searchLoading ? (
-                      <div className="search-loading">
-                        <Spin indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />} />
-                        <span className="ml-2">Đang tìm kiếm...</span>
-                      </div>
-                    ) : searchResults.length > 0 ? (
-                      <List
-                        itemLayout="horizontal"
-                        dataSource={searchResults}
-                        renderItem={item => (
-                          <List.Item
-                            onClick={() => handleResultClick(item)}
-                            className="search-result-item"
-                          >
-                            <List.Item.Meta
-                              avatar={
-                                <Avatar
-                                  src={(item.anhsanpham.find(img => img.ismain === true)?.url) || '/placeholder-image.jpg'}
-                                  shape="square"
-                                  size={40}
+                    {/* Dropdown kết quả tìm kiếm */}
+                    {showSearchResults && (
+                      <div className="search-results-dropdown">
+                        {searchLoading ? (
+                          <div className="search-loading">
+                            <Spin indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />} />
+                            <span className="ml-2">Đang tìm kiếm...</span>
+                          </div>
+                        ) : searchResults.length > 0 ? (
+                          <List
+                            itemLayout="horizontal"
+                            dataSource={searchResults}
+                            renderItem={item => (
+                              <List.Item
+                                onClick={() => handleResultClick(item)}
+                                className="search-result-item"
+                              >
+                                <List.Item.Meta
+                                  avatar={
+                                    <Avatar
+                                      src={(item.anhsanpham.find(img => img.ismain === true)?.url) || '/placeholder-image.jpg'}
+                                      shape="square"
+                                      size={40}
+                                    />
+                                  } title={<span className="search-result-title">{item.tensanpham}</span>}
+                                  description={
+                                    <div>
+                                      <div><Text strong>Mã:</Text> {item.masanpham}</div>
+                                      <div><Text strong>Danh mục:</Text> {item.danhmuc?.tendanhmuc}</div>
+                                      <div className="search-result-hint">Nhấn để xem chi tiết</div>
+                                    </div>
+                                  }
                                 />
-                              } title={<span className="search-result-title">{item.tensanpham}</span>}
-                              description={
-                                <div>
-                                  <div><Text strong>Mã:</Text> {item.masanpham}</div>
-                                  <div><Text strong>Danh mục:</Text> {item.danhmuc?.tendanhmuc}</div>
-                                  <div className="search-result-hint">Nhấn để xem chi tiết</div>
-                                </div>
-                              }
-                            />
-                          </List.Item>
-                        )}
-                      />
-                    ) : searchText.trim() !== '' ? (
-                      <div className="empty-results">
-                        Không tìm thấy sản phẩm phù hợp
+                              </List.Item>
+                            )}
+                          />
+                        ) : searchText.trim() !== '' ? (
+                          <div className="empty-results">
+                            Không tìm thấy sản phẩm phù hợp
+                          </div>
+                        ) : null}
                       </div>
-                    ) : null}
+                    )}
+                  </div>
+
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    size="middle"
+                    onClick={() => setAddModalVisible(true)}
+                  >
+                    Thêm sản phẩm mới
+                  </Button>
+
+                </div>
+                {searchText.trim() !== '' && products.length > 0 && (
+                  <div className="search-result-info mb-3">
+                    <Tag color="blue">Kết quả tìm kiếm cho: "{searchText}"</Tag>
+                    <span className="ml-2">Tìm thấy {totalItems} sản phẩm</span>
                   </div>
                 )}
-              </div>
 
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                size="middle"
-                onClick={() => setAddModalVisible(true)}
-              >
-                Thêm sản phẩm mới
-              </Button>
-
-            </div>        {searchText.trim() !== '' && products.length > 0 && (
-              <div className="search-result-info mb-3">
-                <Tag color="blue">Kết quả tìm kiếm cho: "{searchText}"</Tag>
-                <span className="ml-2">Tìm thấy {totalItems} sản phẩm</span>
-              </div>
-            )}
-
-            <Table
-              columns={columns}
-              dataSource={products}
-              rowKey="id"
-              loading={loading}
-              bordered
-              size="middle"
-              rowClassName={() => "product-row"}
-              pagination={{
-                total: totalItems,
-                pageSize: pageSize,
-                current: currentPage,
-                onChange: (page) => setCurrentPage(page),
-                showSizeChanger: false,
-                showTotal: (total) => `Tổng số: ${total} sản phẩm`,
-                showQuickJumper: true,
-                position: ['bottomRight']
-              }}
-              className="product-table"
-              scroll={{ x: 1100 }} // responsive scroll
-            />
+                <Table
+                  columns={columns}
+                  dataSource={products}
+                  rowKey="id"
+                  loading={loading}
+                  bordered
+                  size="middle"
+                  rowClassName={() => "product-row"}
+                  pagination={{
+                    total: totalItems,
+                    pageSize: pageSize,
+                    current: currentPage,
+                    onChange: (page) => setCurrentPage(page),
+                    showSizeChanger: false,
+                    showTotal: (total) => `Tổng số: ${total} sản phẩm`,
+                    showQuickJumper: true,
+                    position: ['bottomRight']
+                  }}                  className="product-table"
+                  scroll={{ x: 1100 }} // responsive scroll
+                />
           </TabPane>
-          <TabPane tab="Thêm sản phẩm mới" key="2">
-            <div className="p-4">Form thêm sản phẩm sẽ được thêm vào đây</div>
+          <TabPane tab="Quản lý danh mục" key="2">
+            <div className="p-4">
+              <CategoryManagement />
+            </div>
           </TabPane>
           <TabPane tab="Thuốc hết hạn/sắp hết hạn" key="3">
             <Table

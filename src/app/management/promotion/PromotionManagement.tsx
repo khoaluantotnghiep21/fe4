@@ -21,14 +21,15 @@ import {
   findAllProductByPromotion,
   CreatePromotionRequest,
   applyPromotionToProducts,
-  removeAllPromotionFromProducts
+  removeAllPromotionFromProducts,
+  getProductNoPromotion,
+  deleteProductFromPromotion
 } from '@/lib/api/khuyenMaiApi';
 import { KhuyenMai } from '@/types/khuyenmai.types';
 import { Product } from '@/types/product.types';
-import { getProducts } from '@/lib/api/productApi';
 
 const { Title, Text } = Typography;
-const { TabPane } = Tabs;
+// Removed TabPane import - using items prop instead
 const { confirm } = Modal;
 
 export default function PromotionManagement() {
@@ -172,10 +173,8 @@ export default function PromotionManagement() {
 
     try {
       setLoadingProducts(true);
-      // Sử dụng id (UUID) thay vì masanpham
-      const success = await removeAllPromotionFromProducts(selectedPromotion.machuongtrinh, {
-        productIds: [product.id]
-      });
+      // Sử dụng hàm API deleteProductFromPromotion để xóa một sản phẩm cụ thể
+      const success = await deleteProductFromPromotion(selectedPromotion.machuongtrinh, product.masanpham);
       
       if (success) {
         await fetchProductsByPromotion(selectedPromotion.machuongtrinh);
@@ -364,28 +363,17 @@ export default function PromotionManagement() {
     
     setLoadingAvailableProducts(true);
     try {
-      // Fetch all products
-      const response = await getProducts({ page: currentProductPage, take: 10 });
+      // Sử dụng API getProductNoPromotion để lấy các sản phẩm chưa được áp dụng khuyến mãi
+      const products = await getProductNoPromotion();
       
       // Log một sản phẩm mẫu để kiểm tra cấu trúc
-      if (response.data.length > 0) {
-        console.log('Sample product structure:', response.data[0]);
-        console.log('Product ID type:', typeof response.data[0].id);
-        console.log('Product ID value:', response.data[0].id);
+      if (products.length > 0) {
+        console.log('Sample product structure:', products[0]);
+        console.log('Product ID type:', typeof products[0].id);
+        console.log('Product ID value:', products[0].id);
       }
       
-      // Fetch products already in the promotion
-      const promotionProducts = await findAllProductByPromotion(selectedPromotion.machuongtrinh);
-      
-      // Get the IDs of products already in the promotion (sử dụng id thay vì masanpham)
-      const promotionProductIds = promotionProducts.map(p => p.id);
-      
-      // Filter out products already in the promotion
-      const filtered = response.data.filter(
-        product => !promotionProductIds.includes(product.id)
-      );
-      
-      setAvailableProducts(filtered);
+      setAvailableProducts(products);
     } catch (error) {
       console.error('Error fetching available products:', error);
       message.error('Không thể tải danh sách sản phẩm khả dụng');
@@ -425,17 +413,9 @@ export default function PromotionManagement() {
       // In ra thông tin chi tiết về các ID sản phẩm đang được gửi đi
       console.log('Selected product IDs for promotion:', selectedAvailableProductIds);
       
-      // Kiểm tra xem có phải UUID hợp lệ không
-      const validUUIDs = selectedAvailableProductIds.filter(id => 
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
-      );
-      
-      console.log('Valid UUIDs found:', validUUIDs);
-      console.log('Invalid IDs found:', selectedAvailableProductIds.filter(id => !validUUIDs.includes(id)));
-      
-      // Sử dụng ID hợp lệ để áp dụng khuyến mãi
+      // Gửi các ID sản phẩm đã chọn đến API để áp dụng khuyến mãi
       const success = await applyPromotionToProducts(selectedPromotion.machuongtrinh, {
-        productIds: validUUIDs.length > 0 ? validUUIDs : selectedAvailableProductIds
+        productIds: selectedAvailableProductIds
       });
       
       if (success) {
@@ -463,79 +443,88 @@ export default function PromotionManagement() {
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">
-      <Tabs activeKey={activeTab} onChange={handleTabChange}>
-        <TabPane tab="Danh sách chương trình khuyến mãi" key="1">
-          <div className="mb-4 flex justify-between items-center">
-            <Title level={4}>Quản lý chương trình khuyến mãi</Title>
-            <Button 
-              type="primary" 
-              icon={<PlusOutlined />} 
-              onClick={showCreateModal}
-            >
-              Thêm chương trình khuyến mãi
-            </Button>
-          </div>
+      <Tabs activeKey={activeTab} onChange={handleTabChange} items={[
+        {
+          key: "1",
+          label: "Danh sách chương trình khuyến mãi",
+          children: (
+            <>
+              <div className="mb-4 flex justify-between items-center">
+                <Title level={4}>Quản lý chương trình khuyến mãi</Title>
+                <Button 
+                  type="primary" 
+                  icon={<PlusOutlined />} 
+                  onClick={showCreateModal}
+                >
+                  Thêm chương trình khuyến mãi
+                </Button>
+              </div>
 
-          <Table
-            columns={columns}
-            dataSource={promotions}
-            rowKey="machuongtrinh"
-            loading={loading}
-            pagination={{
-              current: currentPage,
-              onChange: (page) => setCurrentPage(page),
-              pageSize: 10,
-              showSizeChanger: false,
-            }}
-          />
-        </TabPane>
-        
-        <TabPane tab="Sản phẩm trong chương trình" key="2">
-          <div className="mb-4">
-            <Button 
-              onClick={() => setActiveTab('1')} 
-              className="mb-4"
-            >
-              &lt; Quay lại danh sách
-            </Button>
-            
-            {selectedPromotion && (
-              <Card className="mb-4">
-                <Row gutter={16}>
-                  <Col span={8}>
-                    <Text strong>Mã chương trình:</Text> {selectedPromotion.machuongtrinh}
-                  </Col>
-                  <Col span={8}>
-                    <Text strong>Tên chương trình:</Text> {selectedPromotion.tenchuongtrinh}
-                  </Col>
-                  <Col span={8}>
-                    <Text strong>Giá trị khuyến mãi:</Text> {selectedPromotion.giatrikhuyenmai}%
-                  </Col>
-                </Row>
-              </Card>
-            )}
-            
-            <div className="mb-4 flex justify-between">
-              <Title level={5}>Danh sách sản phẩm trong chương trình khuyến mãi</Title>
+              <Table
+                columns={columns}
+                dataSource={promotions}
+                rowKey="machuongtrinh"
+                loading={loading}
+                pagination={{
+                  current: currentPage,
+                  onChange: (page) => setCurrentPage(page),
+                  pageSize: 10,
+                  showSizeChanger: false,
+                }}
+              />
+            </>
+          )
+        },
+        {
+          key: "2",
+          label: "Sản phẩm trong chương trình",
+          children: (
+            <div className="mb-4">
               <Button 
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleAddProducts}
+                onClick={() => setActiveTab('1')} 
+                className="mb-4"
               >
-                Thêm sản phẩm
+                &lt; Quay lại danh sách
               </Button>
+              
+              {selectedPromotion && (
+                <Card className="mb-4">
+                  <Row gutter={16}>
+                    <Col span={8}>
+                      <Text strong>Mã chương trình:</Text> {selectedPromotion.machuongtrinh}
+                    </Col>
+                    <Col span={8}>
+                      <Text strong>Tên chương trình:</Text> {selectedPromotion.tenchuongtrinh}
+                    </Col>
+                    <Col span={8}>
+                      <Text strong>Giá trị khuyến mãi:</Text> {selectedPromotion.giatrikhuyenmai}%
+                    </Col>
+                  </Row>
+                </Card>
+              )}
+              
+              <div className="mb-4 flex justify-between">
+                <Title level={5}>Danh sách sản phẩm trong chương trình khuyến mãi</Title>
+                <Button 
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={handleAddProducts}
+                >
+                  Thêm sản phẩm
+                </Button>
+              </div>
+              
+              <Table
+                columns={productColumns}
+                dataSource={products}
+                rowKey="id"
+                loading={loadingProducts}
+                pagination={{ pageSize: 10 }}
+              />
             </div>
-            
-            <Table
-              columns={productColumns}
-              dataSource={products}
-              rowKey="id"
-              loading={loadingProducts}
-              pagination={{ pageSize: 10 }}
-            />
-          </div>
-        </TabPane>
-      </Tabs>
+          )
+        }
+      ]} />
       
       <Modal
         title={modalMode === 'create' ? 'Thêm chương trình khuyến mãi' : 'Chỉnh sửa chương trình khuyến mãi'}

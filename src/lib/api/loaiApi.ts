@@ -15,3 +15,19 @@ export async function getLoais(): Promise<Loai[]> {
     return [];
   }
 }
+
+export async function getLoaiMucByMaLoai(maloai: string): Promise<Loai[]> {
+  try {
+    const response = await axiosClient.get(
+      `/loai/findLoai/${maloai}`
+    );
+    return response.data.data;
+  } catch (error) {
+    if (typeof window !== "undefined") {
+      message.error("Lỗi khi lấy danh mục theo loại");
+    } else {
+      console.error("Error fetching danh muc by loai:", error);
+    }
+    return [];
+  }
+}
