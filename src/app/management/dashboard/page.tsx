@@ -19,6 +19,8 @@ import {
     MenuFoldOutlined, MenuUnfoldOutlined
 } from '@ant-design/icons';
 import UserManagement from '../info-user/UserManagement';
+import OrderManagement from '../orders/page';
+import OrderList from '../orders/OderList';
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
@@ -206,6 +208,7 @@ export default function AdminDashboard() {
                     )}
                     {selectedKey === 'users' && <UserManagement />}
                     {selectedKey === 'promotions' && <PromotionManagement />}
+                    {selectedKey === 'orders' && <OrderList />}
                 </Content>
             </Layout>
              <style jsx global>{`
