@@ -1,10 +1,10 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Card, Form, Input, Radio, Button, Spin, Alert, Divider, Tabs, Select, Switch, Modal } from 'antd';
+import { Card, Form, Input, Radio, Button, Spin, Alert, Divider, Tabs, Select, Switch, Modal, message } from 'antd';
 import { useUser } from '@/context/UserContext';
 import { useLoading } from '@/context/LoadingContext';
-import { createPurchaseOrder, CreatePurchaseOrderRequest } from '@/lib/api/orderApi';
+import { createPurchaseOrder, CreatePurchaseOrderRequest, createVnpayOrder } from '@/lib/api/orderApi';
 import { useCartStore } from '@/store/cartStore';
 import dayjs from 'dayjs';
 import 'dayjs/locale/vi';
@@ -151,31 +151,25 @@ export default function Checkout() {
       };
       
       const result = await createPurchaseOrder(orderData);
-      console.log('Result from createPurchaseOrder:', result); // Add this line to debug
+      console.log('Result from createPurchaseOrder:', result); 
   
       if (result) {
         for (const item of checkoutData.items) {
           await removeItem(item.id, item.option);
         }
-        alert(JSON.stringify(result));
-        router.push(`/order-confirmation?orderId=${result.data.id}` +
-          `&ngayGiaoHang=${selectedDate}` +
-          `&gioGiaoHang=${selectedTime}` +
-          `&soDienThoai=${encodeURIComponent(values.phone)}` +
-          `&tenNguoiNhan=${encodeURIComponent(values.fullName)}` +
-          `&tongTien=${result.data.tongtien}` +
-          `&thanhTien=${result.data.thanhtien}` +
-          `&giamGiaTrucTiep=${result.data.giamgiatructiep}` +
-          `&maChiNhanh=${machinhanh}` +
-          `&hinhThucNhanHang=${encodeURIComponent(result.data.hinhthucnhanhang)}` +
-          `&orderCode=${result.data.madonhang}` +
-          `&total=${result.data.thanhtien}` +
-          `&status=${encodeURIComponent(result.data.trangthai)}` +
-          `&paymentMethod=${encodeURIComponent(result.data.phuongthucthanhtoan)}` +
-          `&date=${result.data.ngaymuahang}`);
-        
+        if(result.data.phuongthucthanhtoan == "Chuyển khoản ngân hàng"){
+          const urlPay = await createVnpayOrder(result.data.madonhang);
+          window.location.href = urlPay;
+        }
+        else{
+          router.push(`/order-confirmation?madonhang=${result.data.madonhang}`);
+
+        }
+
+
       } else {
-        console.log('Result is null, skipping block'); // Add this to confirm null result
+        message.error("Lỗi khi mua hàng! Vui lòng thử lại")
+        console.log('Result is null, skipping block');
       }
     } catch (error) {
       console.error('Checkout error:', error);
