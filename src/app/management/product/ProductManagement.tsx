@@ -94,6 +94,12 @@ export default function ProductManagement({
   const [searchLoading, setSearchLoading] = useState(false);
   const searchInputRef = useRef<InputRef>(null);
 
+  const filteredProducts = products.filter(p =>
+    (p?.tensanpham?.toLowerCase() ?? '').includes(searchText.toLowerCase()) ||
+    (p?.masanpham?.toLowerCase() ?? '').includes(searchText.toLowerCase()) ||
+    (p?.slug?.toLowerCase() ?? '').includes(searchText.toLowerCase())
+  );
+
   useEffect(() => {
     fetchProducts(currentPage);
   }, [currentPage]);
@@ -106,10 +112,10 @@ export default function ProductManagement({
     }
   }, [products, onExpiredStatusChange]);
 
-  const fetchProducts = async (page: number) => {
+  const fetchProducts = async (page: number, searchValue?: string) => {
     setLoading(true);
     try {
-      const searchQuery = searchText.trim();
+      const searchQuery = (searchValue ?? searchText).trim();
       let response;
       if (searchQuery) {
         response = await getProductBySearch(searchQuery, { page, take: pageSize });
@@ -213,9 +219,8 @@ export default function ProductManagement({
   };
   const handleSearch = (value: string) => {
     setSearchText(value);
-    setShowSearchResults(false);
     setCurrentPage(1);
-    fetchProducts(1); // Fetch products with the current search text immediately
+    fetchProducts(1, value);
   };
 
   const viewProductDetail = async (masanpham: string) => {
@@ -375,7 +380,7 @@ export default function ProductManagement({
       key: 'tensanpham',
       sorter: (a, b) => a.tensanpham.localeCompare(b.tensanpham),
       ellipsis: true,
-      width: 260, 
+      width: 260,
       responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
     },
     {
@@ -500,139 +505,133 @@ export default function ProductManagement({
           onCancel={handleCancelEdit}
           onSuccess={handleEditSuccess}
         />
-      ) : (        <Tabs defaultActiveKey="1" type="card">
-          <TabPane
-            tab={
-              <span>
-                Danh sách sản phẩm
-                {products.some(p => getExpiryStatus(p).status === "expired") && (
-                  <ExclamationCircleTwoTone twoToneColor="#ff4d4f" style={{ marginLeft: 8, fontSize: 18, verticalAlign: 'middle' }} />
-                )}
-              </span>
-            }
-            key="1"
-          >
-            <div className="mb-6 flex justify-between items-center relative">
-              <div className="relative" style={{ width: 350 }}>
-                <Input.Search
-                  ref={searchInputRef as any}
-                  placeholder="Tìm kiếm theo tên hoặc mã sản phẩm..."
-                  style={{ width: 350 }}
-                  value={searchText}
-                  onChange={handleSearchChange}
-                  onSearch={handleSearch}
-                  enterButton={<Button type="primary" icon={<SearchOutlined />}>Tìm kiếm</Button>}
-                  size="middle"
-                      onFocus={() => {
-                        if (searchResults.length > 0) {
-                          setShowSearchResults(true);
-                        }
-                      }}
-                    />
+      ) : (<Tabs defaultActiveKey="1" type="card">
+        <TabPane
+          tab={
+            <span>
+              Danh sách sản phẩm
+              {products.some(p => getExpiryStatus(p).status === "expired") && (
+                <ExclamationCircleTwoTone twoToneColor="#ff4d4f" style={{ marginLeft: 8, fontSize: 18, verticalAlign: 'middle' }} />
+              )}
+            </span>
+          }
+          key="1"
+        >
+          <div className="mb-6 flex justify-between items-center relative">
+            <div className="relative" style={{ width: 350 }}>
+            <Input.Search
+                            placeholder="Tìm kiếm theo tên, email, số điện thoại..."
+                            style={{ width: 350 }}
+                            value={searchText}
+                            onChange={e => setSearchText(e.target.value)}
+                            onSearch={() => { }}
+                            enterButton={<Button type="primary" icon={<SearchOutlined />}>Tìm kiếm</Button>}
+                            size="middle"
+                        />
 
-                    {/* Dropdown kết quả tìm kiếm */}
-                    {showSearchResults && (
-                      <div className="search-results-dropdown">
-                        {searchLoading ? (
-                          <div className="search-loading">
-                            <Spin indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />} />
-                            <span className="ml-2">Đang tìm kiếm...</span>
-                          </div>
-                        ) : searchResults.length > 0 ? (
-                          <List
-                            itemLayout="horizontal"
-                            dataSource={searchResults}
-                            renderItem={item => (
-                              <List.Item
-                                onClick={() => handleResultClick(item)}
-                                className="search-result-item"
-                              >
-                                <List.Item.Meta
-                                  avatar={
-                                    <Avatar
-                                      src={(item.anhsanpham.find(img => img.ismain === true)?.url) || '/placeholder-image.jpg'}
-                                      shape="square"
-                                      size={40}
-                                    />
-                                  } title={<span className="search-result-title">{item.tensanpham}</span>}
-                                  description={
-                                    <div>
-                                      <div><Text strong>Mã:</Text> {item.masanpham}</div>
-                                      <div><Text strong>Danh mục:</Text> {item.danhmuc?.tendanhmuc}</div>
-                                      <div className="search-result-hint">Nhấn để xem chi tiết</div>
-                                    </div>
-                                  }
-                                />
-                              </List.Item>
-                            )}
+              {/* Dropdown kết quả tìm kiếm
+              {showSearchResults && (
+                <div className="search-results-dropdown">
+                  {searchLoading ? (
+                    <div className="search-loading">
+                      <Spin indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />} />
+                      <span className="ml-2">Đang tìm kiếm...</span>
+                    </div>
+                  ) : searchResults.length > 0 ? (
+                    <List
+                      itemLayout="horizontal"
+                      dataSource={searchResults}
+                      renderItem={item => (
+                        <List.Item
+                          onClick={() => handleResultClick(item)}
+                          className="search-result-item"
+                        >
+                          <List.Item.Meta
+                            avatar={
+                              <Avatar
+                                src={(item.anhsanpham.find(img => img.ismain === true)?.url) || '/placeholder-image.jpg'}
+                                shape="square"
+                                size={40}
+                              />
+                            } title={<span className="search-result-title">{item.tensanpham}</span>}
+                            description={
+                              <div>
+                                <div><Text strong>Mã:</Text> {item.masanpham}</div>
+                                <div><Text strong>Danh mục:</Text> {item.danhmuc?.tendanhmuc}</div>
+                                <div className="search-result-hint">Nhấn để xem chi tiết</div>
+                              </div>
+                            }
                           />
-                        ) : searchText.trim() !== '' ? (
-                          <div className="empty-results">
-                            Không tìm thấy sản phẩm phù hợp
-                          </div>
-                        ) : null}
-                      </div>
-                    )}
-                  </div>
-
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    size="middle"
-                    onClick={() => setAddModalVisible(true)}
-                  >
-                    Thêm sản phẩm mới
-                  </Button>
-
+                        </List.Item>
+                      )}
+                    />
+                  ) : searchText.trim() !== '' ? (
+                    <div className="empty-results">
+                      Không tìm thấy sản phẩm phù hợp
+                    </div>
+                  ) : null}
                 </div>
-                {searchText.trim() !== '' && products.length > 0 && (
-                  <div className="search-result-info mb-3">
-                    <Tag color="blue">Kết quả tìm kiếm cho: "{searchText}"</Tag>
-                    <span className="ml-2">Tìm thấy {totalItems} sản phẩm</span>
-                  </div>
-                )}
-
-                <Table
-                  columns={columns}
-                  dataSource={products}
-                  rowKey="id"
-                  loading={loading}
-                  bordered
-                  size="middle"
-                  rowClassName={() => "product-row"}
-                  pagination={{
-                    total: totalItems,
-                    pageSize: pageSize,
-                    current: currentPage,
-                    onChange: (page) => setCurrentPage(page),
-                    showSizeChanger: false,
-                    showTotal: (total) => `Tổng số: ${total} sản phẩm`,
-                    showQuickJumper: true,
-                    position: ['bottomRight']
-                  }}                  className="product-table"
-                  scroll={{ x: 1100 }} // responsive scroll
-                />
-          </TabPane>
-          <TabPane tab="Quản lý danh mục" key="2">
-            <div className="p-4">
-              <CategoryManagement />
+              )} */}
             </div>
-          </TabPane>
-          <TabPane tab="Thuốc hết hạn/sắp hết hạn" key="3">
-            <Table
-              columns={columns}
-              dataSource={products.filter(p => {
-                const { status } = getExpiryStatus(p);
-                return status === "expired" || status === "warning";
-              })}
-              rowKey="id"
-              pagination={false}
-              bordered
+
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
               size="middle"
-              title={() => "Danh sách thuốc hết hạn hoặc sắp hết hạn"}
-            />
-          </TabPane>
-        </Tabs>
+              onClick={() => setAddModalVisible(true)}
+            >
+              Thêm sản phẩm mới
+            </Button>
+
+          </div>
+          {/* {searchText.trim() !== '' && products.length > 0 && (
+            <div className="search-result-info mb-3">
+              <Tag color="blue">Kết quả tìm kiếm cho: "{searchText}"</Tag>
+              <span className="ml-2">Tìm thấy {totalItems} sản phẩm</span>
+            </div>
+          )} */}
+
+          <Table
+            columns={columns}
+            dataSource={filteredProducts}
+            rowKey="id"
+            loading={loading}
+            bordered
+            size="middle"
+            rowClassName={() => "product-row"}
+            pagination={{
+              total: totalItems,
+              pageSize: pageSize,
+              current: currentPage,
+              onChange: (page) => setCurrentPage(page),
+              showSizeChanger: false,
+              showTotal: (total) => `Tổng số: ${total} sản phẩm`,
+              showQuickJumper: true,
+              position: ['bottomRight']
+            }} className="product-table"
+            scroll={{ x: 1100 }} // responsive scroll
+          />
+        </TabPane>
+        <TabPane tab="Quản lý danh mục" key="2">
+          <div className="p-4">
+            <CategoryManagement />
+          </div>
+        </TabPane>
+        <TabPane tab="Thuốc hết hạn/sắp hết hạn" key="3">
+          <Table
+            columns={columns}
+            dataSource={products.filter(p => {
+              const { status } = getExpiryStatus(p);
+              return status === "expired" || status === "warning";
+            })}
+            rowKey="id"
+            pagination={false}
+            bordered
+            size="middle"
+            title={() => "Danh sách thuốc hết hạn hoặc sắp hết hạn"}
+          />
+        </TabPane>
+      </Tabs>
       )}
 
       {/* Modal thêm sản phẩm */}
