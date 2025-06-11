@@ -134,24 +134,35 @@ export const assignRoles = async (userid: string, roleids: string[]): Promise<bo
     }
 };
 
+// export const updateWithRole = async (
+//     data: Partial<User> & { roleids: string[] }
+// ): Promise<User> => {
+//     const response = await axiosClient.put(
+//         `/UserInfo/updateUserInfo/${data.id}`,
+//         {
+//             hoten: data.hoten,
+//             email: data.email,
+//             gioitinh: data.gioitinh,
+//             ngaysinh: data.ngaysinh,
+
+//             diachi: data.diachi,
+//             roleids: data.roleids,
+
+//             sodiem: data.sodiem,
+//             sodienthoai: data.sodienthoai,
+
+//         }
+//     );
+//     if (response.data && response.data.statusCode === 200) {
+//         return response.data.data;
+//     }
+//     throw new Error("Cập nhật thất bại!");
+// };
+
+// XÓA hoặc KHÔNG DÙNG các hàm liên quan UserInfo, ví dụ:
 export const updateWithRole = async (
     data: Partial<User> & { roleids: string[] }
 ): Promise<User> => {
-    const response = await axiosClient.put(
-        `/UserInfo/updateUserInfo/${data.id}`,
-        {
-            hoten: data.hoten,
-            email: data.email,
-            gioitinh: data.gioitinh,
-            ngaysinh: data.ngaysinh,
-            sodiem: data.sodiem,
-            diachi: data.diachi,
-            roleids: data.roleids,
-        }
-    );
-    if (response.data && response.data.statusCode === 200) {
-        return response.data.data;
-    }
-    throw new Error("Cập nhật thất bại!");
+    throw new Error("Không dùng API UserInfo nữa!");
 };
 
