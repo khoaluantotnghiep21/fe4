@@ -144,7 +144,7 @@ export default function Checkout() {
         giamgiatructiep: checkoutData.directDiscount,
         thanhtien: checkoutData.finalTotal,
         phivanchuyen: 0,
-        machinhanh: machinhanh,
+        machinhanh: activeTab === 'delivery' ? 'CN000000' : machinhanh,
         details: checkoutData.items.map(item => ({
           masanpham: item.code,
           soluong: item.quantity,
@@ -160,8 +160,7 @@ export default function Checkout() {
           nguoinhan: values.fullName,
           sodienthoainguoinhan: values.phone,
           diachinguoinhan: activeTab === 'delivery' ? values.address :  '',
-          madonhang: result.data.madonhang,
-          thoigiannhan: timestamp // Thời gian nhận hàng chỉ áp dụng khi nhận tại nhà thuốc
+          madonhang: result.data.madonhang
       };
       let giaoHang = await  createGiaoHang(giaoHangData);
       if(giaoHang){

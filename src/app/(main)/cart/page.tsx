@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react';
 import { useLoading } from '@/context/LoadingContext';
 import { useRouter } from 'next/navigation';
 import { createPurchaseOrder, CreatePurchaseOrderRequest } from '@/lib/api/orderApi';
+import { updateUnit } from '@/lib/api/donvitinhApi';
 
 const { Option } = Select;
 
@@ -105,6 +106,15 @@ export default function Cart() {
     router.push(`/checkout?data=${queryString}`);
   };
 
+  const goToDetails = (e: React.MouseEvent, record: any) => {
+    e.stopPropagation();
+    try {
+      window.location.href = `/products/${record.slug}`;
+    } catch (error) {
+      console.error('Error navigating to product details:', error);
+    }
+  };
+
   const columns: any[] = [
     {
       title: (
@@ -131,7 +141,18 @@ export default function Cart() {
       dataIndex: 'product',
       key: 'product',
       render: (_: any, record: any) => (
-        <div className="flex items-center gap-3">
+        <div
+          className="flex items-center gap-3 cursor-pointer"
+          onClick={(e) => goToDetails(e, record)}
+          tabIndex={0}
+          role="button"
+          onKeyDown={e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              goToDetails(e as unknown as React.MouseEvent, record);
+            }
+          }}
+          style={{ outline: 'none' }}
+        >
           <Image
             src={record.image}
             alt={record.name}
@@ -140,9 +161,7 @@ export default function Cart() {
             className="object-contain rounded-lg"
           />
           <div>
-            <Link href={`/products/${record.slug}`}>
-              <h3 className="font-medium text-gray-900 hover:text-blue-500">{record.name}</h3>
-            </Link>
+            <h3 className="font-medium text-gray-900 hover:text-blue-500">{record.name}</h3>
           </div>
         </div>
       ),
@@ -186,20 +205,22 @@ export default function Cart() {
       dataIndex: 'option',
       key: 'option',
       width: 120,
-      render: (option: string, record: any) => (
-        <Select
-          disabled={true}
-          value={option}
-          style={{ width: '100%', borderRadius: '8px' }}
-          onChange={(value) => {
-          }}
-        >
-          <Option value="cái">Cái</Option>
-          <Option value="kg">Kg</Option>
-          <Option value="thùng">Thùng</Option>
-          <Option value="gói">Gói</Option>
-        </Select>
-      ),
+      render: (option: string, record: any) => {
+
+        return (
+          <Select
+            value={option}
+            style={{ width: '100%', borderRadius: '8px' }}
+            onChange={(value) => handleChangeUnit(record.id, value)}
+          >
+            {record.units?.map((unit: any) => (
+              <Option key={unit.donvitinh} value={unit.donvitinh}>
+                {unit.donvitinh}
+              </Option>
+            ))}
+          </Select>
+        );
+      },
     },
     {
       title: 'Thao tác',
@@ -216,6 +237,13 @@ export default function Cart() {
       ),
     },
   ];
+
+  const handleChangeUnit = async (id: string, newUnit: string) => {
+    setLoading(true);
+
+    await updateUnit(id, { madonvitinh: id, donvitinh: newUnit });
+    setLoading(false);
+  };
 
   if (!isUserLoaded || loading || cartLoading) {
     return (

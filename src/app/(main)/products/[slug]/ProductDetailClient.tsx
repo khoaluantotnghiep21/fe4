@@ -69,6 +69,7 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
         price: selectedUnit.giaban,
         image: sortedImages[0]?.url || '/placeholder.png',
         quantity: 1,
+        slug: product.slug,
       });
       message.success(`${product.tensanpham} (${formatUnitString(selectedUnit)}) đã được thêm vào giỏ hàng!`);
     } finally {
@@ -77,7 +78,6 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
   };
 
   const handleContact = () => {
-    // Replace with actual contact logic, e.g., redirect to contact page or open a modal
     router.push('/contact');
   };
 

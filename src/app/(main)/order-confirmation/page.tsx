@@ -3,11 +3,12 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { findOne, Pharmacy } from "@/lib/api/pharmacyService";
 import { message } from "antd";
-import { getOderByMaDonHang, OrderItem } from "@/lib/api/orderApi";
+import { getDeliveryByMaDonHang, getOderByMaDonHang, OrderItem } from "@/lib/api/orderApi";
 import dayjs from "dayjs";
 export default function OrderConfirmation() {
   const searchParams = useSearchParams();
   const [pharmacy, setPharmacy] = useState<Pharmacy | null>(null);
+
   const [orderDetails, setOrderDetails] = useState({
     orderId: "",
     orderCode: "",
@@ -24,7 +25,7 @@ export default function OrderConfirmation() {
     soDienThoai: "",
   });
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
-
+  const [deliveryInfo, setDeliveryInfo] = useState<any>(null);
   useEffect(() => {
     const orderId = searchParams.get("orderId") || "";
     const orderCode = searchParams.get("orderCode") || "";
@@ -70,6 +71,18 @@ export default function OrderConfirmation() {
   }, [searchParams]);
 
   useEffect(() => {
+    if (
+      orderItems.length > 0 &&
+      orderItems[0]?.hinhthucnhanhang === "Giao hàng tận nơi" &&
+      orderItems[0]?.madonhang
+    ) {
+      getDeliveryByMaDonHang(orderItems[0].madonhang).then((data) => {
+        setDeliveryInfo(data?.delivery || null);
+      });
+    }
+  }, [orderItems]);
+
+  useEffect(() => {
     const maChiNhanh = decodeURIComponent(searchParams.get("maChiNhanh") || "");
     if (!maChiNhanh) return;
 
@@ -93,7 +106,7 @@ export default function OrderConfirmation() {
     const fetchOrderDetails = async () => {
       try {
         const data = await getOderByMaDonHang(madonhang);
-        if(data && data[0].machinhanh){
+        if (data && data[0].machinhanh) {
           const pharmacy = await findOne(data[0]?.machinhanh);
           console.log("Pharmacy:", pharmacy);
           setPharmacy(pharmacy);
@@ -106,12 +119,14 @@ export default function OrderConfirmation() {
 
     fetchOrderDetails();
   }, [searchParams]);
+
+
   const statusClass =
     orderItems[0]?.trangthai == "Đã xác nhận"
       ? "bg-green-100 text-green-700"
       : orderItems[0]?.trangthai == "Đang chờ xác nhận"
-      ? "bg-blue-100 text-blue-700"
-      : "bg-red-100 text-red-700";
+        ? "bg-blue-100 text-blue-700"
+        : "bg-red-100 text-red-700";
 
   // Hàm sao chép mã đơn hàng
   const copyOrderCode = () => {
@@ -128,6 +143,12 @@ export default function OrderConfirmation() {
     }
   };
 
+  useEffect(() => {
+    if (orderItems && orderItems.length > 0) {
+      console.log("orderItems:", orderItems);
+    }
+  }, [orderItems]);
+
   return (
     <div className="max-w-5xl mx-auto py-6 px-4">
       <div className="text-lg font-semibold mb-4">
@@ -135,7 +156,7 @@ export default function OrderConfirmation() {
         {orderItems[0]?.ngaymuahang
           ? new Date(orderItems[0]?.ngaymuahang).toLocaleDateString("vi-VN")
           : "Lỗi"}{" "}
-        · 
+        ·
         <span
           className="text-blue-600 ml-1 cursor-pointer"
           onClick={() => copyOrderCode()}
@@ -158,27 +179,34 @@ export default function OrderConfirmation() {
               {pharmacy?.thanhpho || "Nhà thuốc Long Châu"}.
             </p>
           </div>
-
           <div className="border-t pt-4 space-y-2">
             <p className="font-medium">Thông tin người nhận</p>
             <p className="text-black">
-              {orderItems ? orderItems[0]?.nguoinhan : "Khách hàng ẩn danh"}
+              {orderItems[0]?.hinhthucnhanhang === "Giao hàng tận nơi"
+                ? deliveryInfo?.nguoinhan || "Khách hàng ẩn danh"
+                : orderItems[0]?.nguoinhan || "Khách hàng ẩn danh"}
             </p>
             <p className="text-gray-600">
-              {orderItems
-                ? orderItems[0]?.sodienthoainguoinhan
-                : "Số điện thoại không có"}
+              {orderItems[0]?.hinhthucnhanhang === "Giao hàng tận nơi"
+                ? deliveryInfo?.sodienthoainguoinhan || "Số điện thoại không có"
+                : orderItems[0]?.sodienthoainguoinhan || "Số điện thoại không có"}
             </p>
+            {orderItems[0]?.hinhthucnhanhang === "Giao hàng tận nơi" && deliveryInfo?.thoigiandukien && (
+              <div className="mb-2">
+                <span className="font-medium">Dự kiến giao:</span>{" "}
+                <span>{dayjs(deliveryInfo.thoigiandukien).format("DD/MM/YYYY")}</span>
+              </div>
+            )}
           </div>
 
-          <div className="border-t pt-4 space-y-2">
+            <div className="border-t pt-4 space-y-2">
             <p className="font-medium">Nhận hàng tại</p>
             <p className="text-black">
-              {" "}
-              {pharmacy?.diachicuthe} {pharmacy?.tenduong} {pharmacy?.quan}{" "}
-              {pharmacy?.thanhpho || "..."}  {orderItems[0]?.diachinguoinhan} 
+              {orderItems[0]?.hinhthucnhanhang === "Giao hàng tận nơi"
+              ? deliveryInfo?.diachinguoinhan || orderItems[0]?.diachinguoinhan || "Không có địa chỉ giao hàng"
+              : `${pharmacy?.diachicuthe || ""} ${pharmacy?.tenduong || ""} ${pharmacy?.quan || ""} ${pharmacy?.thanhpho || ""}`}
             </p>
-          </div>
+            </div>
         </div>
 
         {/* Right Section */}
@@ -212,7 +240,7 @@ export default function OrderConfirmation() {
             <span className="text-blue-600">Miễn phí</span>
           </div>
           <hr className="my-2" />
-          <div style={{borderBottom: "solid 1px "}} className="flex justify-between text-lg font-semibold">
+          <div style={{ borderBottom: "solid 1px " }} className="flex justify-between text-lg font-semibold">
             <span>Thành tiền</span>
             <span className="text-blue-600">
               {orderItems[0]?.thanhtien
@@ -224,17 +252,17 @@ export default function OrderConfirmation() {
 
           <div className="mt-4 space-y-2">
             <span className="font-semibold text-lg  ">Phương thức thanh toán</span>
-              <div className="font-medium text-black pt-1">
-                {orderItems[0]?.phuongthucthanhtoan ||
-                  "Không có phương thức thanh toán nào"}
-              </div>
+            <div className="font-medium text-black pt-1">
+              {orderItems[0]?.phuongthucthanhtoan ||
+                "Không có phương thức thanh toán nào"}
+            </div>
 
             <div className="mt-2 border-t pt-4">
               <p className="font-semibold text-lg ">Trạng thái đơn hàng</p>
               <div
                 className={`inline-block mt-1 px-3 py-1 rounded-full justify-center text-sm font-medium ${statusClass}`}
               >
-                {`${orderItems[0]?.trangthai} đơn hàng`  || "Không rõ trạng thái" }
+                {`${orderItems[0]?.trangthai} đơn hàng` || "Không rõ trạng thái"}
               </div>
             </div>
           </div>
