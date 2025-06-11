@@ -33,7 +33,7 @@ export interface User {
 const { TabPane } = Tabs;
 const { Title } = Typography;
 
-export default function UserManagement() {
+function UserManagement() {
     const [form] = Form.useForm();
     const [rolesList, setRolesList] = useState<{ id: string; namerole: string }[]>([]);
     const [loading, setLoading] = useState(false);
@@ -61,7 +61,9 @@ export default function UserManagement() {
     useEffect(() => {
         fetchUsers();
         fetchRoles();
-    }, []); useEffect(() => {
+    }, []);
+
+    useEffect(() => {
         if (editMode && selectedUser) {
             // Tìm các vai trò ID từ tên vai trò
             const userRoleIds = selectedUser.roles
@@ -100,7 +102,9 @@ export default function UserManagement() {
                 roleid: userRoleIds,
             });
         }
-    }, [editMode, selectedUser, addModalVisible, changePasswordVisible, roleModalVisible, form, roleForm, rolesList]); const fetchUserRoles = async (userId: string): Promise<string[]> => {
+    }, [editMode, selectedUser, addModalVisible, changePasswordVisible, roleModalVisible, form, roleForm, rolesList]);
+
+    const fetchUserRoles = async (userId: string): Promise<string[]> => {
         try {
             const roleData = await getUserRole(userId);
             if (roleData && Array.isArray(roleData.roles)) {
@@ -134,12 +138,10 @@ export default function UserManagement() {
             setLoading(false);
         }
     };
+
     const fetchRoles = async () => {
         try {
-            // Log trước khi gọi API
             console.log('Calling getAllRoles API from userApi...');
-
-            // Sử dụng hàm getAllRoles từ userApi.ts thay vì gọi trực tiếp qua axios
             const roles = await getAllRoles();
             console.log('Roles returned from getAllRoles API:', roles);
 
@@ -150,8 +152,6 @@ export default function UserManagement() {
             }
 
             console.warn('No roles returned from API or empty array');
-
-            // Thử phương pháp khác nếu getAllRoles không trả về dữ liệu
             console.log('Trying direct axios call as fallback...');
             try {
                 const response = await axiosClient.get("/UserRole/all");
@@ -171,26 +171,23 @@ export default function UserManagement() {
             } catch (directError) {
                 console.error('Error in direct API call:', directError);
             }
-
         } catch (error) {
             console.error('Error fetching roles:', error);
             message.error('Lỗi khi tải danh sách vai trò');
-
         }
     };
+
     const handleSubmit = async (values: any) => {
         try {
             setLoading(true);
             let userId = selectedUser?.id;
             if (editMode && selectedUser) {
-                // Sửa user: dùng updateWithRole, truyền roleids là mảng id vai trò
                 await updateWithRole({
                     ...selectedUser,
                     ...values,
-                    roleids: values.roles, // roles là mảng id vai trò từ form
+                    roleids: values.roles,
                 });
             } else {
-                // Thêm user: tạo user trước, sau đó updateWithRole để gán role
                 const newUser = await register(values);
                 userId = newUser.id;
                 await updateWithRole({
@@ -210,6 +207,8 @@ export default function UserManagement() {
         } finally {
             setLoading(false);
         }
+    };
+
     const handleRoleSubmit = async (values: any) => {
         try {
             setLoading(true);
@@ -217,11 +216,9 @@ export default function UserManagement() {
                 console.log('Updating roles for user:', selectedUser.id);
                 console.log('New roles:', values.roleid);
 
-                // Gọi API assignRoles để gán nhiều vai trò một lúc
                 const success = await assignRoles(selectedUser.id, values.roleid);
 
                 if (success) {
-                    // Cập nhật thông tin vai trò trong state
                     const roleNames = values.roleid.map((roleId: string) =>
                         rolesList.find(r => r.id === roleId)?.namerole || ''
                     ).filter((name: string) => name);
@@ -231,17 +228,14 @@ export default function UserManagement() {
                         roles: roleNames
                     };
                     
-                    // Cập nhật danh sách users trực tiếp
                     setUsers(users.map(user => 
                         user.id === updatedUser.id ? updatedUser : user
                     ));
                     
-                    // Đóng modal
                     setRoleModalVisible(false);
                     roleForm.resetFields();
                     setSelectedUser(null);
                     
-                    // Hiển thị thông báo tùy chỉnh thành công
                     setNotification({
                         visible: true,
                         type: 'success',
@@ -297,7 +291,8 @@ export default function UserManagement() {
             key: 'action',
             width: 200,
             align: 'center',
-            render: (_: unknown, record: User) => (                <Space size="small" wrap>
+            render: (_: unknown, record: User) => (
+                <Space size="small" wrap>
                     <Button
                         type="primary"
                         icon={<EyeOutlined />}
@@ -331,7 +326,6 @@ export default function UserManagement() {
                         onClick={() => { setSelectedUser(record); setRoleModalVisible(true); }}
                         style={{ borderRadius: 6, background: '#e6f7ff', color: '#1890ff', border: 'none' }}
                     />
-                   
                 </Space>
             ),
         },
@@ -357,14 +351,6 @@ export default function UserManagement() {
                             enterButton={<Button type="primary" icon={<SearchOutlined />}>Tìm kiếm</Button>}
                             size="middle"
                         />
-                        {/* <Button
-                            type="primary"
-                            icon={<PlusOutlined />}
-                            size="middle"
-                            onClick={() => setAddModalVisible(true)}
-                        >
-                            Thêm người dùng
-                        </Button> */}
                     </div>
                     <Table
                         columns={columns}
@@ -576,7 +562,9 @@ export default function UserManagement() {
                         </Button>
                     </Form.Item>
                 </Form>
-            </Modal>            {/* Modal for role management */}            <Modal
+            </Modal>
+
+            <Modal
                 title={
                     <div className="flex items-center">
                         <Title level={4} style={{ margin: 0 }}>Quản lý vai trò: {selectedUser?.hoten}</Title>
@@ -593,7 +581,6 @@ export default function UserManagement() {
                 style={{ top: 20 }}
                 destroyOnClose
                 afterClose={() => {
-                    // Đảm bảo form được reset hoàn toàn sau khi modal đóng
                     roleForm.resetFields();
                 }}
             >
@@ -669,7 +656,8 @@ export default function UserManagement() {
                                 Tải lại danh sách vai trò
                             </Button>
                         </Form.Item>
-                    )}                    <div className="flex justify-between mt-4">
+                    )}
+                    <div className="flex justify-between mt-4">
                         <Button
                             onClick={() => {
                                 setRoleModalVisible(false);
@@ -717,4 +705,5 @@ export default function UserManagement() {
         </div>
     );
 }
-}
+
+export default UserManagement;
