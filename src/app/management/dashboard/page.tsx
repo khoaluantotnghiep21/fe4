@@ -212,7 +212,7 @@ export default function AdminDashboard() {
                     )}
                     {selectedKey === 'users' && <UserManagement />}
                     {selectedKey === 'promotions' && <PromotionManagement />}
-                    {selectedKey === 'pharmacys' && <PharmacyManagement />}
+                     {selectedKey === 'pharmacys' && <PharmacyManagement />}
                 </Content>
             </Layout>
              <style jsx global>{`

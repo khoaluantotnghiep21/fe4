@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Card, Table, Select, Tag, Button, Popconfirm, message } from "antd";
-import { getAllOrders, updateOrderStatus } from "@/lib/api/orderApi";
+import { Card, Table, Select, Tag, Button, Popconfirm, message, Modal, Descriptions } from "antd";
+import { getAllOrders, updateOrderStatus, getOderByMaDonHang } from "@/lib/api/orderApi";
 
 const orderStatusOptions = [
   { value: "all", label: "Tất cả" },
@@ -17,6 +17,20 @@ export default function OrderList() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("all");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  const [detailVisible, setDetailVisible] = useState(false);
+  const [detailData, setDetailData] = useState<any>(null);
+
+  const showOrderDetail = async (madonhang: string) => {
+    setLoading(true);
+    try {
+      const data = await getOderByMaDonHang(madonhang);
+      setDetailData(data[0]);
+      setDetailVisible(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchOrders = () => {
     setLoading(true);
@@ -96,9 +110,9 @@ export default function OrderList() {
               ) : (
                 <Tag color={
                   trangthai === "Đang chờ xác nhận" ? "gold" :
-                  trangthai === "Đang giao" ? "blue" :
-                  trangthai === "Hoàn thành" ? "green" :
-                  trangthai === "Đã hủy" ? "red" : "default"
+                    trangthai === "Đang giao" ? "blue" :
+                      trangthai === "Hoàn thành" ? "green" :
+                        trangthai === "Đã hủy" ? "red" : "default"
                 }>
                   {trangthai}
                 </Tag>
@@ -118,9 +132,44 @@ export default function OrderList() {
               </ul>
             ),
           },
+          {
+            title: "Xem chi tiết",
+            key: "action",
+            render: (_: any, record: any) => (
+              <Button onClick={() => showOrderDetail(record.madonhang)}>
+                Xem chi tiết
+              </Button>
+            ),
+          },
         ]}
         pagination={false}
       />
+      <Modal
+        open={detailVisible}
+        title="Chi tiết đơn hàng"
+        onCancel={() => setDetailVisible(false)}
+        footer={null}
+      >
+        {detailData ? (
+          <Descriptions column={1} bordered>
+            <Descriptions.Item label="Mã đơn">{detailData.madonhang}</Descriptions.Item>
+            <Descriptions.Item label="Khách hàng">{detailData.hoten}</Descriptions.Item>
+            <Descriptions.Item label="Số điện thoại">{detailData.sodienthoai}</Descriptions.Item>
+            <Descriptions.Item label="Địa chỉ">{detailData.diachi}</Descriptions.Item>
+            <Descriptions.Item label="Trạng thái">{detailData.trangthai}</Descriptions.Item>
+            <Descriptions.Item label="Tổng tiền">{detailData.thanhtien?.toLocaleString("vi-VN")}đ</Descriptions.Item>
+            <Descriptions.Item label="Sản phẩm">
+              <ul>
+                {detailData.sanpham?.map((sp: any, idx: number) => (
+                  <li key={idx}>
+                    {sp.tensanpham} ({sp.donvitinh}) x{sp.soluong} - {sp.giaban.toLocaleString("vi-VN")}đ
+                  </li>
+                ))}
+              </ul>
+            </Descriptions.Item>
+          </Descriptions>
+        ) : null}
+      </Modal>
     </Card>
   );
 }
