@@ -270,7 +270,7 @@ export default function Checkout() {
                   <Form.Item name="paymentMethod">
                     <Radio.Group defaultValue="COD">
                       <Radio value="COD">Thanh toán khi nhận hàng</Radio>
-                      <Radio value="BANKING">Chuyển khoản ngân hàng</Radio>
+                      <Radio defaultChecked={paymentMethod == 'BANKING'} onChange={() => setPaymentMethod('BANKING')} value="BANKING">Chuyển khoản ngân hàng</Radio>
                     </Radio.Group>
                   </Form.Item>
                   <Form.Item
