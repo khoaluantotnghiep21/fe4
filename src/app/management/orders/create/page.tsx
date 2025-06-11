@@ -10,7 +10,10 @@ import {
     FileAddOutlined,
     UserOutlined,
     LogoutOutlined,
+    InboxOutlined,
 } from '@ant-design/icons';
+import ReceiveProductsComponent from '../../receive/ReceiveProductsComponent';
+import StaffSalesComponent from '../../Staff-sales/StaffSalesComponent';
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
@@ -28,6 +31,7 @@ const mockProducts = [
 export default function CreateOrder() {
     const { user, isUserLoaded, logout } = useUser();
     const router = useRouter();
+    const [selectedMenu, setSelectedMenu] = useState('create_order');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [cartItems, setCartItems] = useState<any[]>([]);
     const [form] = Form.useForm();
@@ -143,11 +147,12 @@ export default function CreateOrder() {
                     <Title level={4} style={{ color: 'white', margin: 0 }}>
                         Nhân viên bán hàng
                     </Title>
-                </div>
-                <Menu
+                </div>                <Menu
                     theme="dark"
                     mode="inline"
-                    defaultSelectedKeys={['create_order']}
+                    defaultSelectedKeys={[selectedMenu]}
+                    selectedKeys={[selectedMenu]}
+                    onClick={({ key }) => setSelectedMenu(key)}
                     items={[
                         {
                             key: 'orders',
@@ -167,6 +172,16 @@ export default function CreateOrder() {
                             ],
                         },
                         {
+                            key: 'receive_products',
+                            icon: <InboxOutlined />,
+                            label: 'Nhập hàng',
+                        },
+                        {
+                            key: 'staff_sales',
+                            icon: <InboxOutlined />,
+                            label: 'Bán hàng',
+                        },
+                        {
                             key: 'profile',
                             icon: <UserOutlined />,
                             label: 'Tài khoản',
@@ -180,11 +195,10 @@ export default function CreateOrder() {
                     ]}
                 />
             </Sider>
-            <Layout>
-                <Header style={{ background: '#fff', padding: '0 24px' }}>
+            <Layout>                <Header style={{ background: '#fff', padding: '0 24px' }}>
                     <div className="flex justify-between items-center">
                         <Title level={3} style={{ margin: 0 }}>
-                            Tạo đơn hàng mới
+                            {selectedMenu === 'create_order' ? 'Tạo đơn hàng mới' : selectedMenu === 'receive_products' ? 'Nhập hàng từ kho tổng' : 'Quản lý đơn hàng'}
                         </Title>
                         <div className="flex items-center">
                             <span className="mr-4">Xin chào, {user.hoten}</span>
@@ -193,89 +207,128 @@ export default function CreateOrder() {
                             </Button>
                         </div>
                     </div>
+                    
                 </Header>
                 <Content style={{ margin: '24px 16px', padding: 24 }}>
-                    <Card title="Thông tin đơn hàng" className="mb-4">
-                        <Form layout="vertical" form={form}>
-                            <div className="flex gap-4">
-                                <div className="flex-1">
+                    {selectedMenu === 'create_order' && (
+                        <>
+                            <Card title="Thông tin đơn hàng" className="mb-4">
+                                <Form layout="vertical" form={form}>
+                                    <div className="flex gap-4">
+                                        <div className="flex-1">
+                                            <Form.Item
+                                                name="customerPhone"
+                                                label="Số điện thoại khách hàng"
+                                                rules={[{ required: true, message: 'Vui lòng nhập số điện thoại!' }]}
+                                            >
+                                                <Input placeholder="Nhập số điện thoại" />
+                                            </Form.Item>
+                                        </div>
+                                        <div className="flex-1">
+                                            <Form.Item
+                                                name="customerName"
+                                                label="Tên khách hàng"
+                                            >
+                                                <Input placeholder="Tên khách hàng sẽ tự động điền nếu đã có tài khoản" />
+                                            </Form.Item>
+                                        </div>
+                                    </div>
+                                </Form>
+                            </Card>
+
+                            <Card title="Thêm sản phẩm" className="mb-4">
+                                <Form layout="inline" form={form}>
                                     <Form.Item
-                                        name="customerPhone"
-                                        label="Số điện thoại khách hàng"
-                                        rules={[{ required: true, message: 'Vui lòng nhập số điện thoại!' }]}
+                                        name="productId"
+                                        rules={[{ required: true, message: 'Vui lòng chọn sản phẩm!' }]}
+                                        style={{ width: '300px' }}
                                     >
-                                        <Input placeholder="Nhập số điện thoại" />
+                                        <Select placeholder="Chọn sản phẩm">
+                                            {mockProducts.map(product => (
+                                                <Option key={product.id} value={product.id}>
+                                                    {product.name} - {product.price.toLocaleString('vi-VN')}đ
+                                                </Option>
+                                            ))}
+                                        </Select>
                                     </Form.Item>
-                                </div>
-                                <div className="flex-1">
                                     <Form.Item
-                                        name="customerName"
-                                        label="Tên khách hàng"
+                                        name="quantity"
+                                        rules={[{ required: true, message: 'Vui lòng nhập số lượng!' }]}
+                                        initialValue={1}
                                     >
-                                        <Input placeholder="Tên khách hàng sẽ tự động điền nếu đã có tài khoản" />
+                                        <InputNumber min={1} placeholder="Số lượng" />
                                     </Form.Item>
+                                    <Form.Item>
+                                        <Button type="primary" onClick={handleAddToCart}>
+                                            Thêm vào giỏ hàng
+                                        </Button>
+                                    </Form.Item>
+                                </Form>
+                            </Card>
+
+                            <Card title="Giỏ hàng">
+                                <Table
+                                    columns={columns}
+                                    dataSource={cartItems}
+                                    rowKey="id"
+                                    pagination={false}
+                                    summary={() => (
+                                        <Table.Summary.Row>
+                                            <Table.Summary.Cell index={0} colSpan={3}>
+                                                <strong>Tổng tiền</strong>
+                                            </Table.Summary.Cell>
+                                            <Table.Summary.Cell index={1}>
+                                                <strong>{totalAmount.toLocaleString('vi-VN')}đ</strong>
+                                            </Table.Summary.Cell>
+                                            <Table.Summary.Cell index={2} />
+                                        </Table.Summary.Row>
+                                    )}
+                                />
+
+                                <div className="mt-4 flex justify-end">
+                                    <Button type="primary" size="large" onClick={handleCreateOrder}>
+                                        Tạo đơn hàng
+                                    </Button>
                                 </div>
-                            </div>
-                        </Form>
-                    </Card>
+                            </Card>
+                        </>
+                    )}
 
-                    <Card title="Thêm sản phẩm" className="mb-4">
-                        <Form layout="inline" form={form}>
-                            <Form.Item
-                                name="productId"
-                                rules={[{ required: true, message: 'Vui lòng chọn sản phẩm!' }]}
-                                style={{ width: '300px' }}
-                            >
-                                <Select placeholder="Chọn sản phẩm">
-                                    {mockProducts.map(product => (
-                                        <Option key={product.id} value={product.id}>
-                                            {product.name} - {product.price.toLocaleString('vi-VN')}đ
-                                        </Option>
-                                    ))}
-                                </Select>
-                            </Form.Item>
-                            <Form.Item
-                                name="quantity"
-                                rules={[{ required: true, message: 'Vui lòng nhập số lượng!' }]}
-                                initialValue={1}
-                            >
-                                <InputNumber min={1} placeholder="Số lượng" />
-                            </Form.Item>
-                            <Form.Item>
-                                <Button type="primary" onClick={handleAddToCart}>
-                                    Thêm vào giỏ hàng
-                                </Button>
-                            </Form.Item>
-                        </Form>
-                    </Card>
-
-                    <Card title="Giỏ hàng">
-                        <Table
-                            columns={columns}
-                            dataSource={cartItems}
-                            rowKey="id"
-                            pagination={false}
-                            summary={() => (
-                                <Table.Summary.Row>
-                                    <Table.Summary.Cell index={0} colSpan={3}>
-                                        <strong>Tổng tiền</strong>
-                                    </Table.Summary.Cell>
-                                    <Table.Summary.Cell index={1}>
-                                        <strong>{totalAmount.toLocaleString('vi-VN')}đ</strong>
-                                    </Table.Summary.Cell>
-                                    <Table.Summary.Cell index={2} />
-                                </Table.Summary.Row>
-                            )}
-                        />
-
-                        <div className="mt-4 flex justify-end">
-                            <Button type="primary" size="large" onClick={handleCreateOrder}>
-                                Tạo đơn hàng
-                            </Button>
-                        </div>
-                    </Card>
-                </Content>
+                    {selectedMenu === 'receive_products' && (
+                        <ReceiveProductsComponent />
+                    )}                </Content>
+                    {selectedMenu === 'staff_sales' && (
+                        <StaffSalesComponent />
+                    )} 
             </Layout>
+            <style jsx global>{`
+                @media (max-width: 900px) {
+                    .ant-layout-sider {
+                        position: fixed !important;
+                        z-index: 1001;
+                        height: 100vh !important;
+                        left: 0;
+                        top: 0;
+                    }
+                    .ant-layout-content {
+                        margin-left: 0 !important;
+                    }
+                }
+                @media (max-width: 768px) {
+                    .ant-layout-sider {
+                        width: 60px !important;
+                        min-width: 60px !important;
+                        max-width: 60px !important;
+                    }
+                    .ant-layout-header {
+                        padding-left: 16px !important;
+                        padding-right: 16px !important;
+                    }
+                    .ant-typography {
+                        font-size: 18px !important;
+                    }
+                }
+            `}</style>
         </Layout>
     );
-} 
+}
