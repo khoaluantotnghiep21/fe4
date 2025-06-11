@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { findOne, Pharmacy } from "@/lib/api/pharmacyService";
 import { message } from "antd";
 import { getOderByMaDonHang, OrderItem } from "@/lib/api/orderApi";
-
+import dayjs from "dayjs";
 export default function OrderConfirmation() {
   const searchParams = useSearchParams();
   const [pharmacy, setPharmacy] = useState<Pharmacy | null>(null);
@@ -150,7 +150,7 @@ export default function OrderConfirmation() {
           <div className="mb-4">
             <p className="font-medium text-gray-700">Dự kiến nhận hàng</p>
             <p className="text-lg font-semibold text-black">
-              {orderDetails.gioGiaoHang} ngày {orderDetails.ngayGiaoHang}
+              {dayjs(orderItems[0]?.thoigiannhan).format("HH:MM")} ngày {dayjs(orderItems[0]?.thoigiannhan).format("DD/MM/YYYY")}
             </p>
             <p className="text-gray-600">
               Đơn hàng đang được xử lý tại nhà thuốc: {pharmacy?.diachicuthe}{" "}
