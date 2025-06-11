@@ -74,16 +74,16 @@ export const getAllRoles = async (): Promise<{ id: string; namerole: string }[]>
         console.log('getAllRoles: Calling API...');
         const response = await axiosClient.get("/role/getAllRoles");
         console.log('getAllRoles: API response:', response);
-        
+
         // Kiểm tra cấu trúc response
         if (!response || !response.data) {
             console.error('getAllRoles: Invalid API response structure');
             return [];
         }
-        
+
         // Kiểm tra và xử lý dữ liệu
         let roles: { id: string; namerole: string }[] = [];
-        
+
         if (Array.isArray(response.data)) {
             console.log('getAllRoles: Data is directly an array');
             roles = response.data;
@@ -93,7 +93,7 @@ export const getAllRoles = async (): Promise<{ id: string; namerole: string }[]>
         } else {
             console.error('getAllRoles: Unexpected data structure:', response.data);
         }
-        
+
         console.log('getAllRoles: Processed roles:', roles);
         return roles;
     } catch (error) {
@@ -132,5 +132,26 @@ export const assignRoles = async (userid: string, roleids: string[]): Promise<bo
         message.error("Lỗi khi gán vai trò cho người dùng!");
         return false;
     }
+};
+
+export const updateWithRole = async (
+    data: Partial<User> & { roleids: string[] }
+): Promise<User> => {
+    const response = await axiosClient.put(
+        `/UserInfo/updateUserInfo/${data.id}`,
+        {
+            hoten: data.hoten,
+            email: data.email,
+            gioitinh: data.gioitinh,
+            ngaysinh: data.ngaysinh,
+            sodiem: data.sodiem,
+            diachi: data.diachi,
+            roleids: data.roleids,
+        }
+    );
+    if (response.data && response.data.statusCode === 200) {
+        return response.data.data;
+    }
+    throw new Error("Cập nhật thất bại!");
 };
 
