@@ -93,6 +93,11 @@ export default function OrderConfirmation() {
     const fetchOrderDetails = async () => {
       try {
         const data = await getOderByMaDonHang(madonhang);
+        if(data && data[0].machinhanh){
+          const pharmacy = await findOne(data[0]?.machinhanh);
+          console.log("Pharmacy:", pharmacy);
+          setPharmacy(pharmacy);
+        }
         setOrderItems(data);
       } catch (error) {
         console.error("Lỗi khi lấy chi tiết đơn hàng:", error);
@@ -157,11 +162,11 @@ export default function OrderConfirmation() {
           <div className="border-t pt-4 space-y-2">
             <p className="font-medium">Thông tin người nhận</p>
             <p className="text-black">
-              {orderItems ? orderItems[0]?.hoten : "Khách hàng ẩn danh"}
+              {orderItems ? orderItems[0]?.nguoinhan : "Khách hàng ẩn danh"}
             </p>
             <p className="text-gray-600">
               {orderItems
-                ? orderItems[0]?.sodienthoai
+                ? orderItems[0]?.sodienthoainguoinhan
                 : "Số điện thoại không có"}
             </p>
           </div>
@@ -171,7 +176,7 @@ export default function OrderConfirmation() {
             <p className="text-black">
               {" "}
               {pharmacy?.diachicuthe} {pharmacy?.tenduong} {pharmacy?.quan}{" "}
-              {pharmacy?.thanhpho || "..."}
+              {pharmacy?.thanhpho || "..."}  {orderItems[0]?.diachinguoinhan} 
             </p>
           </div>
         </div>

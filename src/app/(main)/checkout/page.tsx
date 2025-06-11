@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, Form, Input, Radio, Button, Spin, Alert, Divider, Tabs, Select, Switch, Modal, message } from 'antd';
 import { useUser } from '@/context/UserContext';
 import { useLoading } from '@/context/LoadingContext';
-import { createPurchaseOrder, CreatePurchaseOrderRequest, createVnpayOrder } from '@/lib/api/orderApi';
+import { createGiaoHang, createPurchaseOrder, CreatePurchaseOrderRequest, createVnpayOrder, GiaoHangDTO } from '@/lib/api/orderApi';
 import { useCartStore } from '@/store/cartStore';
 import dayjs from 'dayjs';
 import 'dayjs/locale/vi';
@@ -31,6 +31,7 @@ export default function Checkout() {
   const { showLoading, hideLoading } = useLoading();
   const { removeItem } = useCartStore();
   const [form] = Form.useForm();
+  const [name, setName] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState('COD');
   const [checkoutData, setCheckoutData] = useState<CheckoutData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -133,6 +134,8 @@ export default function Checkout() {
 
     showLoading();
     try {
+      const dateTimeString = `${selectedDate} ${selectedTime}`;
+      const timestamp = dayjs(dateTimeString, 'YYYY-MM-DD HH:mm:ss').format('YYYY-MM-DDTHH:mm:ss');
       const orderData: CreatePurchaseOrderRequest = {
         phuongthucthanhtoan: paymentMethod == 'COD' ? 'Thanh toán khi nhận hàng' : 'Chuyển khoản ngân hàng',
         hinhthucnhanhang: activeTab === 'pickup' ? 'Nhận hàng tại nhà thuốc' : 'Giao hàng tận nơi',
@@ -141,7 +144,7 @@ export default function Checkout() {
         giamgiatructiep: checkoutData.directDiscount,
         thanhtien: checkoutData.finalTotal,
         phivanchuyen: 0,
-        machinhhanh: machinhanh,
+        machinhanh: machinhanh,
         details: checkoutData.items.map(item => ({
           masanpham: item.code,
           soluong: item.quantity,
@@ -149,14 +152,23 @@ export default function Checkout() {
           donvitinh: item.option || 'cái'
         }))
       };
-      
       const result = await createPurchaseOrder(orderData);
-      console.log('Result from createPurchaseOrder:', result); 
+
   
       if (result) {
+        let giaoHangData: GiaoHangDTO = {
+          nguoinhan: values.fullName,
+          sodienthoainguoinhan: values.phone,
+          diachinguoinhan: activeTab === 'delivery' ? values.address :  '',
+          madonhang: result.data.madonhang,
+          thoigiannhan: timestamp // Thời gian nhận hàng chỉ áp dụng khi nhận tại nhà thuốc
+      };
+      let giaoHang = await  createGiaoHang(giaoHangData);
+      if(giaoHang){
         for (const item of checkoutData.items) {
           await removeItem(item.id, item.option);
         }
+        
         if(result.data.phuongthucthanhtoan == "Chuyển khoản ngân hàng"){
           const urlPay = await createVnpayOrder(result.data.madonhang);
           window.location.href = urlPay;
@@ -165,6 +177,8 @@ export default function Checkout() {
           router.push(`/order-confirmation?madonhang=${result.data.madonhang}`);
 
         }
+      }
+
 
 
       } else {
@@ -225,6 +239,7 @@ export default function Checkout() {
                 >
                   <h2 className="text-xl font-semibold mb-4">Thông tin giao hàng</h2>
                   <Form.Item
+                  
                     name="fullName"
                     label="Họ và tên"
                     rules={[{ required: true, message: 'Vui lòng nhập họ tên' }]}
@@ -340,7 +355,7 @@ export default function Checkout() {
                   <Form.Item
                     label="Chọn nhà thuốc"
                     name="store"
-                    rules={[{ required: activeTab === 'pickup', message: 'Vui lòng chọn nhà thuốc' }]}
+
                   >
                     {pharmacyData.length > 0 && (
                       <div style={{ marginBottom: 16, fontWeight: 500 }}>
@@ -354,7 +369,6 @@ export default function Checkout() {
                             key={pharmacy.id}
                             value={pharmacy.machinhanh}
                             onChange={() => {
-                              alert(pharmacy.machinhanh);
                               setMachinhanh(pharmacy.machinhanh);
                             }}
                             style={{
@@ -472,7 +486,7 @@ export default function Checkout() {
                         fontWeight: 'bold',
                         borderRadius: '8px'
                       }}
-                      onClick={handleSubmit}
+
                     >
                       Hoàn tất đơn hàng
                     </Button>
