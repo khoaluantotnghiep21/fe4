@@ -8,7 +8,13 @@ interface ProductPageProps {
 export default async function ProductPage({ params }: ProductPageProps) {
     const { slug } = params;
 
-    const products = await getProducts();
+    const productsRes = await getProducts();
+    const products = Array.isArray(productsRes)
+        ? productsRes
+        : Array.isArray(productsRes?.data)
+            ? productsRes.data
+            : [];
+
     const foundProduct = products.find(p => p.slug === slug);
 
     if (!foundProduct) {

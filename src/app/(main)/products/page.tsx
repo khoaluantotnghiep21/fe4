@@ -45,10 +45,14 @@ export default function ProductsPage() {
           setProducts(productRes);
           setMeta(null);
           setFilteredProducts(productRes);
-        } else {
+        } else if (productRes && Array.isArray(productRes.data)) {
           setProducts(productRes.data);
           setMeta(productRes.meta);
           setFilteredProducts(productRes.data);
+        } else {
+          setProducts([]);
+          setMeta(null);
+          setFilteredProducts([]);
         }
 
         const allCategories = await getAllDanhMuc();
