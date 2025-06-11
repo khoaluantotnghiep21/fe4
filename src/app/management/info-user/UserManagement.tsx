@@ -14,6 +14,7 @@ import {
     updateWithRole
 } from "@/lib/api/userApi";
 import axiosClient from "@/lib/axiosClient";
+import CustomNotification from '@/components/common/CustomNotificationProps';
 import type { ColumnsType } from 'antd/es/table';
 
 export interface User {
@@ -39,11 +40,23 @@ export default function UserManagement() {
     const [users, setUsers] = useState<User[]>([]);
     const [searchText, setSearchText] = useState('');
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
-    const [detailModalVisible, setDetailModalVisible] = useState(false); const [editMode, setEditMode] = useState(false);
+    const [detailModalVisible, setDetailModalVisible] = useState(false);    
+    const [editMode, setEditMode] = useState(false);
     const [addModalVisible, setAddModalVisible] = useState(false);
     const [changePasswordVisible, setChangePasswordVisible] = useState(false);
     const [roleModalVisible, setRoleModalVisible] = useState(false);
     const [roleForm] = Form.useForm();
+    
+    // Custom notification state
+    const [notification, setNotification] = useState<{
+        visible: boolean;
+        type: 'success' | 'error';
+        message: string;
+    }>({
+        visible: false,
+        type: 'success',
+        message: ''
+    });
 
     useEffect(() => {
         fetchUsers();
@@ -197,8 +210,6 @@ export default function UserManagement() {
         } finally {
             setLoading(false);
         }
-    };
-    // Xử lý cập nhật vai trò người dùng
     const handleRoleSubmit = async (values: any) => {
         try {
             setLoading(true);
@@ -219,22 +230,38 @@ export default function UserManagement() {
                         ...selectedUser,
                         roles: roleNames
                     };
-
-                    setUsers(users.map(u => u.id === selectedUser.id ? updatedUser : u));
-                    setSelectedUser(null);
-                    message.success("Cập nhật vai trò thành công!");
+                    
+                    // Cập nhật danh sách users trực tiếp
+                    setUsers(users.map(user => 
+                        user.id === updatedUser.id ? updatedUser : user
+                    ));
+                    
+                    // Đóng modal
                     setRoleModalVisible(false);
                     roleForm.resetFields();
-
-                    // Làm mới danh sách người dùng để hiển thị chính xác
-                    fetchUsers();
+                    setSelectedUser(null);
+                    
+                    // Hiển thị thông báo tùy chỉnh thành công
+                    setNotification({
+                        visible: true,
+                        type: 'success',
+                        message: 'Cập nhật vai trò thành công!'
+                    });
                 } else {
-                    message.error("Không thể cập nhật vai trò, vui lòng thử lại!");
+                    setNotification({
+                        visible: true,
+                        type: 'error',
+                        message: 'Không thể cập nhật vai trò, vui lòng thử lại!'
+                    });
                 }
             }
         } catch (err) {
             console.error('Error updating roles:', err);
-            message.error("Có lỗi khi cập nhật vai trò!");
+            setNotification({
+                visible: true,
+                type: 'error',
+                message: 'Có lỗi khi cập nhật vai trò!'
+            });
         } finally {
             setLoading(false);
         }
@@ -268,52 +295,44 @@ export default function UserManagement() {
         {
             title: 'Thao tác',
             key: 'action',
-            width: 180,
+            width: 200,
             align: 'center',
-            render: (_: unknown, record: User) => (<Space size="small" wrap>
-                <Button
-                    type="primary"
-                    icon={<EyeOutlined />}
-                    size="middle"
-                    shape="circle"
-                    title="Chi tiết"
-                    onClick={() => { setSelectedUser(record); setDetailModalVisible(true); }}
-                    style={{ borderRadius: 6 }}
-                />
-                <Button
-                    icon={<EditOutlined />}
-                    size="middle"
-                    shape="circle"
-                    title="Sửa"
-                    onClick={() => { setSelectedUser(record); setEditMode(true); }}
-                    style={{ borderRadius: 6, background: '#f5f5f5', color: '#1890ff', border: 'none' }}
-                />
-                <Button
-                    icon={<LockOutlined />}
-                    size="middle"
-                    shape="circle"
-                    title="Đổi mật khẩu"
-                    onClick={() => { setSelectedUser(record); setChangePasswordVisible(true); }}
-                    style={{ borderRadius: 6, background: '#f0f0f0', color: '#d48806', border: 'none' }}
-                />
-                <Button
-                    icon={<SearchOutlined />}
-                    size="middle"
-                    shape="circle"
-                    title="Quản lý vai trò"
-                    onClick={() => { setSelectedUser(record); setRoleModalVisible(true); }}
-                    style={{ borderRadius: 6, background: '#e6f7ff', color: '#1890ff', border: 'none' }}
-                />
-                <Button
-                    danger
-                    icon={<DeleteOutlined />}
-                    size="middle"
-                    shape="circle"
-                    title="Xóa"
-                    onClick={() => handleDelete(record.id)}
-                    style={{ borderRadius: 6 }}
-                />
-            </Space>
+            render: (_: unknown, record: User) => (                <Space size="small" wrap>
+                    <Button
+                        type="primary"
+                        icon={<EyeOutlined />}
+                        size="middle"
+                        shape="circle"
+                        title="Chi tiết"
+                        onClick={() => { setSelectedUser(record); setDetailModalVisible(true); }}
+                        style={{ borderRadius: 6 }}
+                    />
+                    <Button
+                        icon={<EditOutlined />}
+                        size="middle"
+                        shape="circle"
+                        title="Sửa"
+                        onClick={() => { setSelectedUser(record); setEditMode(true); }}
+                        style={{ borderRadius: 6, background: '#f5f5f5', color: '#1890ff', border: 'none' }}
+                    />
+                    <Button
+                        icon={<LockOutlined />}
+                        size="middle"
+                        shape="circle"
+                        title="Đổi mật khẩu"
+                        onClick={() => { setSelectedUser(record); setChangePasswordVisible(true); }}
+                        style={{ borderRadius: 6, background: '#f0f0f0', color: '#d48806', border: 'none' }}
+                    />
+                    <Button
+                        icon={<SearchOutlined />}
+                        size="middle"
+                        shape="circle"
+                        title="Quản lý vai trò"
+                        onClick={() => { setSelectedUser(record); setRoleModalVisible(true); }}
+                        style={{ borderRadius: 6, background: '#e6f7ff', color: '#1890ff', border: 'none' }}
+                    />
+                   
+                </Space>
             ),
         },
     ];
@@ -338,14 +357,14 @@ export default function UserManagement() {
                             enterButton={<Button type="primary" icon={<SearchOutlined />}>Tìm kiếm</Button>}
                             size="middle"
                         />
-                        <Button
+                        {/* <Button
                             type="primary"
                             icon={<PlusOutlined />}
                             size="middle"
                             onClick={() => setAddModalVisible(true)}
                         >
                             Thêm người dùng
-                        </Button>
+                        </Button> */}
                     </div>
                     <Table
                         columns={columns}

@@ -287,4 +287,25 @@ export const getAllEmployee = async (): Promise<PharmacyEmployee[]> => {
   }
 };
 
+export const getPharmacyByEmployeeId = async (idnhanvien: string): Promise<any[]> => {
+  try {
+    if (!idnhanvien) {
+      console.error('Error in getPharmacyByEmployeeId: idnhanvien is empty or undefined');
+      return [];
+    }
+
+    const response = await axiosClient.get<PharmacyEmployeeResponse>(
+      `/pharmacy-employees/employee/${encodeURIComponent(idnhanvien)}`
+    );
+    
+    if (response.data.statusCode === 200) {
+      return response.data.data;
+    }
+    return [];
+  } catch (error) {
+    console.error('Error in getPharmacyByEmployeeId:', error);
+    return [];
+  }
+}
+
 

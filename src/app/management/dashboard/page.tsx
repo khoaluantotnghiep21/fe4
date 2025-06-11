@@ -19,6 +19,7 @@ import {
 } from '@ant-design/icons';
 import UserManagement from '../info-user/UserManagement';
 import PharmacyManagement from '../pharmacy/PharmacyManagement';
+import ProductReceiptManagement from '../receive/ProductReceiptManagement';
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
@@ -102,6 +103,11 @@ export default function AdminDashboard() {
                             key: 'pharmacys',
                             icon: <SettingOutlined />,
                             label: 'Quản lý nhà thuốc',
+                        },
+                        {
+                            key: 'pharmacy_products',
+                            icon: <SettingOutlined />,
+                            label: 'Quản lý đơn hàng nhập',
                         },
                         {
                             key: 'settings',
@@ -212,6 +218,7 @@ export default function AdminDashboard() {
                     {selectedKey === 'users' && <UserManagement />}
                     {selectedKey === 'promotions' && <PromotionManagement />}
                      {selectedKey === 'pharmacys' && <PharmacyManagement />}
+                     {selectedKey === 'pharmacy_products' && <ProductReceiptManagement />}
                 </Content>
             </Layout>
              <style jsx global>{`
