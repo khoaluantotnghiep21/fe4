@@ -19,6 +19,7 @@ import {
     MenuFoldOutlined, MenuUnfoldOutlined
 } from '@ant-design/icons';
 import UserManagement from '../info-user/UserManagement';
+import PharmacyManagement from '../pharmacy/PharmacyManagement';
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
@@ -97,6 +98,11 @@ export default function AdminDashboard() {
                             key: 'orders',
                             icon: <ShoppingCartOutlined />,
                             label: 'Quản lý đơn hàng',
+                        },
+                        {
+                            key: 'pharmacys',
+                            icon: <SettingOutlined />,
+                            label: 'Quản lý nhà thuốc',
                         },
                         {
                             key: 'settings',
@@ -206,6 +212,7 @@ export default function AdminDashboard() {
                     )}
                     {selectedKey === 'users' && <UserManagement />}
                     {selectedKey === 'promotions' && <PromotionManagement />}
+                    {selectedKey === 'pharmacys' && <PharmacyManagement />}
                 </Content>
             </Layout>
              <style jsx global>{`
