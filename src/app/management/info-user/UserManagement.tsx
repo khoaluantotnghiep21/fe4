@@ -10,7 +10,8 @@ import {
     SearchOutlined, EyeOutlined, EditOutlined, CloseCircleOutlined, DeleteOutlined, PlusOutlined, LockOutlined
 } from '@ant-design/icons';
 import {
-    getUsers, getUserRole, register, update, deleteUser, changePassword, getAllRoles, createRole, assignRoles
+    getUsers, getUserRole, register, update, deleteUser, changePassword, getAllRoles, createRole, assignRoles,
+    updateWithRole
 } from "@/lib/api/userApi";
 import axiosClient from "@/lib/axiosClient";
 import CustomNotification from '@/components/common/CustomNotificationProps';
@@ -60,7 +61,7 @@ export default function UserManagement() {
     useEffect(() => {
         fetchUsers();
         fetchRoles();
-    }, []);    useEffect(() => {
+    }, []); useEffect(() => {
         if (editMode && selectedUser) {
             // Tìm các vai trò ID từ tên vai trò
             const userRoleIds = selectedUser.roles
@@ -68,12 +69,12 @@ export default function UserManagement() {
                     const role = rolesList.find(r => r.namerole === roleName);
                     return role?.id || '';
                 })
-                .filter(id => id); 
-            
+                .filter(id => id);
+
             console.log('User roles:', selectedUser.roles);
             console.log('User role IDs for form:', userRoleIds);
             console.log('Available roles:', rolesList);
-            
+
             form.setFieldsValue({
                 ...selectedUser,
                 matkhau: '',
@@ -94,12 +95,12 @@ export default function UserManagement() {
                     return role?.id || '';
                 })
                 .filter(id => id);
-            
+
             roleForm.setFieldsValue({
                 roleid: userRoleIds,
             });
         }
-    }, [editMode, selectedUser, addModalVisible, changePasswordVisible, roleModalVisible, form, roleForm, rolesList]);const fetchUserRoles = async (userId: string): Promise<string[]> => {
+    }, [editMode, selectedUser, addModalVisible, changePasswordVisible, roleModalVisible, form, roleForm, rolesList]); const fetchUserRoles = async (userId: string): Promise<string[]> => {
         try {
             const roleData = await getUserRole(userId);
             if (roleData && Array.isArray(roleData.roles)) {
@@ -111,57 +112,57 @@ export default function UserManagement() {
             return [];
         }
     };
-    
+
     const fetchUsers = async () => {
         setLoading(true);
         try {
             const usersData = await getUsers();
+            // Lấy roles cho từng user
             const usersWithRoles = await Promise.all(
                 usersData.map(async (user: User) => {
-                    if (!user.roles || user.roles.length === 0) {
-                        const roles = await fetchUserRoles(user.id);
-                        return { ...user, roles };
-                    }
-                    return user;
+                    const roleRes = await axiosClient.get(`/UserRole/getRolesByUserId/${user.id}`);
+                    const roles = Array.isArray(roleRes.data?.roles)
+                        ? roleRes.data.roles.map((r: any) => r.namerole)
+                        : [];
+                    return { ...user, roles };
                 })
             );
-            console.log('Users fetched with roles:', usersWithRoles);
             setUsers(usersWithRoles);
         } catch (error) {
-            console.error('Failed to fetch users:', error);
             setUsers([]);
         } finally {
             setLoading(false);
         }
-    };const fetchRoles = async () => {
+    };
+    const fetchRoles = async () => {
         try {
             // Log trước khi gọi API
             console.log('Calling getAllRoles API from userApi...');
-            
+
             // Sử dụng hàm getAllRoles từ userApi.ts thay vì gọi trực tiếp qua axios
             const roles = await getAllRoles();
             console.log('Roles returned from getAllRoles API:', roles);
-            
+
             if (Array.isArray(roles) && roles.length > 0) {
                 setRolesList(roles);
                 console.log('Roles set successfully:', roles);
                 return;
             }
-            
+
             console.warn('No roles returned from API or empty array');
-            
+
             // Thử phương pháp khác nếu getAllRoles không trả về dữ liệu
             console.log('Trying direct axios call as fallback...');
             try {
                 const response = await axiosClient.get("/UserRole/all");
                 console.log('Fallback API response:', response);
-                
-                const fallbackRoles = Array.isArray(response.data) 
-                    ? response.data 
-                    : Array.isArray(response.data.data) 
-                        ? response.data.data 
+
+                const fallbackRoles = Array.isArray(response.data)
+                    ? response.data
+                    : Array.isArray(response.data.data)
+                        ? response.data.data
                         : [];
-                
+
                 if (Array.isArray(fallbackRoles) && fallbackRoles.length > 0) {
                     setRolesList(fallbackRoles);
                     console.log('Roles set from fallback method:', fallbackRoles);
@@ -170,65 +171,61 @@ export default function UserManagement() {
             } catch (directError) {
                 console.error('Error in direct API call:', directError);
             }
-                     
+
         } catch (error) {
             console.error('Error fetching roles:', error);
             message.error('Lỗi khi tải danh sách vai trò');
-           
+
         }
-    };const handleSubmit = async (values: any) => {
+    };
+    const handleSubmit = async (values: any) => {
         try {
             setLoading(true);
+            let userId = selectedUser?.id;
             if (editMode && selectedUser) {
-                // Cập nhật thông tin người dùng
-                const updatedUser = await update({
+                // Sửa user: dùng updateWithRole, truyền roleids là mảng id vai trò
+                await updateWithRole({
                     ...selectedUser,
-                    ...values
+                    ...values,
+                    roleids: values.roles, // roles là mảng id vai trò từ form
                 });
-                
-                setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
-                message.success("Cập nhật thông tin người dùng thành công!");
-            } else if (changePasswordVisible && selectedUser) {
-                await changePassword(selectedUser.sodienthoai, values.oldPassword, values.newPassword);
-                message.success("Đổi mật khẩu thành công!");
             } else {
-                // Đăng ký người dùng mới
+                // Thêm user: tạo user trước, sau đó updateWithRole để gán role
                 const newUser = await register(values);
-                setUsers([...users, newUser]);
-                message.success("Thêm người dùng thành công!");
+                userId = newUser.id;
+                await updateWithRole({
+                    ...values,
+                    id: userId,
+                    roleids: values.roles,
+                });
             }
+            message.success(editMode ? "Cập nhật thành công!" : "Thêm người dùng thành công!");
             setAddModalVisible(false);
             setEditMode(false);
-            setChangePasswordVisible(false);
             setSelectedUser(null);
             form.resetFields();
-            
-            // Làm mới danh sách người dùng
             fetchUsers();
         } catch (err) {
-            console.error('Error:', err);
             message.error("Có lỗi xảy ra!");
         } finally {
             setLoading(false);
         }
-    };    // Xử lý cập nhật vai trò người dùng
     const handleRoleSubmit = async (values: any) => {
         try {
             setLoading(true);
             if (selectedUser && values.roleid) {
                 console.log('Updating roles for user:', selectedUser.id);
                 console.log('New roles:', values.roleid);
-                
+
                 // Gọi API assignRoles để gán nhiều vai trò một lúc
                 const success = await assignRoles(selectedUser.id, values.roleid);
-                
+
                 if (success) {
                     // Cập nhật thông tin vai trò trong state
-                    const roleNames = values.roleid.map((roleId: string) => 
+                    const roleNames = values.roleid.map((roleId: string) =>
                         rolesList.find(r => r.id === roleId)?.namerole || ''
                     ).filter((name: string) => name);
-                    
-                    // Cập nhật người dùng trực tiếp trong state thay vì gọi lại API
+
                     const updatedUser = {
                         ...selectedUser,
                         roles: roleNames
@@ -289,7 +286,12 @@ export default function UserManagement() {
         { title: 'Số điện thoại', dataIndex: 'sodienthoai', key: 'sodienthoai', width: 140 },
         { title: 'Giới tính', dataIndex: 'gioitinh', key: 'gioitinh', width: 90, render: (gt: string | undefined) => gt || '-' },
         { title: 'Ngày sinh', dataIndex: 'ngaysinh', key: 'ngaysinh', width: 120, render: (ngaysinh: string | undefined) => ngaysinh ? new Date(ngaysinh).toLocaleDateString('vi-VN') : '-' },
-        { title: 'Vai trò', dataIndex: 'roles', key: 'roles', width: 120, render: (roles: string[] | undefined) => Array.isArray(roles) && roles.length > 0 ? roles.map(role => <Tag color={role === 'admin' ? 'red' : 'blue'} key={role}>{role}</Tag>) : <Tag color="default">-</Tag> },
+        {
+            title: 'Vai trò', dataIndex: 'roles', key: 'roles', width: 120, render: (roles: string[] | undefined) =>
+                Array.isArray(roles) && roles.length > 0
+                    ? roles.map(role => <Tag color={role === 'admin' ? 'red' : 'blue'} key={role}>{role}</Tag>)
+                    : <Tag color="default">-</Tag>
+        },
         {
             title: 'Thao tác',
             key: 'action',
@@ -533,7 +535,7 @@ export default function UserManagement() {
                     >
                         <Input />
                     </Form.Item>
-                    
+
                     <Form.Item
                         label="Giới tính"
                         name="gioitinh"
@@ -545,11 +547,28 @@ export default function UserManagement() {
                         name="ngaysinh"
                     >
                         <Input type="date" />
-                    </Form.Item>                    <Form.Item
+                    </Form.Item>
+                    <Form.Item
                         label="Địa chỉ"
                         name="diachi"
                     >
                         <Input />
+                    </Form.Item>
+                    <Form.Item
+                        label="Vai trò"
+                        name="roles"
+                        rules={[{ required: true, message: 'Vui lòng chọn vai trò!' }]}
+                    >
+                        <Select
+                            mode="multiple"
+                            placeholder="Chọn vai trò"
+                            options={rolesList.map(role => ({
+                                label: role.namerole,
+                                value: role.id,
+                            }))}
+                            value={form.getFieldValue('roles')}
+                            onChange={value => form.setFieldsValue({ roles: value })}
+                        />
                     </Form.Item>
                     <Form.Item>
                         <Button type="primary" htmlType="submit" block loading={loading}>
@@ -595,10 +614,10 @@ export default function UserManagement() {
                             <Descriptions.Item label="Người dùng">{selectedUser.hoten}</Descriptions.Item>
                             <Descriptions.Item label="Email">{selectedUser.email}</Descriptions.Item>
                             <Descriptions.Item label="Vai trò hiện tại">
-                                {selectedUser.roles && selectedUser.roles.length > 0 ? 
-                                    selectedUser.roles.map(role => 
+                                {selectedUser.roles && selectedUser.roles.length > 0 ?
+                                    selectedUser.roles.map(role =>
                                         <Tag color={role === 'admin' ? 'red' : 'blue'} key={role}>{role}</Tag>
-                                    ) : 
+                                    ) :
                                     <Tag color="default">Chưa có vai trò</Tag>
                                 }
                             </Descriptions.Item>
@@ -618,15 +637,15 @@ export default function UserManagement() {
                             allowClear
                             options={
                                 rolesList.length > 0
-                                ? rolesList.map(role => ({
-                                    label: role.namerole,
-                                    value: role.id,
-                                    key: role.id,
-                                  }))
-                                : [{ label: "Đang tải...", value: "loading", key: "loading" }]
+                                    ? rolesList.map(role => ({
+                                        label: role.namerole,
+                                        value: role.id,
+                                        key: role.id,
+                                    }))
+                                    : [{ label: "Đang tải...", value: "loading", key: "loading" }]
                             }
                             optionFilterProp="label"
-                            filterOption={(input, option) => 
+                            filterOption={(input, option) =>
                                 ((option?.label as string) || '').toLowerCase().includes(input.toLowerCase())
                             }
                             loading={rolesList.length === 0}
@@ -641,8 +660,8 @@ export default function UserManagement() {
                     </Form.Item>
                     {rolesList.length === 0 && (
                         <Form.Item>
-                            <Button 
-                                type="dashed" 
+                            <Button
+                                type="dashed"
                                 onClick={fetchRoles}
                                 icon={<SearchOutlined />}
                                 block
@@ -651,7 +670,7 @@ export default function UserManagement() {
                             </Button>
                         </Form.Item>
                     )}                    <div className="flex justify-between mt-4">
-                        <Button 
+                        <Button
                             onClick={() => {
                                 setRoleModalVisible(false);
                                 setSelectedUser(null);
@@ -660,9 +679,9 @@ export default function UserManagement() {
                         >
                             Hủy
                         </Button>
-                        <Button 
-                            type="primary" 
-                            htmlType="submit" 
+                        <Button
+                            type="primary"
+                            htmlType="submit"
                             loading={loading}
                             icon={<SearchOutlined />}
                         >
