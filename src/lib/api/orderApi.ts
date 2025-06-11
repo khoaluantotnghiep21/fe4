@@ -1,5 +1,6 @@
 import { message } from "antd";
 import axiosClient from "../axiosClient";
+import { Timestamp } from "next/dist/server/lib/cache-handlers/types";
 
 export interface PurchaseOrderDetail {
     masanpham: string;
@@ -16,7 +17,7 @@ export interface CreatePurchaseOrderRequest {
     giamgiatructiep: number;
     thanhtien: number;
     phivanchuyen: number;
-    machinhhanh: string;
+    machinhanh: string;
     details: PurchaseOrderDetail[];
 }
 
@@ -39,6 +40,18 @@ export interface CreatePurchaseOrderResponse {
         machinhanh: string | null;
     };
 }
+export interface GiaoHangDTO{
+    nguoinhan: string;
+    sodienthoainguoinhan: string;
+    diachinguoinhan: string | null;
+    madonhang: string;
+    thoigiannhan: string;
+}
+export interface GiaoHangInterface{
+    statusCode: number;
+    message: string;
+    data: GiaoHangDTO
+}
 
 export interface OrderItem {
     id: string;
@@ -52,6 +65,11 @@ export interface OrderItem {
     ngaymuahang?: string;
     giamgiatructiep?: number;
     hoten?: string;
+    nguoinhan?:string,
+    machinhanh?:string,
+    sodienthoainguoinhan?:string,
+    diachinguoinhan?:string,
+    thoigiannhan?:string,
     diachi?:string;
     sodienthoai?:string;
     thanhtien? : number;
@@ -179,5 +197,29 @@ export async function getOderByMaDonHang(madonhang: string): Promise<OrderItem[]
             console.error("Error fetching user orders:", error);
         }
         return [];
+    }
+}
+
+export async function createGiaoHang(orderData: GiaoHangDTO): Promise<GiaoHangInterface | null> {
+    try {
+        const response = await axiosClient.post('/delivery/create', orderData);
+
+        if (response.data && response.data.statusCode == 201) {
+            message.success("Đặt hàng thành công!");
+            return response.data;
+        } else {
+            message.error("Đặt hàng thất bại!");
+            return null;
+        }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+        console.error("Error creating purchase order:", error);
+
+        if (error.response?.data?.message) {
+            message.error(`Lỗi: ${error.response.data.message}`);
+        } else {
+            message.error("Có lỗi xảy ra khi đặt hàng!");
+        }
+        return null;
     }
 }

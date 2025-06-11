@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { findOne, Pharmacy } from "@/lib/api/pharmacyService";
 import { message } from "antd";
 import { getOderByMaDonHang, OrderItem } from "@/lib/api/orderApi";
-
+import dayjs from "dayjs";
 export default function OrderConfirmation() {
   const searchParams = useSearchParams();
   const [pharmacy, setPharmacy] = useState<Pharmacy | null>(null);
@@ -93,6 +93,11 @@ export default function OrderConfirmation() {
     const fetchOrderDetails = async () => {
       try {
         const data = await getOderByMaDonHang(madonhang);
+        if(data && data[0].machinhanh){
+          const pharmacy = await findOne(data[0]?.machinhanh);
+          console.log("Pharmacy:", pharmacy);
+          setPharmacy(pharmacy);
+        }
         setOrderItems(data);
       } catch (error) {
         console.error("Lỗi khi lấy chi tiết đơn hàng:", error);
@@ -145,7 +150,7 @@ export default function OrderConfirmation() {
           <div className="mb-4">
             <p className="font-medium text-gray-700">Dự kiến nhận hàng</p>
             <p className="text-lg font-semibold text-black">
-              {orderDetails.gioGiaoHang} ngày {orderDetails.ngayGiaoHang}
+              {dayjs(orderItems[0]?.thoigiannhan).format("HH:MM")} ngày {dayjs(orderItems[0]?.thoigiannhan).format("DD/MM/YYYY")}
             </p>
             <p className="text-gray-600">
               Đơn hàng đang được xử lý tại nhà thuốc: {pharmacy?.diachicuthe}{" "}
@@ -157,11 +162,11 @@ export default function OrderConfirmation() {
           <div className="border-t pt-4 space-y-2">
             <p className="font-medium">Thông tin người nhận</p>
             <p className="text-black">
-              {orderItems ? orderItems[0]?.hoten : "Khách hàng ẩn danh"}
+              {orderItems ? orderItems[0]?.nguoinhan : "Khách hàng ẩn danh"}
             </p>
             <p className="text-gray-600">
               {orderItems
-                ? orderItems[0]?.sodienthoai
+                ? orderItems[0]?.sodienthoainguoinhan
                 : "Số điện thoại không có"}
             </p>
           </div>
@@ -171,7 +176,7 @@ export default function OrderConfirmation() {
             <p className="text-black">
               {" "}
               {pharmacy?.diachicuthe} {pharmacy?.tenduong} {pharmacy?.quan}{" "}
-              {pharmacy?.thanhpho || "..."}
+              {pharmacy?.thanhpho || "..."}  {orderItems[0]?.diachinguoinhan} 
             </p>
           </div>
         </div>
