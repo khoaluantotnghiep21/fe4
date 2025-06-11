@@ -69,6 +69,9 @@ export default function Checkout() {
     setShowTimeModal(false);
   };
 
+  const [formDelivery] = Form.useForm();
+  const [formPickup] = Form.useForm();
+
   useEffect(() => {
     const data = searchParams.get('data');
     if (data) {
@@ -115,7 +118,7 @@ export default function Checkout() {
       value: item.name,
     })));
     form.setFieldsValue({ district: undefined }); // reset quận/huyện khi đổi tỉnh
-    
+
     // Fetch pharmacies for the selected city with empty district
     const pharmacies = await findPharmacyByProvinces(value);
     setPharmacyData(pharmacies);
@@ -154,29 +157,29 @@ export default function Checkout() {
       };
       const result = await createPurchaseOrder(orderData);
 
-  
+
       if (result) {
         let giaoHangData: GiaoHangDTO = {
           nguoinhan: values.fullName,
           sodienthoainguoinhan: values.phone,
-          diachinguoinhan: activeTab === 'delivery' ? values.address :  '',
+          diachinguoinhan: activeTab === 'delivery' ? values.address : '',
           madonhang: result.data.madonhang
-      };
-      let giaoHang = await  createGiaoHang(giaoHangData);
-      if(giaoHang){
-        for (const item of checkoutData.items) {
-          await removeItem(item.id, item.option);
-        }
-        
-        if(result.data.phuongthucthanhtoan == "Chuyển khoản ngân hàng"){
-          const urlPay = await createVnpayOrder(result.data.madonhang);
-          window.location.href = urlPay;
-        }
-        else{
-          router.push(`/order-confirmation?madonhang=${result.data.madonhang}`);
+        };
+        let giaoHang = await createGiaoHang(giaoHangData);
+        if (giaoHang) {
+          for (const item of checkoutData.items) {
+            await removeItem(item.id, item.option);
+          }
 
+          if (result.data.phuongthucthanhtoan == "Chuyển khoản ngân hàng") {
+            const urlPay = await createVnpayOrder(result.data.madonhang);
+            window.location.href = urlPay;
+          }
+          else {
+            router.push(`/order-confirmation?madonhang=${result.data.madonhang}`);
+
+          }
         }
-      }
 
 
 
@@ -228,7 +231,7 @@ export default function Checkout() {
             <Tabs activeKey={activeTab} onChange={key => setActiveTab(key as 'delivery' | 'pickup')}>
               <TabPane tab="Giao hàng tận nơi" key="delivery">
                 <Form
-                  form={form}
+                  form={formDelivery}
                   layout="vertical"
                   onFinish={handleSubmit}
                   initialValues={{
@@ -238,7 +241,7 @@ export default function Checkout() {
                 >
                   <h2 className="text-xl font-semibold mb-4">Thông tin giao hàng</h2>
                   <Form.Item
-                  
+
                     name="fullName"
                     label="Họ và tên"
                     rules={[{ required: true, message: 'Vui lòng nhập họ tên' }]}
@@ -296,7 +299,7 @@ export default function Checkout() {
               </TabPane>
               <TabPane tab="Nhận tại nhà thuốc" key="pickup">
                 <Form
-                  form={form}
+                  form={formPickup}
                   layout="vertical"
                   onFinish={handleSubmit}
                   initialValues={{
@@ -463,7 +466,7 @@ export default function Checkout() {
                   <h2 className="text-xl font-semibold mb-4">Phương thức thanh toán</h2>
                   <Form.Item name="paymentMethod">
                     <Radio.Group defaultValue={paymentMethod}>
-                      <Radio defaultChecked={paymentMethod == 'COD'} onChange={() => setPaymentMethod('COD')}  value="COD">Thanh toán khi nhận hàng</Radio>
+                      <Radio defaultChecked={paymentMethod == 'COD'} onChange={() => setPaymentMethod('COD')} value="COD">Thanh toán khi nhận hàng</Radio>
                       <Radio defaultChecked={paymentMethod == 'BANKING'} onChange={() => setPaymentMethod('BANKING')} value="BANKING">Chuyển khoản ngân hàng</Radio>
                     </Radio.Group>
                   </Form.Item>

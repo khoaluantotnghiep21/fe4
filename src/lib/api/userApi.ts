@@ -31,6 +31,19 @@ export const getUsers = async (): Promise<User[]> => {
     }
 };
 
+export const getUsersByID = async (id: string): Promise<User | null> => {
+    try {
+        const response = await axiosClient.get(`/identityuser/getUserById/${id}`);
+        if (response.data && response.data.data) {
+            return response.data.data;
+        }
+        return null;
+    } catch (error) {
+        message.error("Lỗi khi lấy thông tin người dùng!");
+        return null;
+    }
+};
+
 export const getUserRole = async (id: string): Promise<{ roles: string[] } | null> => {
     try {
         const response = await axiosClient.get(`/UserRole/getUserRoles/${id}`);
