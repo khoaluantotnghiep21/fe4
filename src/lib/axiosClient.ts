@@ -26,10 +26,6 @@ const axiosClient = axios.create({
   },
 });
 
-// Disable SSL certificate validation (for development only)
-if (typeof process !== "undefined") {
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-}
 
 // Request interceptor: tự động gắn access token nếu có
 axiosClient.interceptors.request.use(
