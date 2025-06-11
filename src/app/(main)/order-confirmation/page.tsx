@@ -171,7 +171,9 @@ export default function OrderConfirmation() {
           <div className="mb-4">
             <p className="font-medium text-gray-700">Dự kiến nhận hàng</p>
             <p className="text-lg font-semibold text-black">
-              {dayjs(orderItems[0]?.thoigiannhan).format("HH:MM")} ngày {dayjs(orderItems[0]?.thoigiannhan).format("DD/MM/YYYY")}
+              {orderItems[0]?.ngaymuahang
+              ? `${dayjs(orderItems[0]?.ngaymuahang).add(2, "day").format("HH:mm")} ngày ${dayjs(orderItems[0]?.ngaymuahang).add(2, "day").format("DD/MM/YYYY")}`
+              : "Không xác định"}
             </p>
             <p className="text-gray-600">
               Đơn hàng đang được xử lý tại nhà thuốc: {pharmacy?.diachicuthe}{" "}
@@ -191,12 +193,6 @@ export default function OrderConfirmation() {
                 ? deliveryInfo?.sodienthoainguoinhan || "Số điện thoại không có"
                 : orderItems[0]?.sodienthoainguoinhan || "Số điện thoại không có"}
             </p>
-            {orderItems[0]?.hinhthucnhanhang === "Giao hàng tận nơi" && deliveryInfo?.thoigiandukien && (
-              <div className="mb-2">
-                <span className="font-medium">Dự kiến giao:</span>{" "}
-                <span>{dayjs(deliveryInfo.thoigiandukien).format("DD/MM/YYYY")}</span>
-              </div>
-            )}
           </div>
 
             <div className="border-t pt-4 space-y-2">
