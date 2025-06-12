@@ -25,7 +25,7 @@ export default function ProductsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 12;
 
-  const pagedProducts = filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  // const pagedProducts = filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -37,9 +37,9 @@ export default function ProductsPage() {
         setLoading(true);
         let productRes;
         if (query) {
-          productRes = await getProductBySearch(query);
+          productRes = await getProductBySearch(query, { page: 1, take: 1000 }); // truyền take lớn
         } else {
-          productRes = await getProducts();
+          productRes = await getProducts({ page: 1, take: 1000 }); // truyền take lớn
         }
         if (Array.isArray(productRes)) {
           setProducts(productRes);
@@ -115,14 +115,16 @@ export default function ProductsPage() {
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-            {pagedProducts.length > 0 ? (
-              pagedProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  buttonText="Thêm vào giỏ"
-                />
-              ))
+            {filteredProducts.length > 0 ? (
+              filteredProducts
+                .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+                .map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    buttonText="Thêm vào giỏ"
+                  />
+                ))
             ) : (
               <div className="col-span-full text-center p-8 bg-gray-100 rounded-lg">
                 <p className="text-lg">Không có sản phẩm nào trong danh mục này.</p>
