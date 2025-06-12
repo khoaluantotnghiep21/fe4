@@ -1,16 +1,29 @@
 import { useEffect, useState } from "react";
 import { Card, Table, Select, Tag, Button, Popconfirm, message, Modal, Descriptions } from "antd";
 import { getAllOrders, updateOrderStatus, getOderByMaDonHang } from "@/lib/api/orderApi";
+import { Input } from "antd";
 
 const orderStatusOptions = [
   { value: "all", label: "Tất cả" },
   { value: "Đang chờ xác nhận", label: "Đang chờ xác nhận" },
-  { value: "Đang giao", label: "Đang giao" },
-  { value: "Hoàn thành", label: "Hoàn thành" },
+  { value: "Đã xác nhận", label: "Đã xác nhận" },
+  { value: "Đang giao hàng", label: "Đang giao hàng" },
+  { value: "Đã giao hàng", label: "Đã giao hàng" },
   { value: "Đã hủy", label: "Đã hủy" },
 ];
 
-const editableStatus = ["Đang chờ xác nhận", "Đang giao"];
+const statusMap: Record<string, string> = {
+  "Đang chờ xác nhận": "Pending",
+  "Đã xác nhận": "Confirmed",
+  "Đang giao hàng": "Delivering",
+  "Đã giao hàng": "Delivered",
+  "Đã hủy": "Cancelled",
+};
+
+const apiStatus = statusMap[status] || status;
+getAllOrders(apiStatus);
+
+const editableStatus = ["Delivering", "Pending", "Delivering", "Confirmed", "Delivering", "Cancelled", "Đang chờ xác nhận", "Đã xác nhận", "Đang giao hàng", "Đã giao hàng", "Đã hủy"];
 
 export default function OrderList() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -20,12 +33,21 @@ export default function OrderList() {
 
   const [detailVisible, setDetailVisible] = useState(false);
   const [detailData, setDetailData] = useState<any>(null);
+  const [detailStatus, setDetailStatus] = useState<string>("");
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+
+
+  const [searchMaDon, setSearchMaDon] = useState("");
 
   const showOrderDetail = async (madonhang: string) => {
     setLoading(true);
     try {
       const data = await getOderByMaDonHang(madonhang);
       setDetailData(data[0]);
+      setDetailStatus(data[0]?.trangthai || "");
       setDetailVisible(true);
     } finally {
       setLoading(false);
@@ -34,9 +56,13 @@ export default function OrderList() {
 
   const fetchOrders = () => {
     setLoading(true);
-    getAllOrders(status)
-      .then(setOrders)
-      .finally(() => setLoading(false));
+    getAllOrders().then((allOrders) => {
+      if (status === "all") {
+        setOrders(allOrders);
+      } else {
+        setOrders(allOrders.filter((order: any) => order.trangthai === status));
+      }
+    }).finally(() => setLoading(false));
   };
 
   useEffect(() => {
@@ -44,12 +70,26 @@ export default function OrderList() {
     // eslint-disable-next-line
   }, [status]);
 
+
+  const filteredOrders = searchMaDon
+    ? orders.filter((order) =>
+      order.madonhang.toLowerCase().includes(searchMaDon.trim().toLowerCase())
+    )
+    : orders;
+
+  const pagedOrders = filteredOrders.slice((page - 1) * pageSize, page * pageSize);
+
+
   const handleStatusChange = async (madonhang: string, newStatus: string) => {
     setUpdatingId(madonhang);
     try {
-      await updateOrderStatus(madonhang, newStatus);
-      message.success("Cập nhật trạng thái thành công!");
+      const apiStatus = statusMap[newStatus] || newStatus;
+      await updateOrderStatus(madonhang, apiStatus);
       fetchOrders();
+      const data = await getOderByMaDonHang(madonhang);
+      setDetailData(data[0]);
+      setDetailStatus(data[0]?.trangthai || "");
+      message.success("Đã cập nhật trạng thái đơn hàng!");
     } catch {
       message.error("Cập nhật trạng thái thất bại!");
     } finally {
@@ -67,11 +107,31 @@ export default function OrderList() {
           onChange={setStatus}
           options={orderStatusOptions}
         />
+        <Input.Search
+          placeholder="Tìm mã đơn hàng"
+          allowClear
+          style={{ width: 220 }}
+          value={searchMaDon}
+          onChange={e => setSearchMaDon(e.target.value)}
+          onSearch={v => setSearchMaDon(v)}
+        />
       </div>
       <Table
-        dataSource={orders}
+        dataSource={pagedOrders}
         loading={loading}
         rowKey="madonhang"
+        pagination={{
+          current: page,
+          pageSize,
+          total: filteredOrders.length,
+          showSizeChanger: true,
+          pageSizeOptions: [5, 10, 20, 50],
+          showTotal: (total) => `Tổng số: ${total} đơn hàng`,
+          onChange: (p, ps) => {
+            setPage(p);
+            setPageSize(ps);
+          },
+        }}
         columns={[
           { title: "Mã đơn", dataIndex: "madonhang", key: "madonhang" },
           { title: "Khách hàng", dataIndex: "hoten", key: "hoten" },
@@ -85,38 +145,17 @@ export default function OrderList() {
             title: "Trạng thái",
             dataIndex: "trangthai",
             key: "trangthai",
-            render: (trangthai: string, record: any) =>
-              editableStatus.includes(trangthai) ? (
-                <Select
-                  value={trangthai}
-                  style={{ width: 150 }}
-                  onChange={newStatus =>
-                    handleStatusChange(record.madonhang, newStatus)
-                  }
-                  loading={updatingId === record.madonhang}
-                  disabled={updatingId === record.madonhang}
-                  options={orderStatusOptions
-                    .filter(opt => opt.value !== "all")
-                    .map(opt => ({
-                      value: opt.value,
-                      label: opt.label,
-                      disabled:
-                        trangthai === "Hoàn thành" ||
-                        trangthai === "Đã hủy" ||
-                        (opt.value === "Hoàn thành" && trangthai === "Đã hủy") ||
-                        (opt.value === "Đã hủy" && trangthai === "Hoàn thành"),
-                    }))}
-                />
-              ) : (
-                <Tag color={
-                  trangthai === "Đang chờ xác nhận" ? "gold" :
-                    trangthai === "Đang giao" ? "blue" :
-                      trangthai === "Hoàn thành" ? "green" :
+            render: (trangthai: string) => (
+              <Tag color={
+                trangthai === "Đang chờ xác nhận" ? "gold" :
+                  trangthai === "Đã xác nhận" ? "cyan" :
+                    trangthai === "Đang giao hàng" ? "blue" :
+                      trangthai === "Đã giao hàng" ? "green" :
                         trangthai === "Đã hủy" ? "red" : "default"
-                }>
-                  {trangthai}
-                </Tag>
-              ),
+              }>
+                {trangthai}
+              </Tag>
+            ),
           },
           {
             title: "Sản phẩm",
@@ -142,7 +181,6 @@ export default function OrderList() {
             ),
           },
         ]}
-        pagination={false}
       />
       <Modal
         open={detailVisible}
@@ -156,7 +194,45 @@ export default function OrderList() {
             <Descriptions.Item label="Khách hàng">{detailData.hoten}</Descriptions.Item>
             <Descriptions.Item label="Số điện thoại">{detailData.sodienthoai}</Descriptions.Item>
             <Descriptions.Item label="Địa chỉ">{detailData.diachi}</Descriptions.Item>
-            <Descriptions.Item label="Trạng thái">{detailData.trangthai}</Descriptions.Item>
+            <Descriptions.Item label="Trạng thái">
+              {editableStatus.includes(detailStatus) ? (
+                <Popconfirm
+                  title="Bạn có chắc muốn thay đổi trạng thái đơn hàng?"
+                  onConfirm={async () => {
+                    await handleStatusChange(detailData.madonhang, detailStatus);
+                    message.success("Đã cập nhật trạng thái đơn hàng!");
+                  }}
+                  okText="Đồng ý"
+                  cancelText="Hủy"
+                  disabled={detailStatus === detailData.trangthai}
+                >
+                  <Select
+                    value={detailStatus}
+                    style={{ width: 180 }}
+                    onChange={setDetailStatus}
+                    options={orderStatusOptions.filter(opt => opt.value !== "all")}
+                    disabled={updatingId === detailData.madonhang}
+                  />
+                  <Button
+                    type="primary"
+                    style={{ marginLeft: 8 }}
+                    disabled={detailStatus === detailData.trangthai}
+                  >
+                    Lưu trạng thái
+                  </Button>
+                </Popconfirm>
+              ) : (
+                <Tag color={
+                  detailStatus === "Đang chờ xác nhận" ? "gold" :
+                    detailStatus === "Đã xác nhận" ? "cyan" :
+                      detailStatus === "Đang giao hàng" ? "blue" :
+                        detailStatus === "Đã giao hàng" ? "green" :
+                          detailStatus === "Đã hủy" ? "red" : "default"
+                }>
+                  {detailStatus}
+                </Tag>
+              )}
+            </Descriptions.Item>
             <Descriptions.Item label="Tổng tiền">{detailData.thanhtien?.toLocaleString("vi-VN")}đ</Descriptions.Item>
             <Descriptions.Item label="Sản phẩm">
               <ul>

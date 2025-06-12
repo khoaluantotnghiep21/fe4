@@ -229,14 +229,14 @@ export default function OrderConfirmation() {
                   "Không có phương thức thanh toán nào"}
               </div>
 
-            <div className="mt-2 border-t pt-4">
+            {/* <div className="mt-2 border-t pt-4">
               <p className="font-semibold text-lg ">Trạng thái đơn hàng</p>
               <div
                 className={`inline-block mt-1 px-3 py-1 rounded-full justify-center text-sm font-medium ${statusClass}`}
               >
                 {`${orderItems[0]?.trangthai} đơn hàng`  || "Không rõ trạng thái" }
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
