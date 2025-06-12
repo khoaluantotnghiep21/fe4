@@ -93,7 +93,7 @@ export default function OrderConfirmation() {
     const fetchOrderDetails = async () => {
       try {
         const data = await getOderByMaDonHang(madonhang);
-        if(data && data[0].machinhanh){
+        if (data && data[0].machinhanh) {
           const pharmacy = await findOne(data[0]?.machinhanh);
           console.log("Pharmacy:", pharmacy);
           setPharmacy(pharmacy);
@@ -135,7 +135,7 @@ export default function OrderConfirmation() {
         {orderItems[0]?.ngaymuahang
           ? new Date(orderItems[0]?.ngaymuahang).toLocaleDateString("vi-VN")
           : "Lỗi"}{" "}
-        · 
+        ·
         <span
           className="text-blue-600 ml-1 cursor-pointer"
           onClick={() => copyOrderCode()}
@@ -150,8 +150,8 @@ export default function OrderConfirmation() {
           <div className="mb-4">
             <p className="font-medium text-gray-700">Dự kiến nhận hàng</p>
             <p className="text-lg font-semibold text-black">
-              
-              {dayjs(orderItems[0]?.thoigiannhan).format("HH:MM")} ngày {dayjs(orderItems[0]?.thoigiannhan).format("DD/MM/YYYY")}
+              {dayjs(orderItems[0]?.thoigiannhan).format("HH:MM")} ngày{" "}
+              {dayjs(orderItems[0]?.thoigiannhan).format("DD/MM/YYYY")}
             </p>
             <p className="text-gray-600">
               Đơn hàng đang được xử lý tại nhà thuốc: {pharmacy?.diachicuthe}{" "}
@@ -173,21 +173,23 @@ export default function OrderConfirmation() {
           </div>
 
           <div className="border-t pt-4 space-y-2">
-  <p className="font-medium">Nhận hàng tại</p>
-  {orderItems[0]?.machinhanh != "CN000000" ? (
-    <p className="text-black">
-      {pharmacy?.diachicuthe} {pharmacy?.tenduong} {pharmacy?.quan}{" "}
-      {pharmacy?.thanhpho || "..."}
-    </p>
-  ) : (
-    <p className="text-gray-500">{orderItems[0]?.diachinguoinhan ? (
-      <p className="text-black">
-        {orderItems[0]?.diachinguoinhan}
-      </p>
-    ) : "Lỗi"}</p>
-  )}
-  </div>
-</div>
+            <p className="font-medium">Nhận hàng tại</p>
+            {orderItems[0]?.machinhanh != "CN000000" ? (
+              <p className="text-black">
+                {pharmacy?.diachicuthe} {pharmacy?.tenduong} {pharmacy?.quan}{" "}
+                {pharmacy?.thanhpho || "..."}
+              </p>
+            ) : (
+              <p className="text-gray-500">
+                {orderItems[0]?.diachinguoinhan ? (
+                  <p className="text-black">{orderItems[0]?.diachinguoinhan}</p>
+                ) : (
+                  "Lỗi"
+                )}
+              </p>
+            )}
+          </div>
+        </div>
 
         {/* Right Section */}
         <div className="bg-white p-4 rounded-md shadow border">
@@ -220,7 +222,10 @@ export default function OrderConfirmation() {
             <span className="text-blue-600">Miễn phí</span>
           </div>
           <hr className="my-2" />
-          <div style={{borderBottom: "solid 1px "}} className="flex justify-between text-lg font-semibold">
+          <div
+            style={{ borderBottom: "solid 1px " }}
+            className="flex justify-between text-lg font-semibold"
+          >
             <span>Thành tiền</span>
             <span className="text-blue-600">
               {orderItems[0]?.thanhtien
@@ -231,18 +236,21 @@ export default function OrderConfirmation() {
           </div>
 
           <div className="mt-4 space-y-2">
-            <span className="font-semibold text-lg  ">Phương thức thanh toán</span>
-              <div className="font-medium text-black pt-1">
-                {orderItems[0]?.phuongthucthanhtoan ||
-                  "Không có phương thức thanh toán nào"}
-              </div>
+            <span className="font-semibold text-lg  ">
+              Phương thức thanh toán
+            </span>
+            <div className="font-medium text-black pt-1">
+              {orderItems[0]?.phuongthucthanhtoan ||
+                "Không có phương thức thanh toán nào"}
+            </div>
 
             <div className="mt-2 border-t pt-4">
               <p className="font-semibold text-lg ">Trạng thái đơn hàng</p>
               <div
                 className={`inline-block mt-1 px-3 py-1 rounded-full justify-center text-sm font-medium ${statusClass}`}
               >
-                {`${orderItems[0]?.trangthai} đơn hàng`  || "Không rõ trạng thái" }
+                {`${orderItems[0]?.trangthai} đơn hàng` ||
+                  "Không rõ trạng thái"}
               </div>
             </div>
           </div>

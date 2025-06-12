@@ -155,7 +155,6 @@ export default function Checkout() {
           donvitinh: item.option || 'cái'
         }))
       };
-      alert(timestamp)
       const result = await createPurchaseOrder(orderData);
 
       if (result) {

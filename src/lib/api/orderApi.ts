@@ -43,7 +43,9 @@ export interface CreatePurchaseOrderResponse {
 export interface GiaoHangDTO {
     nguoinhan: string;
     sodienthoainguoinhan: string;
+    thoigiannhan: string;
     diachinguoinhan: string | null;
+    thoigiandukien?: string | null;
     madonhang: string;
 }
 export interface GiaoHangInterface {
