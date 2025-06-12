@@ -19,6 +19,9 @@ const statusMap: Record<string, string> = {
   "Đã giao hàng": "Delivered",
   "Đã hủy": "Cancelled",
 };
+const statusMapReverse: Record<string, string> = Object.fromEntries(
+  Object.entries(statusMap).map(([vi, en]) => [en, vi])
+);
 
 const apiStatus = statusMap[status] || status;
 getAllOrders(apiStatus);
@@ -57,10 +60,17 @@ export default function OrderList() {
   const fetchOrders = () => {
     setLoading(true);
     getAllOrders().then((allOrders) => {
+      // Chuyển trạng thái về tiếng Việt cho từng đơn
+      const ordersWithViStatus = allOrders.map((order: any) => ({
+        ...order,
+        trangthai: statusMapReverse[order.trangthai] || order.trangthai,
+      }));
       if (status === "all") {
-        setOrders(allOrders);
+        setOrders(ordersWithViStatus);
       } else {
-        setOrders(allOrders.filter((order: any) => order.trangthai === status));
+        setOrders(
+          ordersWithViStatus.filter((order: any) => order.trangthai === status)
+        );
       }
     }).finally(() => setLoading(false));
   };
@@ -87,8 +97,10 @@ export default function OrderList() {
       await updateOrderStatus(madonhang, apiStatus);
       fetchOrders();
       const data = await getOderByMaDonHang(madonhang);
+      // Chuyển trạng thái trả về từ API về tiếng Việt nếu cần
+      const viStatus = statusMapReverse[data[0]?.trangthai] || data[0]?.trangthai;
       setDetailData(data[0]);
-      setDetailStatus(data[0]?.trangthai || "");
+      setDetailStatus(viStatus);
       message.success("Đã cập nhật trạng thái đơn hàng!");
     } catch {
       message.error("Cập nhật trạng thái thất bại!");
