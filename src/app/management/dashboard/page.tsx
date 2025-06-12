@@ -21,6 +21,7 @@ import UserManagement from '../info-user/UserManagement';
 import PharmacyManagement from '../pharmacy/PharmacyManagement';
 import ProductReceiptManagement from '../receive/ProductReceiptManagement';
 import OrderManagement from "@/app/management/orders/page";
+import OrderList from '../orders/OderList';
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
@@ -218,7 +219,7 @@ export default function AdminDashboard() {
                     )}
                     {selectedKey === 'users' && <UserManagement />}
                     {selectedKey === 'promotions' && <PromotionManagement />}
-                    {selectedKey === 'orders' && <OrderManagement />}
+                    {selectedKey === 'orders' && <OrderList />}
 
                      {selectedKey === 'pharmacys' && <PharmacyManagement />}
                      {selectedKey === 'pharmacy_products' && <ProductReceiptManagement />}

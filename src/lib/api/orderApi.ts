@@ -87,8 +87,8 @@ export async function getAllOrders(status?: string) {
     return Array.isArray(res.data?.data) ? res.data.data : [];
 }
 
-export async function updateOrderStatus(madonhang: string, trangthai: string) {
-    return axiosClient.patch(`/purchase-order/updateStatus/${madonhang}`, { trangthai });
+export async function updateOrderStatus(madonhang: string, status: string) {
+  return axiosClient.put(`/purchase-order/updateStatus/${madonhang}`, { status });
 }
 
 export async function createPurchaseOrder(orderData: CreatePurchaseOrderRequest): Promise<CreatePurchaseOrderResponse | null> {
