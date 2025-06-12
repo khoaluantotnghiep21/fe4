@@ -150,6 +150,7 @@ export default function OrderConfirmation() {
           <div className="mb-4">
             <p className="font-medium text-gray-700">Dự kiến nhận hàng</p>
             <p className="text-lg font-semibold text-black">
+              
               {dayjs(orderItems[0]?.thoigiannhan).format("HH:MM")} ngày {dayjs(orderItems[0]?.thoigiannhan).format("DD/MM/YYYY")}
             </p>
             <p className="text-gray-600">
@@ -172,14 +173,21 @@ export default function OrderConfirmation() {
           </div>
 
           <div className="border-t pt-4 space-y-2">
-            <p className="font-medium">Nhận hàng tại</p>
-            <p className="text-black">
-              {" "}
-              {pharmacy?.diachicuthe} {pharmacy?.tenduong} {pharmacy?.quan}{" "}
-              {pharmacy?.thanhpho || "..."}  {orderItems[0]?.diachinguoinhan} 
-            </p>
-          </div>
-        </div>
+  <p className="font-medium">Nhận hàng tại</p>
+  {orderItems[0]?.machinhanh != "CN000000" ? (
+    <p className="text-black">
+      {pharmacy?.diachicuthe} {pharmacy?.tenduong} {pharmacy?.quan}{" "}
+      {pharmacy?.thanhpho || "..."}
+    </p>
+  ) : (
+    <p className="text-gray-500">{orderItems[0]?.diachinguoinhan ? (
+      <p className="text-black">
+        {orderItems[0]?.diachinguoinhan}
+      </p>
+    ) : "Lỗi"}</p>
+  )}
+  </div>
+</div>
 
         {/* Right Section */}
         <div className="bg-white p-4 rounded-md shadow border">

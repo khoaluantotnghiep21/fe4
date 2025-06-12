@@ -155,13 +155,14 @@ export default function Checkout() {
           donvitinh: item.option || 'cái'
         }))
       };
+      alert(timestamp)
       const result = await createPurchaseOrder(orderData);
-
 
       if (result) {
         let giaoHangData: GiaoHangDTO = {
           nguoinhan: values.fullName,
           sodienthoainguoinhan: values.phone,
+          thoigiannhan: timestamp,
           diachinguoinhan: activeTab === 'delivery' ? values.address : '',
           madonhang: result.data.madonhang
         };
@@ -174,17 +175,12 @@ export default function Checkout() {
           if (result.data.phuongthucthanhtoan == "Chuyển khoản ngân hàng") {
             const urlPay = await createVnpayOrder(result.data.madonhang);
             window.location.href = urlPay;
-          }
-          else {
+          } else {
             router.push(`/order-confirmation?madonhang=${result.data.madonhang}`);
-
           }
         }
-
-
-
       } else {
-        message.error("Lỗi khi mua hàng! Vui lòng thử lại")
+        message.error("Lỗi khi mua hàng! Vui lòng thử lại");
         console.log('Result is null, skipping block');
       }
     } catch (error) {
@@ -241,7 +237,6 @@ export default function Checkout() {
                 >
                   <h2 className="text-xl font-semibold mb-4">Thông tin giao hàng</h2>
                   <Form.Item
-
                     name="fullName"
                     label="Họ và tên"
                     rules={[{ required: true, message: 'Vui lòng nhập họ tên' }]}
@@ -264,6 +259,11 @@ export default function Checkout() {
                     rules={[{ required: true, message: 'Vui lòng nhập địa chỉ' }]}
                   >
                     <Input.TextArea rows={3} placeholder="Nhập địa chỉ giao hàng" />
+                  </Form.Item>
+                  <Form.Item label="Thời gian giao hàng dự kiến">
+                    <div style={{ color: '#1677ff' }}>
+                      {displayTime} <Button type="link" size="small" onClick={handleOpenTimeModal}>Thay đổi</Button>
+                    </div>
                   </Form.Item>
                   <Divider />
                   <h2 className="text-xl font-semibold mb-4">Phương thức thanh toán</h2>
@@ -357,7 +357,6 @@ export default function Checkout() {
                   <Form.Item
                     label="Chọn nhà thuốc"
                     name="store"
-
                   >
                     {pharmacyData.length > 0 && (
                       <div style={{ marginBottom: 16, fontWeight: 500 }}>
@@ -369,7 +368,7 @@ export default function Checkout() {
                         {pharmacyData.map(pharmacy => (
                           <Radio
                             key={pharmacy.id}
-                            value={pharmacy.machinhanh}
+                           value={pharmacy.machinhanh}
                             onChange={() => {
                               setMachinhanh(pharmacy.machinhanh);
                             }}
@@ -387,7 +386,7 @@ export default function Checkout() {
                               <div>
                                 <span style={{ color: '#52c41a', fontWeight: 500, marginRight: 8 }}>Có hàng</span>
                                 <span style={{ backgroundColor: '#e6f7ff', color: '#1890ff', padding: '2px 8px', borderRadius: 4, fontSize: '0.8em', marginRight: 8 }}>Đang mở</span>
-                                <span style={{ color: '#888', fontSize: '0.8em' }}>Đóng cửa lúc 22:00</span>
+                                <span style={{ color: '#888', fontSize: '0.8em' }}>Đ đóng cửa lúc 22:00</span>
                               </div>
                               <div style={{ marginTop: 8 }}>
                                 <b>Nhà thuốc LC {pharmacy.machinhanh} {pharmacy.tenduong}</b>
@@ -414,51 +413,6 @@ export default function Checkout() {
                       {displayTime} <Button type="link" size="small" onClick={handleOpenTimeModal}>Thay đổi</Button>
                     </div>
                   </Form.Item>
-                  <Modal
-                    open={showTimeModal}
-                    onCancel={handleCloseTimeModal}
-                    footer={null}
-                    title="Chọn thời gian nhận hàng"
-                    centered
-                  >
-                    <div style={{ marginBottom: 16 }}>
-                      <div style={{ fontWeight: 500, marginBottom: 8 }}>Chọn ngày nhận:</div>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        {days.map(day => (
-                          <Button
-                            key={day.value}
-                            type={selectedDate === day.value ? 'primary' : 'default'}
-                            onClick={() => setSelectedDate(day.value)}
-                            style={{ minWidth: 160 }}
-                          >
-                            {day.label}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                    <div style={{ marginBottom: 16 }}>
-                      <div style={{ fontWeight: 500, marginBottom: 8 }}>Chọn giờ nhận:</div>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        {timeSlots.map(slot => (
-                          <Button
-                            key={slot}
-                            type={selectedTime === slot ? 'primary' : 'default'}
-                            onClick={() => setSelectedTime(slot)}
-                            style={{ minWidth: 120, marginBottom: 8 }}
-                          >
-                            {slot}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                    <div style={{ marginBottom: 16 }}>
-                      <div style={{ fontWeight: 500 }}>Thời gian nhận hàng dự kiến:</div>
-                      <div style={{ background: '#f5f5f5', padding: 8, borderRadius: 6, marginTop: 4 }}>
-                        Từ {selectedTime} {days.find(d => d.value === selectedDate)?.label}
-                      </div>
-                    </div>
-                    <Button type="primary" block onClick={handleConfirmTime}>Xác nhận</Button>
-                  </Modal>
                   <Form.Item label="Yêu cầu xuất hóa đơn điện tử" name="invoice" valuePropName="checked">
                     <Switch />
                   </Form.Item>
@@ -488,7 +442,6 @@ export default function Checkout() {
                         fontWeight: 'bold',
                         borderRadius: '8px'
                       }}
-
                     >
                       Hoàn tất đơn hàng
                     </Button>
@@ -544,6 +497,59 @@ export default function Checkout() {
           </Card>
         </div>
       </div>
+
+      {/* Time Selection Modal - Common for both tabs */}
+      <Modal
+        open={showTimeModal}
+        onCancel={handleCloseTimeModal}
+        footer={null}
+        title={activeTab === 'delivery' ? 'Chọn thời gian giao hàng' : 'Chọn thời gian nhận hàng'}
+        centered
+      >
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontWeight: 500, marginBottom: 8 }}>
+            {activeTab === 'delivery' ? 'Chọn ngày giao:' : 'Chọn ngày nhận:'}
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {days.map(day => (
+              <Button
+                key={day.value}
+                type={selectedDate === day.value ? 'primary' : 'default'}
+                onClick={() => setSelectedDate(day.value)}
+                style={{ minWidth: 160 }}
+              >
+                {day.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontWeight: 500, marginBottom: 8 }}>
+            {activeTab === 'delivery' ? 'Chọn giờ giao:' : 'Chọn giờ nhận:'}
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {timeSlots.map(slot => (
+              <Button
+                key={slot}
+                type={selectedTime === slot ? 'primary' : 'default'}
+                onClick={() => setSelectedTime(slot)}
+                style={{ minWidth: 120, marginBottom: 8 }}
+              >
+                {slot}
+              </Button>
+            ))}
+          </div>
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontWeight: 500 }}>
+            {activeTab === 'delivery' ? 'Thời gian giao hàng dự kiến:' : 'Thời gian nhận hàng dự kiến:'}
+          </div>
+          <div style={{ background: '#f5f5f5', padding: 8, borderRadius: 6, marginTop: 4 }}>
+            Từ {selectedTime} {days.find(d => d.value === selectedDate)?.label}
+          </div>
+        </div>
+        <Button type="primary" block onClick={handleConfirmTime}>Xác nhận</Button>
+      </Modal>
     </div>
   );
 }
