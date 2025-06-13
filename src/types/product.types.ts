@@ -26,24 +26,27 @@ export interface Product {
   };
   khuyenmai: {
     tenchuongtrinh: string;
+    giatrikhuyenmai?: number;
   };
   anhsanpham: {
     url: string;
     ismain: boolean;
-  }[];
-  chitietdonvi: {
+  }[];  chitietdonvi: {
     dinhluong: number;
     giaban: number;
+    giabanSauKhuyenMai?: number;
     donvitinh: {
       donvitinh: string;
     };
-  }[];
-  chitietthanhphan: {
+  }[];  chitietthanhphan: {
     hamluong: string;
     thanhphan: {
       tenthanhphan: string;
-    };
-  }[];
+    };  }[];
+  // Pharmacy-specific properties
+  soluong?: number;
+  manhaphang?: string;
+  ngaynhap?: string;
 }
 
 export interface UpdateProductRequest {
