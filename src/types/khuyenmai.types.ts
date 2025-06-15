@@ -6,3 +6,4 @@ export interface KhuyenMai {
   ngaybatdau: string;
   ngayketthuc: string;
 }
+
