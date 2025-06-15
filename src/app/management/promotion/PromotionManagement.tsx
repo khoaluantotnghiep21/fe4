@@ -28,7 +28,7 @@ import {
 import { KhuyenMai } from '@/types/khuyenmai.types';
 import { Product } from '@/types/product.types';
 import { Voucher } from '@/types/voucher.types';
-import { getAllVouchers } from '@/lib/api/voucherApi';
+import { createNewVoucher, CreateVoucherRequest, deleteVoucher, getAllVouchers, updateVoucher } from '@/lib/api/voucherApi';
 
 const { Title, Text } = Typography;
 // Removed TabPane import - using items prop instead
@@ -146,6 +146,8 @@ export default function PromotionManagement() {
     setIsModalVisible(true);
   };
 
+
+
   const handleModalKMOk = async () => {
     try {
       const values = await form.validateFields();
@@ -173,23 +175,53 @@ export default function PromotionManagement() {
     }
   };
 
-  const handleDeleteKM = async (machuongtrinh: string) => {
+  const handleModalVoucherOk = async () => {
+    try {
+      const values = await form.validateFields();
+
+      const formattedValues: CreateVoucherRequest = {
+        ...values,
+        hansudung: values.hansudung.format('YYYY-MM-DD'),
+      };
+
+      setLoading(true);
+
+      if (modalVoucherMode === 'createVoucher') {
+        await createNewVoucher(formattedValues);
+      } else if (modalVoucherMode === 'editVoucher' && selectedVoucher) {
+        await updateVoucher(selectedVoucher.mavoucher, formattedValues);
+      }
+
+      setIsModalVisible(false);
+      fetchVouchers();
+    } catch (error) {
+      console.error('Form validation error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleModalVoucherCancel = () => {
+    setIsModalVisible(false);
+  };
+
+  const handleDeleteKM = async (mavoucher: string) => {
     confirm({
-      title: 'Bạn có chắc chắn muốn xóa chương trình khuyến mãi này?',
+      title: 'Bạn có chắc chắn muốn xóa voucher này?',
       icon: <ExclamationCircleOutlined />,
-      content: 'Hành động này không thể hoàn tác. Tất cả sản phẩm liên quan sẽ không còn được áp dụng khuyến mãi.',
+      content: 'Hành động này không thể hoàn tác.',
       okText: 'Xóa',
       okType: 'danger',
       cancelText: 'Hủy',
       async onOk() {
         setLoading(true);
         try {
-          const success = await deletePromotion(machuongtrinh);
+          const success = await deleteVoucher(mavoucher);
           if (success) {
-            fetchPromotions();
+            fetchVouchers();
           }
         } catch (error) {
-          console.error('Error deleting promotion:', error);
+          console.error('Error deleting voucher:', error);
         } finally {
           setLoading(false);
         }
@@ -357,14 +389,22 @@ export default function PromotionManagement() {
       render: (value) => value === true || value === 'true' ? 'Giảm phần trăm' : 'Giảm tiền mặt',
     },
     {
-      title: 'Giá trị KM',
-      dataIndex: 'giatrikhuyenmai',
-      key: 'giatrikhuyenmai',
+      title: 'Số lượng',
+      dataIndex: 'soluong',
+      key: 'soluong',
       width: 120,
-      render: (value, record) =>
-        record.loaivoucher === true || String(record.loaivoucher) === 'true'
-          ? `${value}%`
-          : `${value.toLocaleString()}₫`,
+    },
+    {
+      title: 'Giá trị KM',
+      dataIndex: 'giatri',
+      key: 'giatri',
+      width: 120,
+      render: (value, record) => {
+        const giatri = value == null ? 0 : value;
+        return record.loaivoucher === true || String(record.loaivoucher) === 'true'
+          ? `${giatri}%`
+          : `${giatri.toLocaleString()}₫`;
+      },
     },
     {
       title: 'Trạng thái',
@@ -665,7 +705,7 @@ export default function PromotionManagement() {
           )
         }
       ]} />
-
+      {/*Modal add khuyenmai*/}
       <Modal
         title={modalKhuyenMaiMode === 'createKhuyenMai' ? 'Thêm chương trình khuyến mãi' : 'Chỉnh sửa chương trình khuyến mãi'}
         open={isModalVisible}
@@ -742,6 +782,84 @@ export default function PromotionManagement() {
           >
             <DatePicker
               placeholder="Chọn ngày kết thúc"
+              style={{ width: '100%' }}
+              format="DD/MM/YYYY"
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title={modalVoucherMode === 'createVoucher' ? 'Thêm voucher' : 'Chỉnh sửa voucher'}
+        open={isModalVisible}
+        onOk={handleModalVoucherOk}
+        onCancel={() => setIsModalVisible(false)}
+        confirmLoading={loading}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          name="promotion_form"
+        >
+          <Form.Item
+            name="mavoucher"
+            label="Mã voucher"
+            rules={[{ required: true, message: 'Vui lòng nhập mã voucher' }]}
+          >
+            <Input placeholder="Nhập mã voucher" />
+          </Form.Item>
+
+            <Form.Item
+            name="loaivoucher"
+            label="Loại voucher"
+            rules={[{ required: true, message: 'Vui lòng chọn loại voucher' }]}
+            >
+            <Select placeholder="Chọn loại voucher">
+              <Select.Option value={true}>Giảm phần trăm</Select.Option>
+              <Select.Option value={false}>Giảm trực tiếp</Select.Option>
+            </Select>
+            </Form.Item>
+              <Form.Item
+                shouldUpdate={(prev, curr) => prev.loaivoucher !== curr.loaivoucher}
+              >
+                {({ getFieldValue }) => {
+                  const isPercent = getFieldValue('loaivoucher') === true;
+                  return (
+                    <Form.Item
+                      name="giatri"
+                      label={isPercent ? "Giá trị khuyến mãi (%)" : "Giá trị khuyến mãi (VNĐ)"}
+                      rules={[
+                        { required: true, message: 'Vui lòng nhập giá trị khuyến mãi' },
+                        isPercent
+                          ? { type: 'number', min: 1, max: 100, message: 'Giá trị phải từ 1-100%' }
+                          : { type: 'number', min: 1000, message: 'Giá trị phải lớn hơn 1.000 VNĐ' }
+                      ]}
+                    >
+                      <InputNumber
+                        placeholder={isPercent ? "Nhập giá trị khuyến mãi (%)" : "Nhập giá trị khuyến mãi (VNĐ)"}
+                        min={isPercent ? 1 : 1000}
+                        max={isPercent ? 100 : undefined}
+                        style={{ width: '100%' }}
+                        formatter={value =>
+                          isPercent
+                            ? `${value}` // Không thêm % ở đây vì đã có label
+                            : value
+                              ? `${Number(value).toLocaleString()}`
+                              : ''
+                        }
+                      />
+                    </Form.Item>
+                  );
+                }}
+              </Form.Item>
+
+          <Form.Item
+            name="hansudung"
+            label="Ngày hết hạn"
+            rules={[{ required: true, message: 'Vui lòng chọn ngày hết hạn' }]}
+          >
+            <DatePicker
+              placeholder="Chọn ngày hết hạn"
               style={{ width: '100%' }}
               format="DD/MM/YYYY"
             />
