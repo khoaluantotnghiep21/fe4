@@ -210,6 +210,7 @@ export default function UserManagement() {
         } finally {
             setLoading(false);
         }
+    };
     const handleRoleSubmit = async (values: any) => {
         try {
             setLoading(true);

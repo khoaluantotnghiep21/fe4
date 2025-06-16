@@ -18,6 +18,8 @@ import {
 } from '@ant-design/icons';
 import { getProducts, getProductByMaSanPham } from '@/lib/api/productApi';
 import { Product as ProductBase } from '@/types/product.types';
+import { createPurchaseOrder, CreatePurchaseOrderRequest, PurchaseOrderDetail } from '@/lib/api/orderApi';
+import { updateTonKho, createDonThuocTuVan } from '@/lib/api/receiveApi';
 
 // Extend Product type to include hasBeenReceived
 type Product = ProductBase & {
@@ -29,7 +31,7 @@ import { getListProductInPharmacy, PharmacyProduct } from '@/lib/api/receiveApi'
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
-const { TabPane } = Tabs;
+const { TabPane } = Tabs;``
 
 // Mock data for UI design
 const mockCategories = [
@@ -154,10 +156,14 @@ const StaffSalesComponent = () => {
   // View product details
   const viewProductDetails = (product: Product) => {
     fetchProductDetail(product.masanpham);
-  };
-
-  // Add product to cart
+  };  // Add product to cart
   const addToCart = (product: Product, quantity: number = 1, selectedUnit?: string) => {
+    // Kiểm tra sản phẩm có chitietdonvi không
+    if (!product.chitietdonvi || product.chitietdonvi.length === 0) {
+      message.error(`Sản phẩm ${product.tensanpham} không có thông tin đơn vị tính!`);
+      return;
+    }
+
     // Check if product is prescription-only and we're not in prescription mode
     if (product.thuockedon && !prescriptionMode) {
       Modal.confirm({
@@ -174,34 +180,110 @@ const StaffSalesComponent = () => {
     }
     
     // Lấy đơn vị tính và giá được chọn hoặc mặc định
-    const unitToUse = selectedUnit || getDefaultPriceAndUnit(product).unit;
-    const unitDetail = product.chitietdonvi.find(detail => detail.donvitinh.donvitinh === unitToUse);
+    let unitToUse = selectedUnit;
     
-    if (!unitDetail) {
-      message.error('Không tìm thấy thông tin đơn vị tính!');
+    // Nếu không có đơn vị được chọn, kiểm tra xem sản phẩm có đơn vị đã được chọn trước đó không
+    if (!unitToUse) {
+      // Kiểm tra trong state productUnitSelections
+      unitToUse = productUnitSelections[product.masanpham];
+      
+      // Nếu vẫn không có, lấy từ getDefaultPriceAndUnit
+      if (!unitToUse) {
+        const defaultUnitInfo = getDefaultPriceAndUnit(product);
+        unitToUse = defaultUnitInfo.unit;
+          // Nếu vẫn không có đơn vị, tìm đơn vị cơ bản (có định lượng là 1)
+        if (!unitToUse) {
+          // Ưu tiên đơn vị có định lượng lớn nhất (thường là đơn vị đóng gói lớn nhất)
+          const sortedUnits = [...product.chitietdonvi].sort((a, b) => (b.dinhluong || 0) - (a.dinhluong || 0));
+          
+          if (sortedUnits.length > 0) {
+            unitToUse = sortedUnits[0].donvitinh?.donvitinh;
+            console.log(`Sử dụng đơn vị có định lượng lớn nhất cho ${product.tensanpham}:`, unitToUse, 'định lượng:', sortedUnits[0].dinhluong);
+          }
+          
+          // Nếu vẫn không có, thử tìm đơn vị cơ bản (định lượng = 1)
+          if (!unitToUse) {
+            const baseUnit = product.chitietdonvi.find(detail => detail.dinhluong === 1);
+            if (baseUnit && baseUnit.donvitinh) {
+              unitToUse = baseUnit.donvitinh.donvitinh;
+              console.log(`Sử dụng đơn vị cơ bản cho ${product.tensanpham}:`, unitToUse);
+            } 
+            // Nếu không có đơn vị cơ bản, lấy đơn vị đầu tiên
+            else if (product.chitietdonvi.length > 0) {
+              unitToUse = product.chitietdonvi[0].donvitinh?.donvitinh;
+              console.log(`Sử dụng đơn vị đầu tiên cho ${product.tensanpham}:`, unitToUse);
+            }
+          }
+        }
+      }
+    }
+    
+    // Kiểm tra lại xem có đơn vị tính không
+    if (!unitToUse) {
+      message.error(`Không thể xác định đơn vị tính cho sản phẩm ${product.tensanpham}!`);
       return;
     }
     
+    // Cập nhật lại state để lưu đơn vị vừa được chọn
+    setProductUnitSelections(prev => ({
+      ...prev,
+      [product.masanpham]: unitToUse as string
+    }));
+    
+    const unitDetail = product.chitietdonvi.find(detail => detail.donvitinh.donvitinh === unitToUse);
+    
+    // Nếu không tìm thấy chi tiết đơn vị, thử lấy đơn vị đầu tiên
+    if (!unitDetail && product.chitietdonvi.length > 0) {
+      unitToUse = product.chitietdonvi[0].donvitinh?.donvitinh;
+      const firstUnitDetail = product.chitietdonvi[0];
+      
+      if (firstUnitDetail) {
+        console.log(`Không tìm thấy đơn vị ${unitToUse}, sử dụng đơn vị đầu tiên thay thế:`, firstUnitDetail.donvitinh?.donvitinh);
+        // Cập nhật lại state
+        setProductUnitSelections(prev => ({
+          ...prev,
+          [product.masanpham]: firstUnitDetail.donvitinh?.donvitinh as string
+        }));
+        return addToCart(product, quantity, firstUnitDetail.donvitinh?.donvitinh); // Gọi lại hàm với đơn vị đầu tiên
+      }
+    }
+    
+    if (!unitDetail) {
+      message.error(`Không tìm thấy thông tin đơn vị tính ${unitToUse} cho sản phẩm ${product.tensanpham}!`);
+      console.error('Các đơn vị tính hiện có:', product.chitietdonvi.map(d => d.donvitinh.donvitinh));
+      return;
+    }    
     // Tính giá dựa trên đơn vị tính được chọn
     const price = unitDetail.giaban;
     const priceAfterDiscount = unitDetail.giabanSauKhuyenMai !== undefined ? 
       unitDetail.giabanSauKhuyenMai : price;
     const mainImage = getMainImage(product);
     
+    // Log thông tin chi tiết đơn vị tính được chọn
+    console.log(`Thông tin chi tiết đơn vị tính ${unitToUse} cho sản phẩm ${product.tensanpham}:`, {
+      donvitinh: unitToUse,
+      dinhluong: unitDetail.dinhluong,
+      soLuongTrongKho: product.soluong || 0,
+      dongia: price,
+      dongiaSauKhuyenMai: priceAfterDiscount
+    });
+    
     // Kiểm tra sản phẩm với đơn vị tính này đã có trong giỏ hàng chưa
     const existingItemIndex = cart.findIndex(item => 
       item.masanpham === product.masanpham && item.donvitinh === unitToUse
     );
-    
-    if (existingItemIndex !== -1) {
+      if (existingItemIndex !== -1) {
       // Cập nhật số lượng nếu sản phẩm đã có trong giỏ
       const updatedCart = [...cart];
-      const totalQuantity = updatedCart[existingItemIndex].soluong + quantity;
-      
+      const totalQuantity = updatedCart[existingItemIndex].soluong + quantity;      
       // Tính số lượng tối đa dựa trên định lượng của đơn vị
-      const maxQuantityForUnit = unitDetail.dinhluong
-        ? Math.floor((product.soluong || 0) / unitDetail.dinhluong)
-        : (product.soluong || 0);
+      const maxQuantityForUnit = calculateMaxQuantityForUnit(product, unitDetail);
+      
+      console.log(`Cập nhật số lượng cho sản phẩm đã có trong giỏ ${product.tensanpham} (${unitToUse}):`, {
+        soLuongHienTai: updatedCart[existingItemIndex].soluong,
+        soLuongTong: totalQuantity,
+        maxQuantityForUnit
+      });
         
       if (totalQuantity > maxQuantityForUnit) {
         message.warning(`Chỉ còn ${maxQuantityForUnit} ${unitToUse} trong kho!`);
@@ -210,16 +292,14 @@ const StaffSalesComponent = () => {
         updatedCart[existingItemIndex].soluong = totalQuantity;
       }
       
-      setCart(updatedCart);
-    } else {
+      setCart(updatedCart);    } else {
       // Thêm sản phẩm mới vào giỏ hàng
       // Tính số lượng tối đa dựa trên định lượng của đơn vị
-      const maxQuantityForUnit = unitDetail.dinhluong
-        ? Math.floor((product.soluong || 0) / unitDetail.dinhluong)
-        : (product.soluong || 0);
+      const maxQuantityForUnit = calculateMaxQuantityForUnit(product, unitDetail);
         
       if (maxQuantityForUnit <= 0) {
         message.warning(`Sản phẩm ${product.tensanpham} (${unitToUse}) đã hết hàng!`);
+        console.warn(`Không thể thêm ${product.tensanpham} (${unitToUse}) vào giỏ hàng vì maxQuantityForUnit = ${maxQuantityForUnit}`);
         return;
       }
       
@@ -257,8 +337,7 @@ const StaffSalesComponent = () => {
     
     if (!product) {
       message.error('Sản phẩm không tồn tại trong kho!');
-      return;
-    }
+      return;    }
     
     // Find unit detail to get dinhluong (ratio)
     const unitDetail = product.chitietdonvi.find(detail => detail.donvitinh.donvitinh === donvitinh);
@@ -268,10 +347,8 @@ const StaffSalesComponent = () => {
       return;
     }
     
-    // Calculate max available quantity for this unit based on ratio
-    const maxQuantityForUnit = unitDetail.dinhluong
-      ? Math.floor((product.soluong || 0) / unitDetail.dinhluong)
-      : (product.soluong || 0);
+    // Sử dụng hàm đã được chuẩn hóa để tính số lượng tối đa
+    const maxQuantityForUnit = calculateMaxQuantityForUnit(product, unitDetail);
     
     // Check if quantity exceeds available stock (considering unit ratio)
     if (quantity > maxQuantityForUnit) {
@@ -338,7 +415,6 @@ const StaffSalesComponent = () => {
     
     setCart(updatedCart);
   };
-
   // Handle checkout
   const handleCheckout = () => {
     if (cart.length === 0) {
@@ -352,55 +428,182 @@ const StaffSalesComponent = () => {
       return;
     }
     
+    // Calculate original total (before discounts)
+    const originalTotal = cart.reduce((total, item) => {
+      return total + (item.giaGoc || item.dongia) * item.soluong;
+    }, 0);
+    
+    // Calculate discount (original - final)
+    const directDiscount = originalTotal - cartTotal;
+    
     setPaymentModalVisible(true);
     
     // Pre-fill payment form
     paymentForm.setFieldsValue({
       paymentMethod: 'CASH',
       deliveryMethod: 'PICKUP',
+      originalTotal: originalTotal,
+      directDiscount: directDiscount,
       totalAmount: cartTotal,
       discount: 0,
       shippingFee: 0,
       finalAmount: cartTotal,
     });
-  };
-
-  // Confirm checkout
-  const confirmCheckout = (values: any) => {
+  };  // Confirm checkout
+  const confirmCheckout = async (values: any) => {
     setCheckoutLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      setCheckoutLoading(false);
-      setPaymentModalVisible(false);
-      setCart([]);
+    try {
+      // Prepare order details
+      const orderDetails: PurchaseOrderDetail[] = cart.map(item => ({
+        masanpham: item.masanpham,
+        soluong: item.soluong,
+        giaban: item.dongia,
+        donvitinh: item.donvitinh
+      }));
       
-      // Show success modal
-      Modal.success({
-        title: 'Thanh toán thành công!',
-        content: (
-          <div>
-            <p className="text-lg mb-2">Mã đơn hàng: <strong>DH{Math.floor(Math.random() * 10000).toString().padStart(5, '0')}</strong></p>
-            <p>Tổng tiền: {values.finalAmount.toLocaleString('vi-VN')} VNĐ</p>
-            <p>Phương thức thanh toán: {values.paymentMethod === 'CASH' ? 'Tiền mặt' : 'Thẻ'}</p>
-            <p>Thời gian: {new Date().toLocaleString('vi-VN')}</p>
-            {prescriptionMode && (
-              <p>Khách hàng: {customerForm.getFieldValue('hoTen')}</p>
-            )}
-          </div>
-        ),
-        okText: 'In hóa đơn',
-        okButtonProps: {
-          icon: <PrinterOutlined />
-        },
-        onOk: () => {
-          message.info('Chức năng in hóa đơn đang phát triển!');
+      // Prepare request data according to API requirements
+      const purchaseOrderData: CreatePurchaseOrderRequest = {
+        phuongthucthanhtoan: values.paymentMethod === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản ngân hàng',
+        hinhthucnhanhang: 'Nhận hàng tại nhà thuốc',
+        mavoucher: null, // Always null as requested
+        tongtien: values.originalTotal, // Original total (before discounts)
+        giamgiatructiep: values.directDiscount, // Direct discount (original - final)
+        thanhtien: values.finalAmount, // Final amount after all discounts
+        phivanchuyen: values.shippingFee || 0,
+        machinhanh: pharmacy?.machinhanh || '',
+        details: orderDetails
+      };
+      
+      console.log('Purchase order data:', JSON.stringify(purchaseOrderData, null, 2));
+      
+      // Call API to create purchase order
+      const response = await createPurchaseOrder(purchaseOrderData);
+      console.log('API response:', response);
+        if (response && response.statusCode === 201) {
+        // Update inventory for all products in cart
+        try {
+          // Process each item in the cart and update inventory
+          const updateInventoryPromises = cart.map(async (item) => {
+            // Find product in products list to get current inventory
+            const product = products.find(p => p.masanpham === item.masanpham);
+            
+            if (product) {
+              // Get the definition of the current unit
+              const unitDetail = product.chitietdonvi.find(
+                detail => detail.donvitinh.donvitinh === item.donvitinh
+              );
+              
+              if (unitDetail) {                // Calculate new inventory using the correct formula:
+                // New inventory = Current inventory - (Sold quantity / Definition ratio)
+                const currentInventory = product.soluong || 0;
+                const soldQuantity = item.soluong;
+                const definitionRatio = unitDetail.dinhluong;
+                
+                // Đảm bảo định lượng có giá trị hợp lệ và không bằng 0
+                const safeDefinitionRatio = (definitionRatio && definitionRatio > 0) ? definitionRatio : 1;
+                
+                // Calculate how much base inventory is being reduced
+                // Công thức: Khi bán SL đơn vị với định lượng là DL, số lượng cơ bản giảm là SL/DL
+                // Ví dụ: Bán 2 hộp, mỗi hộp có 10 viên (DL=10), giảm 2/10 = 0.2 của đơn vị cơ bản
+                const inventoryReduction = soldQuantity / safeDefinitionRatio;
+                
+                // Calculate new inventory level (can be decimal)
+                const newInventory = currentInventory - inventoryReduction;
+                
+                console.log(`Updating inventory for ${product.masanpham}:`, {
+                  product: product.tensanpham,
+                  currentInventory,
+                  soldQuantity,
+                  definitionRatio,
+                  inventoryReduction,
+                  newInventory
+                });
+                
+                // Update inventory in backend
+                if (pharmacy?.machinhanh) {
+                  await updateTonKho(
+                    pharmacy.machinhanh,
+                    product.masanpham,
+                    parseFloat(newInventory.toFixed(2))  // Round to 2 decimal places
+                  );
+                }
+              }
+            }
+          });
+          
+          // Wait for all inventory updates to complete
+          await Promise.all(updateInventoryPromises);
+          console.log('All inventory updates completed successfully');
+          
+        } catch (inventoryError) {
+          console.error('Error updating inventory:', inventoryError);
+          message.warning('Đơn hàng đã thanh toán nhưng có lỗi khi cập nhật tồn kho');
         }
-      });
-      
-      // Reset prescription mode
-      setPrescriptionMode(false);
-    }, 1500);
+        
+        // Update UI
+        setPaymentModalVisible(false);
+        setCart([]);
+        
+        // Show success modal
+        Modal.success({
+          title: 'Thanh toán thành công!',
+          content: (
+            <div>
+              <p className="text-lg mb-2">Mã đơn hàng: <strong>{response.data.madonhang}</strong></p>
+              <p>Tổng tiền gốc: {values.originalTotal.toLocaleString('vi-VN')} VNĐ</p>
+              <p>Giảm giá khuyến mãi: {values.directDiscount.toLocaleString('vi-VN')} VNĐ</p>
+              <p>Giảm giá thêm: {values.discount.toLocaleString('vi-VN')} VNĐ</p>
+              <p>Phí vận chuyển: {values.shippingFee.toLocaleString('vi-VN')} VNĐ</p>
+              <p>Thành tiền: {values.finalAmount.toLocaleString('vi-VN')} VNĐ</p>
+              <p>Phương thức thanh toán: {values.paymentMethod === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản ngân hàng'}</p>
+              <p>Thời gian: {new Date().toLocaleString('vi-VN')}</p>
+              {prescriptionMode && (
+                <p>Khách hàng: {customerForm.getFieldValue('hoTen')}</p>
+              )}
+            </div>
+          ),
+          okText: 'In hóa đơn',
+          okButtonProps: {
+            icon: <PrinterOutlined />
+          },
+          onOk: () => {
+            message.info('Chức năng in hóa đơn đang phát triển!');
+          }        });
+
+        // Nếu đang trong chế độ bán theo đơn thuốc, lưu thông tin vào đơn thuốc tư vấn
+        if (prescriptionMode && customerForm.getFieldValue('hoTen')) {
+          try {
+            const donThuocTuVanData = {
+              madonhang: response.data.madonhang, // Sử dụng mã đơn hàng vừa tạo
+              hoten: customerForm.getFieldValue('hoTen'),
+              sodienthoai: customerForm.getFieldValue('soDienThoai') || '',
+              ghichu: customerForm.getFieldValue('ghiChu') || ''
+            };
+
+            const donThuocResponse = await createDonThuocTuVan(donThuocTuVanData);
+            console.log('Đã lưu thông tin đơn thuốc tư vấn:', donThuocResponse);
+            message.success('Đã lưu thông tin đơn thuốc tư vấn thành công!');
+          } catch (donThuocError) {
+            console.error('Lỗi khi lưu thông tin đơn thuốc tư vấn:', donThuocError);
+            message.warning('Đơn hàng đã thanh toán nhưng có lỗi khi lưu thông tin đơn thuốc tư vấn');
+          }
+        }
+        
+        // Reset prescription mode
+        setPrescriptionMode(false);
+        
+        // Refresh products to get updated inventory
+        fetchProducts();
+      } else {
+        message.error('Thanh toán thất bại. Vui lòng thử lại!');
+      }
+    } catch (error) {
+      console.error('Error during checkout:', error);
+      message.error('Đã xảy ra lỗi khi thanh toán. Vui lòng thử lại!');
+    } finally {
+      setCheckoutLoading(false);
+    }
   };
 
   // Hàm fetch sản phẩm từ nhà thuốc
@@ -542,7 +745,7 @@ const StaffSalesComponent = () => {
               soluong: hasBeenReceived ? pharmacyProduct.soluong : null,
               manhaphang: pharmacyProduct.manhaphang,
               ngaynhap: pharmacyProduct.ngaynhap || pharmacyProduct.ngaygui,
-              hasBeenReceived, // Thêm flag để biết sản phẩm đã nhập kho hay chưa
+              hasBeenReceived: hasBeenReceived, // Thêm flag để biết sản phẩm đã nhập kho hay chưa
             };
           } else {
             console.error(`Không tìm thấy thông tin chi tiết cho sản phẩm ${productCode}`);
@@ -671,35 +874,91 @@ const StaffSalesComponent = () => {
     const mainImage = product.anhsanpham.find(img => img.ismain === true);
     return mainImage ? mainImage.url : product.anhsanpham[0].url;
   };
-  
   // Hàm lấy giá và đơn vị tính mặc định
   const getDefaultPriceAndUnit = (product: Product) => {
+    // Kiểm tra kỹ lưỡng xem sản phẩm có chitietdonvi không
     if (!product.chitietdonvi || product.chitietdonvi.length === 0) {
+      console.warn(`Sản phẩm ${product.tensanpham} (${product.masanpham}) không có thông tin đơn vị tính`);
       return { price: 0, priceAfterDiscount: 0, unit: '' };
     }
     
-    // Lấy đơn vị đầu tiên làm mặc định
-    const defaultUnit = product.chitietdonvi[0];
-    
-    // Ưu tiên giá sau khuyến mãi nếu có
-    const price = defaultUnit.giaban;
-    const priceAfterDiscount = defaultUnit.giabanSauKhuyenMai !== undefined 
-      ? defaultUnit.giabanSauKhuyenMai 
-      : price;
+    try {      // Lọc các đơn vị tính hợp lệ (có đầy đủ thông tin)
+      const validUnits = product.chitietdonvi.filter(
+        unit => unit.donvitinh && unit.donvitinh.donvitinh && unit.giaban !== undefined
+      );
       
-    console.log('Price info for', product.tensanpham, ':', {
-      price,
-      priceAfterDiscount, 
-      hasDiscount: price !== priceAfterDiscount
-    });
-    
-    return {
-      price: price,
-      priceAfterDiscount: priceAfterDiscount,
-      unit: defaultUnit.donvitinh?.donvitinh || ''
-    };
-  };
-  
+      // Log thông tin chi tiết về các đơn vị tính có sẵn
+      console.log(`Thông tin chi tiết các đơn vị tính của ${product.tensanpham}:`, 
+        validUnits.map(unit => ({
+          donvitinh: unit.donvitinh?.donvitinh,
+          dinhluong: unit.dinhluong,
+          giaban: unit.giaban
+        }))
+      );
+      
+      if (validUnits.length === 0) {
+        console.warn(`Sản phẩm ${product.tensanpham} (${product.masanpham}) không có đơn vị tính hợp lệ`);
+        return { price: 0, priceAfterDiscount: 0, unit: '' };
+      }
+      
+      // Kiểm tra xem sản phẩm có đơn vị đã được chọn trước đó không
+      const storedUnit = productUnitSelections[product.masanpham];
+      if (storedUnit) {
+        const selectedUnit = validUnits.find(unit => unit.donvitinh?.donvitinh === storedUnit);
+        if (selectedUnit) {
+          // Sử dụng đơn vị đã chọn trước đó
+          const price = selectedUnit.giaban;
+          const priceAfterDiscount = selectedUnit.giabanSauKhuyenMai !== undefined 
+            ? selectedUnit.giabanSauKhuyenMai 
+            : price;
+          return {
+            price: price,
+            priceAfterDiscount: priceAfterDiscount,
+            unit: storedUnit
+          };
+        }
+      }
+        // Tìm đơn vị cơ bản (định lượng = 1) nếu có
+      let defaultUnit = validUnits.find(unit => unit.dinhluong === 1);
+      
+      // Nếu không có đơn vị cơ bản hoặc đã có đơn vị được chọn trước đó, sử dụng đơn vị đầu tiên
+      if (!defaultUnit || storedUnit) {
+        // Sắp xếp các đơn vị tính theo định lượng từ lớn đến nhỏ
+        const sortedUnits = [...validUnits].sort((a, b) => (b.dinhluong || 0) - (a.dinhluong || 0));
+        defaultUnit = sortedUnits[0]; // Lấy đơn vị có định lượng lớn nhất
+      }
+      
+      if (!defaultUnit || !defaultUnit.donvitinh) {
+        console.error(`Không thể xác định đơn vị tính mặc định cho sản phẩm ${product.tensanpham} (${product.masanpham})`);
+        // Nếu không tìm được đơn vị mặc định, trả về kết quả rỗng
+        return { price: 0, priceAfterDiscount: 0, unit: '' };
+      }
+      
+      // Ưu tiên giá sau khuyến mãi nếu có
+      const price = defaultUnit.giaban;
+      const priceAfterDiscount = defaultUnit.giabanSauKhuyenMai !== undefined 
+        ? defaultUnit.giabanSauKhuyenMai 
+        : price;
+      
+      // Lưu lại đơn vị mặc định đã chọn để sử dụng lại sau này
+      const unitName = defaultUnit.donvitinh.donvitinh;
+      if (unitName && !productUnitSelections[product.masanpham]) {
+        setProductUnitSelections(prev => ({
+          ...prev,
+          [product.masanpham]: unitName
+        }));
+      }
+      
+      return {
+        price: price,
+        priceAfterDiscount: priceAfterDiscount,
+        unit: unitName || ''
+      };
+    } catch (error) {
+      console.error(`Lỗi khi lấy đơn vị tính mặc định cho sản phẩm ${product.tensanpham} (${product.masanpham}):`, error);
+      return { price: 0, priceAfterDiscount: 0, unit: '' };
+    }
+  };  
   // Helper function to get unit info outside of renderProductCard
   const getUnitInfo = (product: Product, unitName: string) => {
     const unitDetail = product.chitietdonvi.find(detail => detail.donvitinh.donvitinh === unitName);
@@ -713,6 +972,23 @@ const StaffSalesComponent = () => {
       price: unitPrice,
       priceAfterDiscount: unitPriceAfterDiscount
     };
+  };
+    // Hàm tính toán số lượng tối đa cho một đơn vị tính
+  const calculateMaxQuantityForUnit = (product: Product, unitDetail: any) => {
+    // Đảm bảo định lượng có giá trị hợp lệ và không bằng 0
+    const dinhluong = (unitDetail.dinhluong && unitDetail.dinhluong > 0) ? unitDetail.dinhluong : 1;
+    
+    // Công thức đúng: Số lượng hiển thị = Giá trị trong DB × Định lượng
+    const maxQuantityForUnit = Math.floor((product.soluong || 0) * dinhluong);
+    
+    console.log(`Tính toán số lượng tối đa cho ${product.tensanpham} (${unitDetail.donvitinh?.donvitinh}):`, {
+      soLuongTrongKho: product.soluong || 0,
+      dinhluong: dinhluong,
+      congThuc: `${product.soluong || 0} × ${dinhluong}`,
+      ketQua: maxQuantityForUnit
+    });
+    
+    return maxQuantityForUnit;
   };
   
   // Cập nhật hàm renderProductCard
@@ -790,11 +1066,12 @@ const StaffSalesComponent = () => {
                       showZero
                     />
                   );
-                }
-                
-                // Số lượng hiện tại là đơn vị cơ bản, để hiển thị cho đơn vị khác, 
+                }                // Số lượng hiện tại là đơn vị cơ bản, để hiển thị cho đơn vị khác, 
                 // ta nhân với định lượng của đơn vị đó
-                const displayQuantity = Math.floor((product.soluong || 0) * selectedUnitDetail.dinhluong);
+                // Công thức đúng: Số lượng hiển thị = Giá trị trong DB × Định lượng
+                const displayQuantity = selectedUnitDetail.dinhluong && selectedUnitDetail.dinhluong > 0
+                  ? Math.floor((product.soluong || 0) * selectedUnitDetail.dinhluong)
+                  : (product.soluong || 0);
                 
                 return (
                   <Badge 
@@ -828,22 +1105,48 @@ const StaffSalesComponent = () => {
               </Text>
             )}
           </div>
-          
-          {/* Unit selection */}
+            {/* Unit selection */}
           <Select
             size="small"
-            value={selectedUnit}
-            style={{ width: '100%', marginBottom: '8px' }}
-            onChange={(value) => setProductUnitSelections(prev => ({
-              ...prev,
-              [product.masanpham]: value as string
-            }))}
-            options={
+            value={selectedUnit || ''}
+            style={{ width: '100%', marginBottom: '8px' }}            onChange={(value) => {
+              // Only update if there's a valid value
+              if (value) {
+                // Tìm chi tiết đơn vị tính được chọn
+                const selectedUnitDetail = product.chitietdonvi.find(detail => 
+                  detail.donvitinh?.donvitinh === value
+                );
+                
+                console.log(`Đã chọn đơn vị tính ${value} cho sản phẩm ${product.tensanpham}:`, {
+                  donvitinh: value,
+                  dinhluong: selectedUnitDetail?.dinhluong,
+                  soLuongTrongKho: product.soluong || 0,
+                  soLuongTinh: selectedUnitDetail?.dinhluong && selectedUnitDetail.dinhluong > 0
+                    ? Math.floor((product.soluong || 0) / selectedUnitDetail.dinhluong)
+                    : (product.soluong || 0)
+                });
+                
+                setProductUnitSelections(prev => ({
+                  ...prev,
+                  [product.masanpham]: value as string
+                }));
+              }
+            }}            options={
               product.chitietdonvi && product.chitietdonvi.length > 0 
-                ? product.chitietdonvi.map(detail => ({
-                    label: detail.donvitinh.donvitinh,
-                    value: detail.donvitinh.donvitinh
-                  }))
+                ? [...product.chitietdonvi]
+                    // Sắp xếp đơn vị tính theo định lượng từ lớn đến nhỏ
+                    .sort((a, b) => (b.dinhluong || 0) - (a.dinhluong || 0))
+                    .map(detail => {
+                      // Tính số lượng hiển thị cho đơn vị này
+                      const stock = detail.dinhluong && detail.dinhluong > 0
+                        ? Math.floor((product.soluong || 0) * detail.dinhluong)
+                        : (product.soluong || 0);
+                      
+                      return {
+                        label: `${detail.donvitinh?.donvitinh || 'Không có'} (SL: ${stock})`,
+                        value: detail.donvitinh?.donvitinh || ''
+                      };
+                    })
                 : [{ label: 'Không có', value: '' }]
             }
           />
@@ -897,8 +1200,7 @@ const StaffSalesComponent = () => {
               <div className="font-medium truncate max-w-[150px] text-sm">{record.tensanpham}</div>
             </Tooltip>
             <div className="text-gray-500 text-xs">{record.masanpham}</div>
-            <div className="mt-1 flex items-center gap-1">
-              <Text className="text-xs">{record.donvitinh}</Text>
+            <div className="mt-1 flex items-center gap-1">              <Text className="text-xs">{record.donvitinh} (ĐL: {record.dinhluong})</Text>
               {record.thuocKedon && <Tag color="orange" style={{ fontSize: '10px', lineHeight: '16px', padding: '0 4px', margin: 0 }}>Kê đơn</Tag>}
             </div>
           </div>
@@ -937,11 +1239,15 @@ const StaffSalesComponent = () => {
             onClick={() => updateCartItemQuantity(record.key, Math.max(1, record.soluong - 1))}
             size="small"
             style={{ padding: '0 4px', minWidth: '24px', height: '24px' }}
-          />
-          <InputNumber
+          />          <InputNumber
             min={1}
             value={record.soluong}
-            onChange={(value) => updateCartItemQuantity(record.key, Number(value))}
+            onChange={(value) => {
+              // Avoid using a Form field with name="quantity" directly
+              if (value !== null) {
+                updateCartItemQuantity(record.key, Number(value));
+              }
+            }}
             style={{ width: 40, margin: '0 2px' }}
             size="small"
           />
@@ -1242,12 +1548,11 @@ const StaffSalesComponent = () => {
                         <Text className="text-red-600 block mb-2">
                           {getDefaultPriceAndUnit(product).priceAfterDiscount.toLocaleString('vi-VN')} đ/
                           {getDefaultPriceAndUnit(product).unit}
-                        </Text>
-                        <Button 
+                        </Text>                        <Button 
                           type="primary" 
                           size="small" 
                           icon={<ShoppingCartOutlined />}
-                          onClick={() => addToCart(product)}
+                          onClick={() => addToCart(product, 1, getDefaultPriceAndUnit(product).unit)}
                         >
                           Thêm
                         </Button>
@@ -1517,7 +1822,7 @@ const StaffSalesComponent = () => {
                 {selectedProduct.chidinh && (
                   <div className="mb-4">
                     <Text strong>Chỉ định:</Text>
-                    <div className="mt-1 text-gray-700">{selectedProduct.chidinh}</div>
+                                       <div className="mt-1 text-gray-700">{selectedProduct.chidinh}</div>
                   </div>
                 )}
                 
@@ -1594,7 +1899,7 @@ const StaffSalesComponent = () => {
                     <DollarOutlined /> Tiền mặt
                   </Option>
                   <Option value="CARD">
-                    <CreditCardOutlined /> Thẻ
+                    <CreditCardOutlined /> Chuyển khoảng ngân hàng
                   </Option>
                 </Select>
               </Form.Item>
@@ -1608,8 +1913,41 @@ const StaffSalesComponent = () => {
                 initialValue="PICKUP"
               >
                 <Select>
-                  <Option value="PICKUP">Nhận tại cửa hàng</Option>
+                  <Option value="PICKUP">Nhận hàng tại nhà thuốc</Option>
                 </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+            <Row gutter={16} className="mt-4">
+            <Col span={12}>
+              <Form.Item
+                name="originalTotal"
+                label="Tổng tiền gốc"
+                tooltip="Tổng tiền trước khi áp dụng khuyến mãi"
+              >
+                <InputNumber
+                  style={{ width: '100%' }}
+                  formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => Number(value?.replace(/\$\s?|(,*)/g, '') || 0) as 0}
+                  addonAfter="VNĐ"
+                  disabled
+                />
+              </Form.Item>
+            </Col>
+            
+            <Col span={12}>
+              <Form.Item
+                name="directDiscount"
+                label="Giảm giá khuyến mãi"
+                tooltip="Số tiền được giảm từ các chương trình khuyến mãi"
+              >
+                <InputNumber
+                  style={{ width: '100%' }}
+                  formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => Number(value?.replace(/\$\s?|(,*)/g, '') || 0) as 0}
+                  addonAfter="VNĐ"
+                  disabled
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -1618,7 +1956,8 @@ const StaffSalesComponent = () => {
             <Col span={12}>
               <Form.Item
                 name="totalAmount"
-                label="Tổng tiền hàng"
+                label="Tổng tiền sau khuyến mãi"
+                tooltip="Tổng tiền sau khi áp dụng khuyến mãi"
               >
                 <InputNumber
                   style={{ width: '100%' }}
@@ -1633,8 +1972,9 @@ const StaffSalesComponent = () => {
             <Col span={12}>
               <Form.Item
                 name="discount"
-                label="Giảm giá"
+                label="Giảm giá thêm"
                 initialValue={0}
+                tooltip="Giảm giá thêm do nhân viên áp dụng"
               >
                 <InputNumber 
                   style={{ width: '100%' }}
@@ -1800,7 +2140,6 @@ const StaffSalesComponent = () => {
           <Form.Item
             name="hoTen"
             label="Họ tên khách hàng"
-            rules={[{ required: true, message: 'Vui lòng nhập họ tên khách hàng!' }]}
           >
             <Input placeholder="Nhập họ tên khách hàng" />
           </Form.Item>
@@ -1810,13 +2149,6 @@ const StaffSalesComponent = () => {
             label="Số điện thoại"
           >
             <Input placeholder="Nhập số điện thoại" />
-          </Form.Item>
-          
-          <Form.Item
-            name="diaChi"
-            label="Địa chỉ"
-          >
-            <Input.TextArea placeholder="Nhập địa chỉ" rows={2} />
           </Form.Item>
           
           <Form.Item
@@ -1944,6 +2276,3 @@ const StaffSalesComponent = () => {
 
 export default StaffSalesComponent;
 
-function handleUnitChange(masanpham: any, value: any): void {
-  throw new Error('Function not implemented.');
-}
