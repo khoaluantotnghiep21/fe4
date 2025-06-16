@@ -801,13 +801,13 @@ export default function PromotionManagement() {
           layout="vertical"
           name="promotion_form"
         >
-          <Form.Item
+            <Form.Item
             name="mavoucher"
             label="Mã voucher"
             rules={[{ required: true, message: 'Vui lòng nhập mã voucher' }]}
-          >
-            <Input placeholder="Nhập mã voucher" />
-          </Form.Item>
+            >
+            <Input placeholder="Nhập mã voucher" disabled={modalVoucherMode === 'editVoucher'} />
+            </Form.Item>
 
             <Form.Item
             name="loaivoucher"
@@ -842,7 +842,7 @@ export default function PromotionManagement() {
                         style={{ width: '100%' }}
                         formatter={value =>
                           isPercent
-                            ? `${value}` // Không thêm % ở đây vì đã có label
+                            ? `${value}` 
                             : value
                               ? `${Number(value).toLocaleString()}`
                               : ''
