@@ -18,7 +18,7 @@ import {
 } from '@ant-design/icons';
 import { getProducts, getProductByMaSanPham } from '@/lib/api/productApi';
 import { Product as ProductBase } from '@/types/product.types';
-import { createPurchaseOrder, CreatePurchaseOrderRequest, PurchaseOrderDetail } from '@/lib/api/orderApi';
+import { createPurchaseOrder, CreatePurchaseOrderRequest, PurchaseOrderDetail, getOderByMaChiNhanh, OrderItem, OrderProductItem, generateInvoice } from '@/lib/api/orderApi';
 import { updateTonKho, createDonThuocTuVan } from '@/lib/api/receiveApi';
 
 // Extend Product type to include hasBeenReceived
@@ -84,6 +84,12 @@ const StaffSalesComponent = () => {
   
   // State for product unit selections - to avoid hook in render function
   const [productUnitSelections, setProductUnitSelections] = useState<Record<string, string>>({});
+  
+  // State for order history
+  const [orderHistoryData, setOrderHistoryData] = useState<OrderItem[]>([]);
+  const [orderHistoryLoading, setOrderHistoryLoading] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
+  const [orderDetailVisible, setOrderDetailVisible] = useState(false);
   
   // Pagination state
   const [pagination, setPagination] = useState({
@@ -819,6 +825,64 @@ const StaffSalesComponent = () => {
     }
   };
   
+  // Fetch order history data
+  const fetchOrderHistory = async () => {
+    if (!pharmacy?.machinhanh) {
+      message.error('Không có thông tin chi nhánh để lấy lịch sử đơn hàng');
+      return;
+    }
+    
+    setOrderHistoryLoading(true);
+    try {
+      const orderData = await getOderByMaChiNhanh(pharmacy.machinhanh);
+      setOrderHistoryData(orderData);
+      console.log('Lịch sử đơn hàng:', orderData);
+    } catch (error) {
+      console.error('Lỗi khi lấy lịch sử đơn hàng:', error);
+      message.error('Không thể lấy lịch sử đơn hàng');
+    } finally {
+      setOrderHistoryLoading(false);
+    }
+  };
+  
+  // Handle opening order history modal
+  const handleOpenOrderHistory = () => {
+    setOrderHistoryVisible(true);
+    fetchOrderHistory();
+  };
+  
+  // View order detail
+  const handleViewOrderDetail = (order: OrderItem) => {
+    setSelectedOrder(order);
+    setOrderDetailVisible(true);
+  };
+    // Handle invoice download
+  const handleDownloadInvoice = async (madonhang: string) => {
+    console.log("Handling invoice download for:", madonhang);
+    
+    if (!madonhang) {
+      message.error("Mã đơn hàng không hợp lệ");
+      return;
+    }
+    
+    setCheckoutLoading(true);
+    message.loading({ content: "Đang tạo hoá đơn...", key: "invoice-loading" });
+    
+    try {
+      const success = await generateInvoice(madonhang);
+      if (success) {
+        message.success({ content: "Đang tải xuống hoá đơn", key: "invoice-loading" });
+      } else {
+        message.error({ content: "Không thể tạo hoá đơn", key: "invoice-loading" });
+      }
+    } catch (error) {
+      console.error("Error in handleDownloadInvoice:", error);
+      message.error({ content: "Lỗi khi tạo hoá đơn", key: "invoice-loading" });
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
+
   // Gọi API khi component mount
   useEffect(() => {
     // Fetch pharmacy data for the current user
@@ -1277,33 +1341,6 @@ const StaffSalesComponent = () => {
     },
   ];
 
-  // Mock order history data
-  const orderHistoryData = [
-    {
-      key: '1',
-      madonhang: 'DH00123',
-      ngayban: '12/06/2025',
-      khachhang: 'Nguyễn Văn B',
-      tongtien: 250000,
-      trangthai: 'Hoàn thành'
-    },
-    {
-      key: '2',
-      madonhang: 'DH00122',
-      ngayban: '11/06/2025',
-      khachhang: 'Trần Thị C',
-      tongtien: 420000,
-      trangthai: 'Hoàn thành'
-    },
-    {
-      key: '3',
-      madonhang: 'DH00121',
-      ngayban: '10/06/2025',
-      khachhang: 'Lê Văn D',
-      tongtien: 185000,
-      trangthai: 'Hoàn thành'
-    },
-  ];
 
   return (
     <div>
@@ -1344,7 +1381,7 @@ const StaffSalesComponent = () => {
             </Button>
             <Button 
               icon={<HistoryOutlined />}
-              onClick={() => setOrderHistoryVisible(true)}
+              onClick={handleOpenOrderHistory}
             >
               Lịch sử bán hàng
             </Button>
@@ -2185,13 +2222,16 @@ const StaffSalesComponent = () => {
                 { value: 'month', label: 'Tháng này' },
               ]}
             />
-            <Button icon={<SearchOutlined />}>Tìm kiếm</Button>
+            <Button icon={<SearchOutlined />} onClick={fetchOrderHistory}>Tìm kiếm</Button>
           </div>
           <Button icon={<PrinterOutlined />}>Xuất báo cáo</Button>
         </div>
-        
-        <Table
-          dataSource={orderHistoryData}
+          <Table
+          loading={orderHistoryLoading}
+          dataSource={orderHistoryData.map(order => ({
+            ...order,
+            key: order.madonhang
+          }))}
           columns={[
             {
               title: 'Mã đơn hàng',
@@ -2200,41 +2240,204 @@ const StaffSalesComponent = () => {
             },
             {
               title: 'Ngày bán',
-              dataIndex: 'ngayban',
-              key: 'ngayban',
+              dataIndex: 'ngaymuahang',
+              key: 'ngaymuahang',
+              render: (ngaymuahang) => {
+                const date = new Date(ngaymuahang);
+                return date.toLocaleDateString('vi-VN');
+              }
             },
             {
               title: 'Khách hàng',
-              dataIndex: 'khachhang',
-              key: 'khachhang',
+              dataIndex: 'nguoinhan',
+              key: 'nguoinhan',
             },
             {
               title: 'Tổng tiền',
-              dataIndex: 'tongtien',
-              key: 'tongtien',
-              render: (tongtien) => `${tongtien.toLocaleString('vi-VN')} đ`,
+              dataIndex: 'thanhtien',
+              key: 'thanhtien',
+              render: (thanhtien) => `${thanhtien.toLocaleString('vi-VN')} đ`,
             },
             {
               title: 'Trạng thái',
               dataIndex: 'trangthai',
               key: 'trangthai',
-              render: (trangthai) => (
-                <Tag color="green">{trangthai}</Tag>
-              ),
+              render: (trangthai) => {
+                let color = 'blue';
+                if (trangthai === 'Hoàn thành') color = 'green';
+                if (trangthai === 'Đã xác nhận') color = 'green';
+                if (trangthai === 'Đã hủy') color = 'red';
+                if (trangthai === 'Đang xử lý') color = 'orange';
+                if (trangthai === 'Chờ xác nhận') color = 'gold';
+                
+                return <Tag color={color}>{trangthai}</Tag>;
+              },
             },
             {
               title: 'Thao tác',
-              key: 'action',
-              render: (_, record) => (
+              key: 'action',              render: (_, record) => (
                 <Space>
-                  <Button size="small" icon={<InfoCircleOutlined />}>Chi tiết</Button>
-                  <Button size="small" icon={<PrinterOutlined />}>In</Button>
+                  <Button size="small" icon={<InfoCircleOutlined />} onClick={() => handleViewOrderDetail(record)}>Chi tiết</Button>                  <Button 
+                    size="small" 
+                    icon={<PrinterOutlined />}
+                    onClick={() => {
+                      try {
+                        handleDownloadInvoice(record.madonhang);
+                      } catch (error) {
+                        console.error("Error handling print click:", error);
+                        message.error("Không thể tạo hoá đơn");
+                      }
+                    }}
+                  >
+                    In
+                  </Button>
                 </Space>
               ),
             },
           ]}
           pagination={{ pageSize: 5 }}
         />
+      </Modal>
+
+      {/* Order Detail Modal */}
+      <Modal
+        title="Chi tiết đơn hàng"
+        open={orderDetailVisible}
+        onCancel={() => setOrderDetailVisible(false)}
+        footer={null}
+        width={800}
+      >
+        {selectedOrder ? (
+          <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <p className="mb-1"><Text strong>Mã đơn hàng:</Text> {selectedOrder.madonhang}</p>
+                <p className="mb-1"><Text strong>Ngày mua hàng:</Text> {new Date(selectedOrder.ngaymuahang).toLocaleDateString('vi-VN')}</p>
+                <p className="mb-1"><Text strong>Tổng tiền:</Text> {selectedOrder.thanhtien.toLocaleString('vi-VN')} đ</p>
+                <p className="mb-1"><Text strong>Giảm giá trực tiếp:</Text> {selectedOrder.giamgiatructiep.toLocaleString('vi-VN')} đ</p>
+                <p className="mb-1"><Text strong>Phí vận chuyển:</Text> {selectedOrder.phivanchuyen.toLocaleString('vi-VN')} đ</p>
+                {selectedOrder.mavoucher && (
+                  <p className="mb-1"><Text strong>Mã voucher:</Text> {selectedOrder.mavoucher}</p>
+                )}
+              </div>
+              <div>
+                <p className="mb-1"><Text strong>Khách hàng:</Text> {selectedOrder.nguoinhan}</p>
+                <p className="mb-1"><Text strong>Số điện thoại:</Text> {selectedOrder.sodienthoainguoinhan}</p>
+                <p className="mb-1"><Text strong>Phương thức thanh toán:</Text> {selectedOrder.phuongthucthanhtoan}</p>
+                <p className="mb-1"><Text strong>Hình thức nhận hàng:</Text> {selectedOrder.hinhthucnhanhang}</p>
+                <p className="mb-1"><Text strong>Trạng thái:</Text> <Tag color={selectedOrder.trangthai === 'Đã xác nhận' ? 'green' : 'blue'}>{selectedOrder.trangthai}</Tag></p>
+                <p className="mb-1"><Text strong>Người bán:</Text> {selectedOrder.nguoiban}</p>
+              </div>
+            </div>
+
+            {selectedOrder.ghichu && (
+              <div className="bg-gray-50 p-3 rounded-md mb-4">
+                <Text strong>Ghi chú:</Text>
+                <p>{selectedOrder.ghichu}</p>
+              </div>
+            )}
+
+            <Divider orientation="left">Danh sách sản phẩm</Divider>
+            
+            <div className="overflow-auto">
+              <Table
+                dataSource={selectedOrder.sanpham.map((item, index) => ({
+                  ...item,
+                  key: index,
+                  thanhtien: item.giaban * item.soluong
+                }))}
+                columns={[
+                  {
+                    title: 'Sản phẩm',
+                    dataIndex: 'tensanpham',
+                    key: 'tensanpham',
+                    render: (tensanpham, record: any) => (
+                      <div className="flex items-center">
+                        {record.url && (
+                          <Avatar 
+                            src={record.url} 
+                            shape="square" 
+                            size={40} 
+                            className="mr-2"
+                            style={{ flexShrink: 0 }}
+                          />
+                        )}
+                        <span style={{ maxWidth: '280px' }} className="line-clamp-2">{tensanpham}</span>
+                      </div>
+                    ),
+                  },
+                  {
+                    title: 'Đơn vị tính',
+                    dataIndex: 'donvitinh',
+                    key: 'donvitinh',
+                    width: 100,
+                  },
+                  {
+                    title: 'Số lượng',
+                    dataIndex: 'soluong',
+                    key: 'soluong',
+                    width: 100,
+                    align: 'center' as const,
+                  },
+                  {
+                    title: 'Đơn giá',
+                    dataIndex: 'giaban',
+                    key: 'giaban',
+                    width: 120,
+                    render: (giaban) => `${giaban.toLocaleString('vi-VN')} đ`,
+                    align: 'right' as const,
+                  },
+                  {
+                    title: 'Thành tiền',
+                    dataIndex: 'thanhtien',
+                    key: 'thanhtien',
+                    width: 120,
+                    render: (thanhtien) => `${thanhtien.toLocaleString('vi-VN')} đ`,
+                    align: 'right' as const,
+                  },
+                ]}
+                pagination={false}
+                bordered
+                summary={() => (
+                  <Table.Summary fixed>
+                    <Table.Summary.Row>
+                      <Table.Summary.Cell index={0} colSpan={4} align="right">
+                        <Text strong>Tổng tiền:</Text>
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={1} align="right">
+                        <Text strong>{selectedOrder.thanhtien.toLocaleString('vi-VN')} đ</Text>
+                      </Table.Summary.Cell>
+                    </Table.Summary.Row>
+                  </Table.Summary>
+                )}
+              />
+            </div>            <div className="mt-4 flex justify-end">
+              <Space>
+                <Button onClick={() => setOrderDetailVisible(false)}>Đóng</Button>                <Button 
+                  icon={<PrinterOutlined />} 
+                  type="primary"
+                  onClick={() => {
+                    try {
+                      console.log("Print button clicked for order:", selectedOrder.madonhang);
+                      handleDownloadInvoice(selectedOrder.madonhang);
+                    } catch (error) {
+                      console.error("Error handling print button click:", error);
+                      message.error("Không thể tạo hoá đơn");
+                    }
+                  }}
+                  loading={checkoutLoading}
+                >
+                  In đơn hàng
+                </Button>
+              </Space>
+            </div>
+          </div>
+        ) : (
+          <div className="py-8 text-center">
+            <Spin size="large" />
+            <p className="mt-4">Đang tải thông tin đơn hàng...</p>
+          </div>
+        )}
       </Modal>
 
       {/* Barcode scanner modal */}
