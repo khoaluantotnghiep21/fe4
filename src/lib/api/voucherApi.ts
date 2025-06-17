@@ -5,7 +5,6 @@ import { Product } from '@/types/product.types';
 
 export interface CreateVoucherRequest {
   mavoucher: string;
-  loaivoucher: boolean;
   soluong: number;
   mota: string;
   hansudung: string;
@@ -79,23 +78,15 @@ export async function updateVoucher(mavoucher: string, data: Partial<CreateVouch
 
 export async function deleteVoucher(mavoucher: string): Promise<boolean> {
   try {
-    console.log(`Deleting voucher with code: ${mavoucher}`);
     const response = await axiosClient.delete(`/voucher/deleteVoucher/${mavoucher}`);
-
-    console.log('Delete voucher response:', response);
-
     if (response.status >= 200 && response.status < 300) {
       message.success('Xóa voucher thành công!');
       return true;
     }
-    
     return false;
   } catch (err: any) {
-    console.error('Error deleting voucher:', err);
-
     const errorMessage = err.response?.data?.message || 'Lỗi khi xóa voucher';
     message.error(errorMessage);
-    
     throw err;
   }
 }

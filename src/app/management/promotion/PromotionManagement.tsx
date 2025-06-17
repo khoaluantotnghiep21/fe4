@@ -29,6 +29,7 @@ import { KhuyenMai } from '@/types/khuyenmai.types';
 import { Product } from '@/types/product.types';
 import { Voucher } from '@/types/voucher.types';
 import { createNewVoucher, CreateVoucherRequest, deleteVoucher, getAllVouchers, updateVoucher } from '@/lib/api/voucherApi';
+import { set } from 'lodash';
 
 const { Title, Text } = Typography;
 // Removed TabPane import - using items prop instead
@@ -41,6 +42,7 @@ export default function PromotionManagement() {
   const [selectedPromotion, setSelectedPromotion] = useState<KhuyenMai | null>(null);
 
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isModalVoucherVisible, setIsModalVoucherVisible] = useState(false);
   const [modalKhuyenMaiMode, setModalKhuyenMaiMode] = useState<'createKhuyenMai' | 'editKhuyenMai'>('createKhuyenMai');
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -61,14 +63,24 @@ export default function PromotionManagement() {
   const [selectedAvailableProductIds, setSelectedAvailableProductIds] = useState<string[]>([]);
   const [currentProductPage, setCurrentProductPage] = useState(1);
 
+
+  const [searchKMText, setSearchKMText] = useState('');
+  const [statusFilterKM, setStatusFilterKM] = useState('all');
+
+  const [searchVCText, setSearchVCText] = useState('');
+  const [statusFilterVC, setStatusFilterVC] = useState('all');
+
+
+  const [productTabDisabled, setProductTabDisabled] = useState(true);
+
+  
   useEffect(() => {
     fetchPromotions();
   }, []);
 
   useEffect(() => {
     fetchVouchers();
-  }
-    , []);
+  }, []);
   const fetchVouchers = async () => {
     try {
       const data = await getAllVouchers();
@@ -122,7 +134,7 @@ export default function PromotionManagement() {
     setModalVoucherMode('createVoucher');
     setSelectedVoucher(null);
     form.resetFields();
-    setIsModalVisible(true);
+    setIsModalVoucherVisible(true);
   };
 
   const showEditModalKhuyenMai = (promotion: KhuyenMai) => {
@@ -143,7 +155,7 @@ export default function PromotionManagement() {
       ...voucher,
       hansudung: voucher.hansudung ? dayjs(voucher.hansudung) : undefined
     });
-    setIsModalVisible(true);
+    setIsModalVoucherVisible(true);
   };
 
 
@@ -192,7 +204,7 @@ export default function PromotionManagement() {
         await updateVoucher(selectedVoucher.mavoucher, formattedValues);
       }
 
-      setIsModalVisible(false);
+      setIsModalVoucherVisible(false);
       fetchVouchers();
     } catch (error) {
       console.error('Form validation error:', error);
@@ -201,45 +213,68 @@ export default function PromotionManagement() {
     }
   };
 
-  const handleModalVoucherCancel = () => {
-    setIsModalVisible(false);
+  const handleDeleteKM = async (machuongtrinh: string) => {
+    setLoading(true);
+    try {
+      // Lấy danh sách sản phẩm trong chương trình khuyến mãi
+      const productsInPromotion = await findAllProductByPromotion(machuongtrinh);
+
+      // Nếu có sản phẩm, xóa từng sản phẩm khỏi chương trình trước
+      if (productsInPromotion.length > 0) {
+        for (const product of productsInPromotion) {
+          await deleteProductFromPromotion(machuongtrinh, product.masanpham);
+        }
+      }
+
+      // Sau khi đã xóa hết sản phẩm, xóa chương trình khuyến mãi
+      const success = await deletePromotion(machuongtrinh);
+      if (success) {
+        setPromotions(prev => prev.filter(p => p.machuongtrinh !== machuongtrinh));
+        message.success('Xóa chương trình khuyến mãi thành công!');
+      } else {
+        message.error('Xóa chương trình khuyến mãi thất bại!');
+      }
+    } catch (error) {
+      console.error('Error deleting chương trình khuyến mãi:', error);
+      message.error('Xóa chương trình khuyến mãi thất bại!');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDeleteKM = async (mavoucher: string) => {
-    confirm({
-      title: 'Bạn có chắc chắn muốn xóa voucher này?',
-      icon: <ExclamationCircleOutlined />,
-      content: 'Hành động này không thể hoàn tác.',
-      okText: 'Xóa',
-      okType: 'danger',
-      cancelText: 'Hủy',
-      async onOk() {
-        setLoading(true);
-        try {
-          const success = await deleteVoucher(mavoucher);
-          if (success) {
-            fetchVouchers();
-          }
-        } catch (error) {
-          console.error('Error deleting voucher:', error);
-        } finally {
-          setLoading(false);
-        }
-      },
-    });
+  const handleDeleteVoucher = async (mavoucher: string) => {
+    setLoading(true);
+    try {
+      const success = await deleteVoucher(mavoucher);
+      if (success) {
+        setVouchers(prev => prev.filter(v => v.mavoucher !== mavoucher));
+        message.success('Xóa voucher thành công!');
+      } else {
+        message.error('Xóa voucher thất bại!');
+      }
+    } catch (error) {
+      console.error('Error deleting voucher:', error);
+      message.error('Xóa voucher thất bại!');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleViewProducts = async (promotion: KhuyenMai) => {
+    setProductTabDisabled(false);
     setSelectedPromotion(promotion);
     setActiveTab('2');
     await fetchProductsByPromotion(promotion.machuongtrinh);
   };
 
-  const handleViewVoucherList = async (voucher: Voucher) => {
-    setSelectedVoucher(voucher);
-    setActiveTab('3');
-    await fetchVouchers();
-  };
+  useEffect(() => {
+    if (activeTab !== '2') {
+      setProductTabDisabled(true);
+      setSelectedPromotion(null);
+      setProducts([]);
+    }
+  }, [activeTab]);
+
 
   const handleRemoveProductFromPromotion = async (product: Product) => {
     if (!selectedPromotion) return;
@@ -303,12 +338,6 @@ export default function PromotionManagement() {
       render: (value) => `${value}%`,
     },
     {
-      title: 'Đơn vị áp dụng',
-      dataIndex: 'donviapdung',
-      key: 'donviapdung',
-      width: 150,
-    },
-    {
       title: 'Ngày bắt đầu',
       dataIndex: 'ngaybatdau',
       key: 'ngaybatdau',
@@ -344,33 +373,38 @@ export default function PromotionManagement() {
       title: 'Thao tác',
       key: 'action',
       width: 250,
-      render: (_, record) => (
-        <Space size="small">
-          <Button
-            type="primary"
-            icon={<FileSearchOutlined />}
-            onClick={() => handleViewProducts(record)}
-          >
-            Sản phẩm
-          </Button>
-          <Button
-            icon={<EditOutlined />}
-            onClick={() => showEditModalKhuyenMai(record)}
-          >
-            Sửa
-          </Button>
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa chương trình này?"
-            onConfirm={() => handleDeleteKM(record.machuongtrinh)}
-            okText="Xóa"
-            cancelText="Hủy"
-          >
-            <Button danger icon={<DeleteOutlined />}>
-              Xóa
+      render: (_, record) => {
+        const isDisabled = record.machuongtrinh === 'CT000';
+        return (
+          <Space size="small">
+            <Button
+              type="primary"
+              icon={<FileSearchOutlined />}
+              onClick={() => handleViewProducts(record)}
+            >
+              Sản phẩm
             </Button>
-          </Popconfirm>
-        </Space>
-      ),
+            <Button
+              icon={<EditOutlined />}
+              onClick={() => showEditModalKhuyenMai(record)}
+              disabled={isDisabled}
+            >
+              Sửa
+            </Button>
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa chương trình này?"
+              onConfirm={() => handleDeleteKM(record.machuongtrinh)}
+              okText="Xóa"
+              cancelText="Hủy"
+              disabled={isDisabled}
+            >
+              <Button danger icon={<DeleteOutlined />} disabled={isDisabled}>
+                Xóa
+              </Button>
+            </Popconfirm>
+          </Space>
+        );
+      },
     },
   ];
 
@@ -382,11 +416,10 @@ export default function PromotionManagement() {
       width: 150,
     },
     {
-      title: 'Loại voucher',
-      dataIndex: 'loaivoucher',
-      key: 'loaivoucher',
-      sorter: (a, b) => a.mavoucher.localeCompare(b.mavoucher),
-      render: (value) => value === true || value === 'true' ? 'Giảm phần trăm' : 'Giảm tiền mặt',
+      title: 'Mô tả',
+      dataIndex: 'mota',
+      key: 'mota',
+      width: 150,
     },
     {
       title: 'Số lượng',
@@ -395,16 +428,21 @@ export default function PromotionManagement() {
       width: 120,
     },
     {
-      title: 'Giá trị KM',
+      title: 'Giá trị khuyến mãi',
       dataIndex: 'giatri',
       key: 'giatri',
       width: 120,
-      render: (value, record) => {
+      render: (value) => {
         const giatri = value == null ? 0 : value;
-        return record.loaivoucher === true || String(record.loaivoucher) === 'true'
-          ? `${giatri}%`
-          : `${giatri.toLocaleString()}₫`;
+        return `${giatri.toLocaleString()}₫`;
       },
+    },
+    {
+      title: 'Ngày tạo',
+      dataIndex: 'created_at',
+      key: 'created_at',
+      width: 130,
+      render: (date) => date ? dayjs(date).format('DD/MM/YYYY') : '',
     },
     {
       title: 'Trạng thái',
@@ -413,13 +451,13 @@ export default function PromotionManagement() {
       render: (_, record) => {
         const today = dayjs();
         const hsd = dayjs(record.hansudung);
-
-        if (today.isBefore(hsd)) {
-          return <Tag color="blue">Sắp diễn ra</Tag>;
-        } else if (today.isAfter(hsd)) {
-          return <Tag color="red">Đã kết thúc</Tag>;
+        if (!record.hansudung) {
+          return <Tag color="blue">Vô hạn</Tag>;
+        }
+        if (today.isAfter(hsd)) {
+          return <Tag color="red">Đã kết thúc ({hsd.format('DD/MM/YYYY')})</Tag>;
         } else {
-          return <Tag color="green">Đang áp dụng</Tag>;
+          return <Tag color="green">Đang áp dụng ({hsd.format('DD/MM/YYYY')})</Tag>;
         }
       },
     },
@@ -427,26 +465,31 @@ export default function PromotionManagement() {
       title: 'Thao tác',
       key: 'action',
       width: 250,
-      render: (_, record) => (
-        <Space size="small">
-          <Button
-            icon={<EditOutlined />}
-            onClick={() => showEditModalVoucher(record)}
-          >
-            Sửa
-          </Button>
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa voucher này?"
-            onConfirm={() => handleDeleteKM(record.mavoucher)}
-            okText="Xóa"
-            cancelText="Hủy"
-          >
-            <Button danger icon={<DeleteOutlined />}>
-              Xóa
+      render: (_, record) => {
+        const isDisabled = record.mavoucher === 'VC00000';
+        return (
+          <Space size="small">
+            <Button
+              icon={<EditOutlined />}
+              onClick={() => showEditModalVoucher(record)}
+              disabled={isDisabled}
+            >
+              Sửa
             </Button>
-          </Popconfirm>
-        </Space>
-      ),
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa voucher này?"
+              onConfirm={() => handleDeleteVoucher(record.mavoucher)}
+              okText="Xóa"
+              cancelText="Hủy"
+              disabled={isDisabled}
+            >
+              <Button danger icon={<DeleteOutlined />} disabled={isDisabled}>
+                Xóa
+              </Button>
+            </Popconfirm>
+          </Space>
+        );
+      },
     },
   ];
 
@@ -589,7 +632,44 @@ export default function PromotionManagement() {
   const handleSearchProduct = (value: string) => {
     setSearchText(value);
   };
+  const filteredPromotions = promotions.filter(promotions => {
+    // Tìm kiếm theo tên hoặc mã
+    const matchSearch =
+      promotions.machuongtrinh?.toLowerCase().includes(searchKMText.toLowerCase()) ||
+      promotions.tenchuongtrinh?.toLowerCase().includes(searchKMText.toLowerCase());
 
+    // Lọc theo trạng thái
+    let matchStatus = true;
+    if (statusFilterKM !== 'all') {
+      const isExpired = promotions.ngayketthuc && dayjs().isBefore(dayjs(promotions.ngayketthuc), 'day') === false;
+      matchStatus =
+        (statusFilterKM === 'active' && !isExpired) ||
+          (statusFilterKM === 'expired' && isExpired)
+          ? true
+          : false;
+    }
+
+    return matchSearch && matchStatus;
+  });
+
+  const filteredVouchers = vouchers.filter(vouchers => {
+    // Tìm kiếm theo tên hoặc mã
+    const matchSearch =
+      vouchers.mavoucher?.toLowerCase().includes(searchVCText.toLowerCase())
+
+    // Lọc theo trạng thái
+    let matchStatus = true;
+    if (statusFilterVC !== 'all') {
+      const isExpired = vouchers.hansudung && dayjs().isBefore(dayjs(vouchers.hansudung), 'day') === false;
+      matchStatus =
+        (statusFilterVC === 'active' && !isExpired) ||
+          (statusFilterVC === 'expired' && isExpired)
+          ? true
+          : false;
+    }
+
+    return matchSearch && matchStatus;
+  });
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">
       <Tabs activeKey={activeTab} onChange={handleTabChange} items={[
@@ -599,7 +679,27 @@ export default function PromotionManagement() {
           children: (
             <>
               <div className="mb-4 flex justify-between items-center">
+
                 <Title level={4}>Quản lý chương trình khuyến mãi</Title>
+
+                <Select
+                  value={statusFilterKM}
+                  onChange={setStatusFilterKM}
+                  style={{ width: 180 }}
+                  options={[
+                    { value: 'all', label: 'Tất cả trạng thái' },
+                    { value: 'active', label: 'Đang áp dụng' },
+                    { value: 'expired', label: 'Đã kết thúc' },
+                  ]}
+                />
+                <Input
+                  placeholder="Tìm kiếm theo tên hoặc mã"
+                  value={searchKMText}
+                  onChange={e => setSearchKMText(e.target.value)}
+                  style={{ width: 240 }}
+                />
+
+
                 <Button
                   type="primary"
                   icon={<PlusOutlined />}
@@ -607,11 +707,13 @@ export default function PromotionManagement() {
                 >
                   Thêm chương trình khuyến mãi
                 </Button>
+
+
               </div>
 
               <Table
                 columns={columns}
-                dataSource={promotions}
+                dataSource={filteredPromotions}
                 rowKey="machuongtrinh"
                 loading={loading}
                 pagination={{
@@ -627,6 +729,7 @@ export default function PromotionManagement() {
         {
           key: "2",
           label: "Sản phẩm trong chương trình",
+          disabled: productTabDisabled,
           children: (
             <div className="mb-4">
               <Button
@@ -680,6 +783,22 @@ export default function PromotionManagement() {
             <>
               <div className="mb-4 flex justify-between items-center">
                 <Title level={4}>Quản lý voucher</Title>
+                <Select
+                  value={statusFilterVC}
+                  onChange={setStatusFilterVC}
+                  style={{ width: 180 }}
+                  options={[
+                    { value: 'all', label: 'Tất cả trạng thái' },
+                    { value: 'active', label: 'Đang áp dụng' },
+                    { value: 'expired', label: 'Đã kết thúc' },
+                  ]}
+                />
+                <Input
+                  placeholder="Tìm kiếm theo tên hoặc mã"
+                  value={searchVCText}
+                  onChange={e => setSearchVCText(e.target.value)}
+                  style={{ width: 240 }}
+                />
                 <Button
                   type="primary"
                   icon={<PlusOutlined />}
@@ -691,7 +810,7 @@ export default function PromotionManagement() {
 
               <Table
                 columns={columnsVoucher}
-                dataSource={vouchers}
+                dataSource={filteredVouchers}
                 rowKey="mavoucher"
                 loading={loading}
                 pagination={{
@@ -791,67 +910,65 @@ export default function PromotionManagement() {
 
       <Modal
         title={modalVoucherMode === 'createVoucher' ? 'Thêm voucher' : 'Chỉnh sửa voucher'}
-        open={isModalVisible}
+        open={isModalVoucherVisible}
         onOk={handleModalVoucherOk}
-        onCancel={() => setIsModalVisible(false)}
+        onCancel={() => setIsModalVoucherVisible(false)}
         confirmLoading={loading}
       >
         <Form
           form={form}
           layout="vertical"
-          name="promotion_form"
+          name="voucher_form"
         >
-            <Form.Item
+          <Form.Item
             name="mavoucher"
             label="Mã voucher"
             rules={[{ required: true, message: 'Vui lòng nhập mã voucher' }]}
-            >
+          >
             <Input placeholder="Nhập mã voucher" disabled={modalVoucherMode === 'editVoucher'} />
-            </Form.Item>
+          </Form.Item>
 
-            <Form.Item
-            name="loaivoucher"
-            label="Loại voucher"
-            rules={[{ required: true, message: 'Vui lòng chọn loại voucher' }]}
-            >
-            <Select placeholder="Chọn loại voucher">
-              <Select.Option value={true}>Giảm phần trăm</Select.Option>
-              <Select.Option value={false}>Giảm trực tiếp</Select.Option>
-            </Select>
-            </Form.Item>
-              <Form.Item
-                shouldUpdate={(prev, curr) => prev.loaivoucher !== curr.loaivoucher}
-              >
-                {({ getFieldValue }) => {
-                  const isPercent = getFieldValue('loaivoucher') === true;
-                  return (
-                    <Form.Item
-                      name="giatri"
-                      label={isPercent ? "Giá trị khuyến mãi (%)" : "Giá trị khuyến mãi (VNĐ)"}
-                      rules={[
-                        { required: true, message: 'Vui lòng nhập giá trị khuyến mãi' },
-                        isPercent
-                          ? { type: 'number', min: 1, max: 100, message: 'Giá trị phải từ 1-100%' }
-                          : { type: 'number', min: 1000, message: 'Giá trị phải lớn hơn 1.000 VNĐ' }
-                      ]}
-                    >
-                      <InputNumber
-                        placeholder={isPercent ? "Nhập giá trị khuyến mãi (%)" : "Nhập giá trị khuyến mãi (VNĐ)"}
-                        min={isPercent ? 1 : 1000}
-                        max={isPercent ? 100 : undefined}
-                        style={{ width: '100%' }}
-                        formatter={value =>
-                          isPercent
-                            ? `${value}` 
-                            : value
-                              ? `${Number(value).toLocaleString()}`
-                              : ''
-                        }
-                      />
-                    </Form.Item>
-                  );
-                }}
-              </Form.Item>
+          <Form.Item
+            name="soluong"
+            label="Số lượng"
+            rules={[{ required: true, message: 'Vui lòng nhập số lượng voucher' }]}
+          >
+            <InputNumber
+              placeholder="Nhập số lượng voucher"
+              min={1}
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+          <Form.Item
+            name="giatri"
+            label="Giá trị khuyến mãi"
+            rules={[
+              { required: true, message: 'Vui lòng nhập giá trị khuyến mãi' },
+              { type: 'number', min: 1000, message: 'Giá trị phải lớn hơn hoặc bằng 1000' }
+            ]}
+          >
+            <InputNumber
+              placeholder="Nhập giá trị khuyến mãi"
+              min={1000}
+              style={{ width: '100%' }}
+              formatter={value =>
+                value !== undefined && value !== null ? `${Number(value).toLocaleString()}` : ''
+              }
+            />
+          </Form.Item>
+          <Form.Item
+            name="mota"
+            label="Mô tả"
+            rules={[
+              { required: true, message: 'Vui lòng nhập mô tả' },
+              { max: 200, message: 'Mô tả không được vượt quá 200 ký tự' }
+            ]}
+          >
+            <Input.TextArea
+              placeholder="Nhập mô tả"
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
 
           <Form.Item
             name="hansudung"
