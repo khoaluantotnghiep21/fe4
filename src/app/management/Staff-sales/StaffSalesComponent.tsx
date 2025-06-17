@@ -21,10 +21,9 @@ import { Product as ProductBase } from '@/types/product.types';
 import { createPurchaseOrder, CreatePurchaseOrderRequest, PurchaseOrderDetail, getOderByMaChiNhanh, OrderItem, OrderProductItem, generateInvoice } from '@/lib/api/orderApi';
 import { updateTonKho, createDonThuocTuVan } from '@/lib/api/receiveApi';
 
-// Extend Product type to include hasBeenReceived and soluong
+// Extend Product type to include hasBeenReceived
 type Product = ProductBase & {
   hasBeenReceived?: boolean;
-  soluong?: number;
 };
 import { useUser } from '@/context/UserContext';
 import { getPharmacyByEmployeeId, findOne } from '@/lib/api/pharmacyService';
@@ -2406,7 +2405,7 @@ const StaffSalesComponent = () => {
                         <Text strong>Tổng tiền:</Text>
                       </Table.Summary.Cell>
                       <Table.Summary.Cell index={1} align="right">
-                        <Text strong>{(selectedOrder.thanhtien ?? 0).toLocaleString('vi-VN')} đ</Text>
+                        <Text strong>{selectedOrder.thanhtien.toLocaleString('vi-VN')} đ</Text>
                       </Table.Summary.Cell>
                     </Table.Summary.Row>
                   </Table.Summary>
@@ -2479,3 +2478,4 @@ const StaffSalesComponent = () => {
 };
 
 export default StaffSalesComponent;
+

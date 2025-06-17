@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import {
-  Table, Button, Space, Modal, Form, Input, DatePicker, InputNumber, 
+  Table, Button, Space, Modal, Form, Input, DatePicker, InputNumber,
   Tag, Spin, message, Popconfirm, Tabs, Card, Typography, Row, Col,
   Select, Checkbox
 } from 'antd';
-import { 
-  PlusOutlined, EditOutlined, DeleteOutlined, 
+import {
+  PlusOutlined, EditOutlined, DeleteOutlined,
   ExclamationCircleOutlined, TagsOutlined, FileSearchOutlined,
   SearchOutlined
 } from '@ant-design/icons';
@@ -27,6 +27,9 @@ import {
 } from '@/lib/api/khuyenMaiApi';
 import { KhuyenMai } from '@/types/khuyenmai.types';
 import { Product } from '@/types/product.types';
+import { Voucher } from '@/types/voucher.types';
+import { createNewVoucher, CreateVoucherRequest, deleteVoucher, getAllVouchers, updateVoucher } from '@/lib/api/voucherApi';
+import { set } from 'lodash';
 
 const { Title, Text } = Typography;
 // Removed TabPane import - using items prop instead
@@ -37,16 +40,21 @@ export default function PromotionManagement() {
   const [loading, setLoading] = useState(false);
   const [promotions, setPromotions] = useState<KhuyenMai[]>([]);
   const [selectedPromotion, setSelectedPromotion] = useState<KhuyenMai | null>(null);
+
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [isModalVoucherVisible, setIsModalVoucherVisible] = useState(false);
+  const [modalKhuyenMaiMode, setModalKhuyenMaiMode] = useState<'createKhuyenMai' | 'editKhuyenMai'>('createKhuyenMai');
   const [currentPage, setCurrentPage] = useState(1);
-  
+
+  const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
+  const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [modalVoucherMode, setModalVoucherMode] = useState<'createVoucher' | 'editVoucher'>('createVoucher');
   // State cho tab sản phẩm trong khuyến mãi
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState('1');
-  
+
   // State cho modal thêm sản phẩm
   const [isProductModalVisible, setIsProductModalVisible] = useState(false);
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
@@ -55,9 +63,32 @@ export default function PromotionManagement() {
   const [selectedAvailableProductIds, setSelectedAvailableProductIds] = useState<string[]>([]);
   const [currentProductPage, setCurrentProductPage] = useState(1);
 
+
+  const [searchKMText, setSearchKMText] = useState('');
+  const [statusFilterKM, setStatusFilterKM] = useState('all');
+
+  const [searchVCText, setSearchVCText] = useState('');
+  const [statusFilterVC, setStatusFilterVC] = useState('all');
+
+
+  const [productTabDisabled, setProductTabDisabled] = useState(true);
+
+  
   useEffect(() => {
     fetchPromotions();
   }, []);
+
+  useEffect(() => {
+    fetchVouchers();
+  }, []);
+  const fetchVouchers = async () => {
+    try {
+      const data = await getAllVouchers();
+      setVouchers(data);
+    } catch (error) {
+      message.error('Không thể tải danh sách voucher');
+    }
+  };
 
   const fetchPromotions = async () => {
     setLoading(true);
@@ -65,7 +96,6 @@ export default function PromotionManagement() {
       const data = await getAllKhuyenMai();
       setPromotions(data);
     } catch (error) {
-      console.error('Error fetching promotions:', error);
       message.error('Không thể tải danh sách chương trình khuyến mãi');
     } finally {
       setLoading(false);
@@ -76,14 +106,14 @@ export default function PromotionManagement() {
     setLoadingProducts(true);
     try {
       const data = await findAllProductByPromotion(machuongtrinh);
-      
+
       // Log thông tin sản phẩm từ API promotion để so sánh
       if (data.length > 0) {
         console.log('Sample product from promotion API:', data[0]);
         console.log('Product ID from promotion API - type:', typeof data[0].id);
         console.log('Product ID from promotion API - value:', data[0].id);
       }
-      
+
       setProducts(data);
     } catch (error) {
       console.error('Error fetching products by promotion:', error);
@@ -93,15 +123,22 @@ export default function PromotionManagement() {
     }
   };
 
-  const showCreateModal = () => {
-    setModalMode('create');
+  const showCreateModalKhuyenMai = () => {
+    setModalKhuyenMaiMode('createKhuyenMai');
     setSelectedPromotion(null);
     form.resetFields();
     setIsModalVisible(true);
   };
 
-  const showEditModal = (promotion: KhuyenMai) => {
-    setModalMode('edit');
+  const showCreateModalVoucher = () => {
+    setModalVoucherMode('createVoucher');
+    setSelectedVoucher(null);
+    form.resetFields();
+    setIsModalVoucherVisible(true);
+  };
+
+  const showEditModalKhuyenMai = (promotion: KhuyenMai) => {
+    setModalKhuyenMaiMode('editKhuyenMai');
     setSelectedPromotion(promotion);
     form.setFieldsValue({
       ...promotion,
@@ -111,10 +148,22 @@ export default function PromotionManagement() {
     setIsModalVisible(true);
   };
 
-  const handleModalOk = async () => {
+  const showEditModalVoucher = (voucher: Voucher) => {
+    setModalVoucherMode('editVoucher');
+    setSelectedVoucher(voucher);
+    form.setFieldsValue({
+      ...voucher,
+      hansudung: voucher.hansudung ? dayjs(voucher.hansudung) : undefined
+    });
+    setIsModalVoucherVisible(true);
+  };
+
+
+
+  const handleModalKMOk = async () => {
     try {
       const values = await form.validateFields();
-      
+
       const formattedValues: CreatePromotionRequest = {
         ...values,
         ngaybatdau: values.ngaybatdau.format('YYYY-MM-DD'),
@@ -122,13 +171,13 @@ export default function PromotionManagement() {
       };
 
       setLoading(true);
-      
-      if (modalMode === 'create') {
+
+      if (modalKhuyenMaiMode === 'createKhuyenMai') {
         await createNewPromotion(formattedValues);
-      } else if (modalMode === 'edit' && selectedPromotion) {
+      } else if (modalKhuyenMaiMode === 'editKhuyenMai' && selectedPromotion) {
         await updatePromotion(selectedPromotion.machuongtrinh, formattedValues);
       }
-      
+
       setIsModalVisible(false);
       fetchPromotions();
     } catch (error) {
@@ -138,35 +187,94 @@ export default function PromotionManagement() {
     }
   };
 
-  const handleDelete = async (machuongtrinh: string) => {
-    confirm({
-      title: 'Bạn có chắc chắn muốn xóa chương trình khuyến mãi này?',
-      icon: <ExclamationCircleOutlined />,
-      content: 'Hành động này không thể hoàn tác. Tất cả sản phẩm liên quan sẽ không còn được áp dụng khuyến mãi.',
-      okText: 'Xóa',
-      okType: 'danger',
-      cancelText: 'Hủy',
-      async onOk() {
-        setLoading(true);
-        try {
-          const success = await deletePromotion(machuongtrinh);
-          if (success) {
-            fetchPromotions();
-          }
-        } catch (error) {
-          console.error('Error deleting promotion:', error);
-        } finally {
-          setLoading(false);
+  const handleModalVoucherOk = async () => {
+    try {
+      const values = await form.validateFields();
+
+      const formattedValues: CreateVoucherRequest = {
+        ...values,
+        hansudung: values.hansudung.format('YYYY-MM-DD'),
+      };
+
+      setLoading(true);
+
+      if (modalVoucherMode === 'createVoucher') {
+        await createNewVoucher(formattedValues);
+      } else if (modalVoucherMode === 'editVoucher' && selectedVoucher) {
+        await updateVoucher(selectedVoucher.mavoucher, formattedValues);
+      }
+
+      setIsModalVoucherVisible(false);
+      fetchVouchers();
+    } catch (error) {
+      console.error('Form validation error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteKM = async (machuongtrinh: string) => {
+    setLoading(true);
+    try {
+      // Lấy danh sách sản phẩm trong chương trình khuyến mãi
+      const productsInPromotion = await findAllProductByPromotion(machuongtrinh);
+
+      // Nếu có sản phẩm, xóa từng sản phẩm khỏi chương trình trước
+      if (productsInPromotion.length > 0) {
+        for (const product of productsInPromotion) {
+          await deleteProductFromPromotion(machuongtrinh, product.masanpham);
         }
-      },
-    });
+      }
+
+      // Sau khi đã xóa hết sản phẩm, xóa chương trình khuyến mãi
+      const success = await deletePromotion(machuongtrinh);
+      if (success) {
+        setPromotions(prev => prev.filter(p => p.machuongtrinh !== machuongtrinh));
+        message.success('Xóa chương trình khuyến mãi thành công!');
+      } else {
+        message.error('Xóa chương trình khuyến mãi thất bại!');
+      }
+    } catch (error) {
+      console.error('Error deleting chương trình khuyến mãi:', error);
+      message.error('Xóa chương trình khuyến mãi thất bại!');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteVoucher = async (mavoucher: string) => {
+    setLoading(true);
+    try {
+      const success = await deleteVoucher(mavoucher);
+      if (success) {
+        setVouchers(prev => prev.filter(v => v.mavoucher !== mavoucher));
+        message.success('Xóa voucher thành công!');
+      } else {
+        message.error('Xóa voucher thất bại!');
+      }
+    } catch (error) {
+      console.error('Error deleting voucher:', error);
+      message.error('Xóa voucher thất bại!');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleViewProducts = async (promotion: KhuyenMai) => {
+    setProductTabDisabled(false);
     setSelectedPromotion(promotion);
     setActiveTab('2');
     await fetchProductsByPromotion(promotion.machuongtrinh);
   };
+
+  useEffect(() => {
+    if (activeTab !== '2') {
+      setProductTabDisabled(true);
+      setSelectedPromotion(null);
+      setProducts([]);
+    }
+  }, [activeTab]);
+
 
   const handleRemoveProductFromPromotion = async (product: Product) => {
     if (!selectedPromotion) return;
@@ -175,7 +283,7 @@ export default function PromotionManagement() {
       setLoadingProducts(true);
       // Sử dụng hàm API deleteProductFromPromotion để xóa một sản phẩm cụ thể
       const success = await deleteProductFromPromotion(selectedPromotion.machuongtrinh, product.masanpham);
-      
+
       if (success) {
         await fetchProductsByPromotion(selectedPromotion.machuongtrinh);
       }
@@ -197,7 +305,7 @@ export default function PromotionManagement() {
       const success = await applyPromotionToProducts(selectedPromotion.machuongtrinh, {
         productIds: selectedProductIds
       });
-      
+
       if (success) {
         setSelectedProductIds([]);
         await fetchProductsByPromotion(selectedPromotion.machuongtrinh);
@@ -230,12 +338,6 @@ export default function PromotionManagement() {
       render: (value) => `${value}%`,
     },
     {
-      title: 'Đơn vị áp dụng',
-      dataIndex: 'donviapdung',
-      key: 'donviapdung',
-      width: 150,
-    },
-    {
       title: 'Ngày bắt đầu',
       dataIndex: 'ngaybatdau',
       key: 'ngaybatdau',
@@ -257,7 +359,7 @@ export default function PromotionManagement() {
         const today = dayjs();
         const startDate = dayjs(record.ngaybatdau);
         const endDate = dayjs(record.ngayketthuc);
-        
+
         if (today.isBefore(startDate)) {
           return <Tag color="blue">Sắp diễn ra</Tag>;
         } else if (today.isAfter(endDate)) {
@@ -271,33 +373,123 @@ export default function PromotionManagement() {
       title: 'Thao tác',
       key: 'action',
       width: 250,
-      render: (_, record) => (
-        <Space size="small">
-          <Button 
-            type="primary" 
-            icon={<FileSearchOutlined />} 
-            onClick={() => handleViewProducts(record)}
-          >
-            Sản phẩm
-          </Button>
-          <Button 
-            icon={<EditOutlined />} 
-            onClick={() => showEditModal(record)}
-          >
-            Sửa
-          </Button>
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa chương trình này?"
-            onConfirm={() => handleDelete(record.machuongtrinh)}
-            okText="Xóa"
-            cancelText="Hủy"
-          >
-            <Button danger icon={<DeleteOutlined />}>
-              Xóa
+      render: (_, record) => {
+        const isDisabled = record.machuongtrinh === 'CT000';
+        return (
+          <Space size="small">
+            <Button
+              type="primary"
+              icon={<FileSearchOutlined />}
+              onClick={() => handleViewProducts(record)}
+            >
+              Sản phẩm
             </Button>
-          </Popconfirm>
-        </Space>
-      ),
+            <Button
+              icon={<EditOutlined />}
+              onClick={() => showEditModalKhuyenMai(record)}
+              disabled={isDisabled}
+            >
+              Sửa
+            </Button>
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa chương trình này?"
+              onConfirm={() => handleDeleteKM(record.machuongtrinh)}
+              okText="Xóa"
+              cancelText="Hủy"
+              disabled={isDisabled}
+            >
+              <Button danger icon={<DeleteOutlined />} disabled={isDisabled}>
+                Xóa
+              </Button>
+            </Popconfirm>
+          </Space>
+        );
+      },
+    },
+  ];
+
+  const columnsVoucher: ColumnsType<Voucher> = [
+    {
+      title: 'Mã voucher',
+      dataIndex: 'mavoucher',
+      key: 'mavoucher',
+      width: 150,
+    },
+    {
+      title: 'Mô tả',
+      dataIndex: 'mota',
+      key: 'mota',
+      width: 150,
+    },
+    {
+      title: 'Số lượng',
+      dataIndex: 'soluong',
+      key: 'soluong',
+      width: 120,
+    },
+    {
+      title: 'Giá trị khuyến mãi',
+      dataIndex: 'giatri',
+      key: 'giatri',
+      width: 120,
+      render: (value) => {
+        const giatri = value == null ? 0 : value;
+        return `${giatri.toLocaleString()}₫`;
+      },
+    },
+    {
+      title: 'Ngày tạo',
+      dataIndex: 'created_at',
+      key: 'created_at',
+      width: 130,
+      render: (date) => date ? dayjs(date).format('DD/MM/YYYY') : '',
+    },
+    {
+      title: 'Trạng thái',
+      key: 'status',
+      width: 150,
+      render: (_, record) => {
+        const today = dayjs();
+        const hsd = dayjs(record.hansudung);
+        if (!record.hansudung) {
+          return <Tag color="blue">Vô hạn</Tag>;
+        }
+        if (today.isAfter(hsd)) {
+          return <Tag color="red">Đã kết thúc ({hsd.format('DD/MM/YYYY')})</Tag>;
+        } else {
+          return <Tag color="green">Đang áp dụng ({hsd.format('DD/MM/YYYY')})</Tag>;
+        }
+      },
+    },
+    {
+      title: 'Thao tác',
+      key: 'action',
+      width: 250,
+      render: (_, record) => {
+        const isDisabled = record.mavoucher === 'VC00000';
+        return (
+          <Space size="small">
+            <Button
+              icon={<EditOutlined />}
+              onClick={() => showEditModalVoucher(record)}
+              disabled={isDisabled}
+            >
+              Sửa
+            </Button>
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa voucher này?"
+              onConfirm={() => handleDeleteVoucher(record.mavoucher)}
+              okText="Xóa"
+              cancelText="Hủy"
+              disabled={isDisabled}
+            >
+              <Button danger icon={<DeleteOutlined />} disabled={isDisabled}>
+                Xóa
+              </Button>
+            </Popconfirm>
+          </Space>
+        );
+      },
     },
   ];
 
@@ -309,9 +501,9 @@ export default function PromotionManagement() {
       render: (_, record) => {
         const mainImage = record.anhsanpham?.find(img => img.ismain)?.url || '';
         return mainImage ? (
-          <img 
-            src={mainImage} 
-            alt={record.tensanpham} 
+          <img
+            src={mainImage}
+            alt={record.tensanpham}
             style={{ width: 50, height: 50, objectFit: 'cover' }}
           />
         ) : null;
@@ -360,19 +552,19 @@ export default function PromotionManagement() {
 
   const fetchAvailableProducts = async () => {
     if (!selectedPromotion) return;
-    
+
     setLoadingAvailableProducts(true);
     try {
       // Sử dụng API getProductNoPromotion để lấy các sản phẩm chưa được áp dụng khuyến mãi
       const products = await getProductNoPromotion();
-      
+
       // Log một sản phẩm mẫu để kiểm tra cấu trúc
       if (products.length > 0) {
         console.log('Sample product structure:', products[0]);
         console.log('Product ID type:', typeof products[0].id);
         console.log('Product ID value:', products[0].id);
       }
-      
+
       setAvailableProducts(products);
     } catch (error) {
       console.error('Error fetching available products:', error);
@@ -387,12 +579,12 @@ export default function PromotionManagement() {
       message.warning('Vui lòng chọn một chương trình khuyến mãi trước');
       return;
     }
-    
+
     setSelectedAvailableProductIds([]);
     setIsProductModalVisible(true);
     fetchAvailableProducts();
   };
-  
+
   const handleProductSelection = (productId: string, checked: boolean) => {
     if (checked) {
       setSelectedAvailableProductIds(prev => [...prev, productId]);
@@ -400,7 +592,7 @@ export default function PromotionManagement() {
       setSelectedAvailableProductIds(prev => prev.filter(id => id !== productId));
     }
   };
-  
+
   const handleAddSelectedProducts = async () => {
     if (!selectedPromotion || selectedAvailableProductIds.length === 0) {
       message.warning('Vui lòng chọn sản phẩm để áp dụng khuyến mãi');
@@ -409,15 +601,15 @@ export default function PromotionManagement() {
 
     try {
       setLoadingAvailableProducts(true);
-      
+
       // In ra thông tin chi tiết về các ID sản phẩm đang được gửi đi
       console.log('Selected product IDs for promotion:', selectedAvailableProductIds);
-      
+
       // Gửi các ID sản phẩm đã chọn đến API để áp dụng khuyến mãi
       const success = await applyPromotionToProducts(selectedPromotion.machuongtrinh, {
         productIds: selectedAvailableProductIds
       });
-      
+
       if (success) {
         message.success('Đã thêm sản phẩm vào chương trình khuyến mãi thành công');
         setIsProductModalVisible(false);
@@ -440,7 +632,44 @@ export default function PromotionManagement() {
   const handleSearchProduct = (value: string) => {
     setSearchText(value);
   };
+  const filteredPromotions = promotions.filter(promotions => {
+    // Tìm kiếm theo tên hoặc mã
+    const matchSearch =
+      promotions.machuongtrinh?.toLowerCase().includes(searchKMText.toLowerCase()) ||
+      promotions.tenchuongtrinh?.toLowerCase().includes(searchKMText.toLowerCase());
 
+    // Lọc theo trạng thái
+    let matchStatus = true;
+    if (statusFilterKM !== 'all') {
+      const isExpired = promotions.ngayketthuc && dayjs().isBefore(dayjs(promotions.ngayketthuc), 'day') === false;
+      matchStatus =
+        (statusFilterKM === 'active' && !isExpired) ||
+          (statusFilterKM === 'expired' && isExpired)
+          ? true
+          : false;
+    }
+
+    return matchSearch && matchStatus;
+  });
+
+  const filteredVouchers = vouchers.filter(vouchers => {
+    // Tìm kiếm theo tên hoặc mã
+    const matchSearch =
+      vouchers.mavoucher?.toLowerCase().includes(searchVCText.toLowerCase())
+
+    // Lọc theo trạng thái
+    let matchStatus = true;
+    if (statusFilterVC !== 'all') {
+      const isExpired = vouchers.hansudung && dayjs().isBefore(dayjs(vouchers.hansudung), 'day') === false;
+      matchStatus =
+        (statusFilterVC === 'active' && !isExpired) ||
+          (statusFilterVC === 'expired' && isExpired)
+          ? true
+          : false;
+    }
+
+    return matchSearch && matchStatus;
+  });
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">
       <Tabs activeKey={activeTab} onChange={handleTabChange} items={[
@@ -450,19 +679,41 @@ export default function PromotionManagement() {
           children: (
             <>
               <div className="mb-4 flex justify-between items-center">
+
                 <Title level={4}>Quản lý chương trình khuyến mãi</Title>
-                <Button 
-                  type="primary" 
-                  icon={<PlusOutlined />} 
-                  onClick={showCreateModal}
+
+                <Select
+                  value={statusFilterKM}
+                  onChange={setStatusFilterKM}
+                  style={{ width: 180 }}
+                  options={[
+                    { value: 'all', label: 'Tất cả trạng thái' },
+                    { value: 'active', label: 'Đang áp dụng' },
+                    { value: 'expired', label: 'Đã kết thúc' },
+                  ]}
+                />
+                <Input
+                  placeholder="Tìm kiếm theo tên hoặc mã"
+                  value={searchKMText}
+                  onChange={e => setSearchKMText(e.target.value)}
+                  style={{ width: 240 }}
+                />
+
+
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={showCreateModalKhuyenMai}
                 >
                   Thêm chương trình khuyến mãi
                 </Button>
+
+
               </div>
 
               <Table
                 columns={columns}
-                dataSource={promotions}
+                dataSource={filteredPromotions}
                 rowKey="machuongtrinh"
                 loading={loading}
                 pagination={{
@@ -478,15 +729,16 @@ export default function PromotionManagement() {
         {
           key: "2",
           label: "Sản phẩm trong chương trình",
+          disabled: productTabDisabled,
           children: (
             <div className="mb-4">
-              <Button 
-                onClick={() => setActiveTab('1')} 
+              <Button
+                onClick={() => setActiveTab('1')}
                 className="mb-4"
               >
                 &lt; Quay lại danh sách
               </Button>
-              
+
               {selectedPromotion && (
                 <Card className="mb-4">
                   <Row gutter={16}>
@@ -502,10 +754,10 @@ export default function PromotionManagement() {
                   </Row>
                 </Card>
               )}
-              
+
               <div className="mb-4 flex justify-between">
                 <Title level={5}>Danh sách sản phẩm trong chương trình khuyến mãi</Title>
-                <Button 
+                <Button
                   type="primary"
                   icon={<PlusOutlined />}
                   onClick={handleAddProducts}
@@ -513,7 +765,7 @@ export default function PromotionManagement() {
                   Thêm sản phẩm
                 </Button>
               </div>
-              
+
               <Table
                 columns={productColumns}
                 dataSource={products}
@@ -523,13 +775,60 @@ export default function PromotionManagement() {
               />
             </div>
           )
+        },
+        {
+          key: "3",
+          label: "Danh sách voucher",
+          children: (
+            <>
+              <div className="mb-4 flex justify-between items-center">
+                <Title level={4}>Quản lý voucher</Title>
+                <Select
+                  value={statusFilterVC}
+                  onChange={setStatusFilterVC}
+                  style={{ width: 180 }}
+                  options={[
+                    { value: 'all', label: 'Tất cả trạng thái' },
+                    { value: 'active', label: 'Đang áp dụng' },
+                    { value: 'expired', label: 'Đã kết thúc' },
+                  ]}
+                />
+                <Input
+                  placeholder="Tìm kiếm theo tên hoặc mã"
+                  value={searchVCText}
+                  onChange={e => setSearchVCText(e.target.value)}
+                  style={{ width: 240 }}
+                />
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={showCreateModalVoucher}
+                >
+                  Thêm voucher
+                </Button>
+              </div>
+
+              <Table
+                columns={columnsVoucher}
+                dataSource={filteredVouchers}
+                rowKey="mavoucher"
+                loading={loading}
+                pagination={{
+                  current: currentPage,
+                  onChange: (page) => setCurrentPage(page),
+                  pageSize: 10,
+                  showSizeChanger: false,
+                }}
+              />
+            </>
+          )
         }
       ]} />
-      
+      {/*Modal add khuyenmai*/}
       <Modal
-        title={modalMode === 'create' ? 'Thêm chương trình khuyến mãi' : 'Chỉnh sửa chương trình khuyến mãi'}
+        title={modalKhuyenMaiMode === 'createKhuyenMai' ? 'Thêm chương trình khuyến mãi' : 'Chỉnh sửa chương trình khuyến mãi'}
         open={isModalVisible}
-        onOk={handleModalOk}
+        onOk={handleModalKMOk}
         onCancel={() => setIsModalVisible(false)}
         confirmLoading={loading}
       >
@@ -545,7 +844,7 @@ export default function PromotionManagement() {
           >
             <Input placeholder="Nhập tên chương trình khuyến mãi" />
           </Form.Item>
-          
+
           <Form.Item
             name="giatrikhuyenmai"
             label="Giá trị khuyến mãi (%)"
@@ -554,14 +853,14 @@ export default function PromotionManagement() {
               { type: 'number', min: 1, max: 100, message: 'Giá trị phải từ 1-100%' }
             ]}
           >
-            <InputNumber 
-              placeholder="Nhập giá trị khuyến mãi" 
-              min={1} 
-              max={100} 
+            <InputNumber
+              placeholder="Nhập giá trị khuyến mãi"
+              min={1}
+              max={100}
               style={{ width: '100%' }}
             />
           </Form.Item>
-          
+
           <Form.Item
             name="donviapdung"
             label="Đơn vị áp dụng"
@@ -569,19 +868,19 @@ export default function PromotionManagement() {
           >
             <Input placeholder="Nhập đơn vị áp dụng" />
           </Form.Item>
-          
+
           <Form.Item
             name="ngaybatdau"
             label="Ngày bắt đầu"
             rules={[{ required: true, message: 'Vui lòng chọn ngày bắt đầu' }]}
           >
-            <DatePicker 
-              placeholder="Chọn ngày bắt đầu" 
+            <DatePicker
+              placeholder="Chọn ngày bắt đầu"
               style={{ width: '100%' }}
               format="DD/MM/YYYY"
             />
           </Form.Item>
-          
+
           <Form.Item
             name="ngayketthuc"
             label="Ngày kết thúc"
@@ -589,8 +888,8 @@ export default function PromotionManagement() {
               { required: true, message: 'Vui lòng chọn ngày kết thúc' },
               ({ getFieldValue }) => ({
                 validator(_, value) {
-                  if (!value || !getFieldValue('ngaybatdau') || 
-                      value.isAfter(getFieldValue('ngaybatdau'))) {
+                  if (!value || !getFieldValue('ngaybatdau') ||
+                    value.isAfter(getFieldValue('ngaybatdau'))) {
                     return Promise.resolve();
                   }
                   return Promise.reject(
@@ -600,15 +899,91 @@ export default function PromotionManagement() {
               })
             ]}
           >
-            <DatePicker 
-              placeholder="Chọn ngày kết thúc" 
+            <DatePicker
+              placeholder="Chọn ngày kết thúc"
               style={{ width: '100%' }}
-              format="DD/MM/YYYY" 
+              format="DD/MM/YYYY"
             />
           </Form.Item>
         </Form>
       </Modal>
-      
+
+      <Modal
+        title={modalVoucherMode === 'createVoucher' ? 'Thêm voucher' : 'Chỉnh sửa voucher'}
+        open={isModalVoucherVisible}
+        onOk={handleModalVoucherOk}
+        onCancel={() => setIsModalVoucherVisible(false)}
+        confirmLoading={loading}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          name="voucher_form"
+        >
+          <Form.Item
+            name="mavoucher"
+            label="Mã voucher"
+            rules={[{ required: true, message: 'Vui lòng nhập mã voucher' }]}
+          >
+            <Input placeholder="Nhập mã voucher" disabled={modalVoucherMode === 'editVoucher'} />
+          </Form.Item>
+
+          <Form.Item
+            name="soluong"
+            label="Số lượng"
+            rules={[{ required: true, message: 'Vui lòng nhập số lượng voucher' }]}
+          >
+            <InputNumber
+              placeholder="Nhập số lượng voucher"
+              min={1}
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+          <Form.Item
+            name="giatri"
+            label="Giá trị khuyến mãi"
+            rules={[
+              { required: true, message: 'Vui lòng nhập giá trị khuyến mãi' },
+              { type: 'number', min: 1000, message: 'Giá trị phải lớn hơn hoặc bằng 1000' }
+            ]}
+          >
+            <InputNumber
+              placeholder="Nhập giá trị khuyến mãi"
+              min={1000}
+              style={{ width: '100%' }}
+              formatter={value =>
+                value !== undefined && value !== null ? `${Number(value).toLocaleString()}` : ''
+              }
+            />
+          </Form.Item>
+          <Form.Item
+            name="mota"
+            label="Mô tả"
+            rules={[
+              { required: true, message: 'Vui lòng nhập mô tả' },
+              { max: 200, message: 'Mô tả không được vượt quá 200 ký tự' }
+            ]}
+          >
+            <Input.TextArea
+              placeholder="Nhập mô tả"
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="hansudung"
+            label="Ngày hết hạn"
+            rules={[{ required: true, message: 'Vui lòng chọn ngày hết hạn' }]}
+          >
+            <DatePicker
+              placeholder="Chọn ngày hết hạn"
+              style={{ width: '100%' }}
+              format="DD/MM/YYYY"
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
       {/* Modal for adding products to promotion */}
       <Modal
         title="Thêm sản phẩm vào chương trình khuyến mãi"
@@ -627,10 +1002,10 @@ export default function PromotionManagement() {
             style={{ width: '100%' }}
           />
         </div>
-        
+
         <Table
           rowKey="id"
-          dataSource={availableProducts.filter(p => 
+          dataSource={availableProducts.filter(p =>
             p.tensanpham.toLowerCase().includes(searchText.toLowerCase())
           )}
           loading={loadingAvailableProducts}
@@ -657,9 +1032,9 @@ export default function PromotionManagement() {
               render: (_, record) => {
                 const mainImage = record.anhsanpham?.find(img => img.ismain)?.url || '';
                 return mainImage ? (
-                  <img 
-                    src={mainImage} 
-                    alt={record.tensanpham} 
+                  <img
+                    src={mainImage}
+                    alt={record.tensanpham}
                     style={{ width: 40, height: 40, objectFit: 'cover' }}
                   />
                 ) : null;
@@ -684,11 +1059,11 @@ export default function PromotionManagement() {
             },
           ]}
         />
-        
+
         <div className="mt-4 flex justify-between items-center">
           <span>Đã chọn {selectedAvailableProductIds.length} sản phẩm</span>
-          <Button 
-            type="primary" 
+          <Button
+            type="primary"
             onClick={handleAddSelectedProducts}
             disabled={selectedAvailableProductIds.length === 0}
           >

@@ -513,7 +513,7 @@ const ProductReceiptManagement = () => {
           <TabPane tab="Đã duyệt" key="3">
             <div className="overflow-x-auto">
               <Table
-                dataSource={receipts.filter(r => r.tinhtrang === 'Đã duyệt')}
+                dataSource={receipts.filter(r => r.tinhtrang === 'Đã xác nhận đơn hàng')}
                 columns={receiptColumns}
                 rowKey="manhaphang"
                 loading={loading}
