@@ -1,29 +1,51 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Table, Card, Button, Input, Select, Typography, Space, Badge, 
   Tag, Modal, Form, InputNumber, Image, Row, Col, Divider, 
-  Spin, Empty, message, Pagination, Statistic, Tooltip 
+  Spin, Empty, message, Pagination, Statistic, Tooltip, Tabs, 
+  Avatar, Drawer, Radio, Checkbox
 } from 'antd';
 import { 
   SearchOutlined, ShoppingCartOutlined, PlusOutlined, 
   MinusOutlined, DeleteOutlined, CreditCardOutlined, 
   DollarOutlined, ShopOutlined, BarcodeOutlined, 
   InboxOutlined, InfoCircleOutlined, CheckOutlined, 
-  PrinterOutlined, UserOutlined
+  PrinterOutlined, UserOutlined, FilterOutlined, 
+  CalendarOutlined, MedicineBoxOutlined, HeartOutlined,
+  ScanOutlined, FileTextOutlined, HistoryOutlined, EyeOutlined
 } from '@ant-design/icons';
+import { getProducts, getProductByMaSanPham } from '@/lib/api/productApi';
+import { Product as ProductBase } from '@/types/product.types';
+import { createPurchaseOrder, CreatePurchaseOrderRequest, PurchaseOrderDetail, getOderByMaChiNhanh, OrderItem, OrderProductItem, generateInvoice } from '@/lib/api/orderApi';
+import { updateTonKho, createDonThuocTuVan } from '@/lib/api/receiveApi';
+
+// Extend Product type to include hasBeenReceived and soluong
+type Product = ProductBase & {
+  hasBeenReceived?: boolean;
+  soluong?: number;
+};
 import { useUser } from '@/context/UserContext';
-import { getPharmacyByEmployeeId } from '@/lib/api/pharmacyService';
+import { getPharmacyByEmployeeId, findOne } from '@/lib/api/pharmacyService';
 import { getListProductInPharmacy, PharmacyProduct } from '@/lib/api/receiveApi';
-import { getProductByMaSanPham } from '@/lib/api/productApi';
-import { createPurchaseOrder } from '@/lib/api/orderApi';
-import dayjs from 'dayjs';
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
+const { TabPane } = Tabs;``
 
-// Define interfaces
+// Mock data for UI design
+const mockCategories = [
+  { value: 'all', label: 'Tất cả danh mục' },
+  { value: 'thuoc-khang-sinh', label: 'Thuốc kháng sinh' },
+  { value: 'thuoc-ha-sot', label: 'Thuốc hạ sốt' },
+  { value: 'thuoc-da-day', label: 'Thuốc dạ dày' },
+  { value: 'vitamin-khoang-chat', label: 'Vitamin & Khoáng chất' },
+  { value: 'cham-soc-da', label: 'Chăm sóc da' },
+  { value: 'thuc-pham-chuc-nang', label: 'Thực phẩm chức năng' },
+];
+
+// Interface for pharmacy data
 interface PharmacyData {
   id: string;
   idnhathuoc: string;
@@ -34,89 +56,41 @@ interface PharmacyData {
   phuong?: string;
   tenduong?: string;
   diachicuthe?: string;
-}
-
-// PharmacyProduct is now imported from '@/lib/api/receiveApi'
-
-interface DetailedProduct {
-  id: string;
-  masanpham: string;
-  tensanpham: string;
-  slug: string;
-  dangbaoche: string;
-  congdung: string;
-  chidinh: string;
-  chongchidinh: string;
-  thuockedon: boolean;
-  motangan: string;
-  doituongsudung: string;
-  luuy: string;
-  ngaysanxuat: string;
-  hansudung: number;
-  gianhap: number;
-  mathuonghieu: string;
-  madanhmuc: string;
-  machuongtrinh: string;
-  danhmuc: {
-    tendanhmuc: string;
-    slug: string;
-  };
-  thuonghieu: {
-    tenthuonghieu: string;
-  };
-  khuyenmai: {
-    tenchuongtrinh: string;
-    giatrikhuyenmai: number;
-  };
-  anhsanpham: {
-    url: string;
-    ismain: boolean | null;
-  }[];
-  chitietdonvi: {
-    dinhluong: number;
-    giaban: number;
-    donvitinh: {
-      donvitinh: string;
-    };
-    giabanSauKhuyenMai: number;
-  }[];
-  chitietthanhphan: {
-    hamluong: string;
-    thanhphan: {
-      tenthanhphan: string;
-    };
-  }[];
-}
-
-interface CartItem {
-  masanpham: string;
-  tensanpham: string;
-  soluong: number;
-  dongia: number;
-  donvitinh: string;
-  giaban: number;
-  anhSanPham?: string;
-  thuocKedon: boolean;
-  key: string;
+  tennhathuoc?: string;
 }
 
 const StaffSalesComponent = () => {
-  // States
+  // User context
   const { user } = useUser();
+  // States
   const [loading, setLoading] = useState(false);
   const [pharmacy, setPharmacy] = useState<PharmacyData | null>(null);
-  const [products, setProducts] = useState<PharmacyProduct[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<PharmacyProduct[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [searchText, setSearchText] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<any[]>([]);
   const [productDetailVisible, setProductDetailVisible] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<DetailedProduct | null>(null);
-  const [detailedProductMap, setDetailedProductMap] = useState<Record<string, DetailedProduct>>({});
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [paymentForm] = Form.useForm();
   const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [categories, setCategories] = useState<{value: string, label: string}[]>([]);
+  const [filterDrawerVisible, setFilterDrawerVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState('products');
+  const [prescriptionMode, setPrescriptionMode] = useState(false);
+  const [customerInfoVisible, setCustomerInfoVisible] = useState(false);
+  const [customerForm] = Form.useForm();
+  const [orderHistoryVisible, setOrderHistoryVisible] = useState(false);
+  const [barcodeModalVisible, setBarcodeModalVisible] = useState(false);
+  
+  // State for product unit selections - to avoid hook in render function
+  const [productUnitSelections, setProductUnitSelections] = useState<Record<string, string>>({});
+  
+  // State for order history
+  const [orderHistoryData, setOrderHistoryData] = useState<OrderItem[]>([]);
+  const [orderHistoryLoading, setOrderHistoryLoading] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
+  const [orderDetailVisible, setOrderDetailVisible] = useState(false);
   
   // Pagination state
   const [pagination, setPagination] = useState({
@@ -125,103 +99,8 @@ const StaffSalesComponent = () => {
     total: 0
   });
 
-  // Calculate totals
-  const cartTotal = useMemo(() => {
-    return cart.reduce((total, item) => total + item.dongia * item.soluong, 0);
-  }, [cart]);
-
-  // Fetch pharmacy data for the current user
-  useEffect(() => {
-    const fetchPharmacyData = async () => {
-      try {
-        if (user?.id) {
-          setLoading(true);
-          const pharmacyData = await getPharmacyByEmployeeId(user.id);
-          
-          if (pharmacyData && pharmacyData.length > 0) {
-            setPharmacy(pharmacyData[0]);
-            // Load products once we have the pharmacy data
-            fetchProducts(pharmacyData[0].machinhanh);
-          } else {
-            message.error('Không tìm thấy thông tin chi nhánh cho nhân viên này!');
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching pharmacy data:', error);
-        message.error('Lỗi khi lấy thông tin chi nhánh!');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPharmacyData();
-  }, [user]);
-
-  // Fetch products for the pharmacy
-  const fetchProducts = async (branchCode: string) => {
-    try {
-      setLoading(true);
-      const response = await getListProductInPharmacy(branchCode);
-      
-      const productsData = response.data || [];
-      setProducts(productsData);
-      setFilteredProducts(productsData);
-      setPagination(prev => ({
-        ...prev,
-        total: productsData.length
-      }));
-
-      // Extract unique categories for filtering
-      const uniqueCategories = new Set<string>();
-      
-      // Fetch detailed product information for each product
-      const detailedProducts: Record<string, DetailedProduct> = {};
-      for (const product of productsData) {
-        try {
-          const detailedProduct = await getProductByMaSanPham(product.masanpham);
-          if (detailedProduct) {
-            // Ensure khuyenmai.giatrikhuyenmai exists
-            if (detailedProduct.khuyenmai) {
-              if (typeof (detailedProduct.khuyenmai as any).giatrikhuyenmai === 'undefined') {
-                (detailedProduct.khuyenmai as any).giatrikhuyenmai = 0;
-              }
-              if (typeof (detailedProduct.khuyenmai as any).tenchuongtrinh === 'undefined') {
-                (detailedProduct.khuyenmai as any).tenchuongtrinh = '';
-              }
-            } else {
-              detailedProduct.khuyenmai = { tenchuongtrinh: '', giatrikhuyenmai: 0 } as any;
-            }
-            detailedProducts[product.masanpham] = detailedProduct as DetailedProduct;
-            
-            // Add category to unique set
-            if (detailedProduct.danhmuc?.tendanhmuc) {
-              uniqueCategories.add(detailedProduct.danhmuc.tendanhmuc);
-            }
-          }
-        } catch (err) {
-          console.error(`Failed to fetch details for product ${product.masanpham}:`, err);
-        }
-      }
-
-      setDetailedProductMap(detailedProducts);
-      
-      // Create categories filter array
-      const categoryOptions = [
-        { value: 'all', label: 'Tất cả danh mục' },
-        ...Array.from(uniqueCategories).map(category => ({
-          value: category,
-          label: category,
-        })),
-      ];
-      setCategories(categoryOptions);
-
-    } catch (error) {
-      console.error('Error fetching products:', error);
-      message.error('Lỗi khi tải danh sách sản phẩm!');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Calculate cart total
+  const cartTotal = cart.reduce((total, item) => total + (item.dongia || 0) * (item.soluong || 0), 0);
 
   // Handle search
   const handleSearch = (value: string) => {
@@ -251,10 +130,9 @@ const StaffSalesComponent = () => {
     
     // Filter by category
     if (category && category !== 'all') {
-      filtered = filtered.filter(product => {
-        const detailedProduct = detailedProductMap[product.masanpham];
-        return detailedProduct?.danhmuc?.tendanhmuc === category;
-      });
+      filtered = filtered.filter(product => 
+        product.danhmuc?.slug === category
+      );
     }
     
     setFilteredProducts(filtered);
@@ -283,121 +161,211 @@ const StaffSalesComponent = () => {
   };
 
   // View product details
-  const viewProductDetails = async (masanpham: string) => {
-    try {
-      setLoading(true);
-      
-      // Check if we already have detailed info for this product
-      let detailedProduct = detailedProductMap[masanpham];
-      
-      // If not, fetch it
-      if (!detailedProduct) {
-        const fetchedProduct = await getProductByMaSanPham(masanpham);
-        if (fetchedProduct) {
-          // Ensure khuyenmai.giatrikhuyenmai exists
-          if (fetchedProduct.khuyenmai) {
-            if (typeof (fetchedProduct.khuyenmai as any).giatrikhuyenmai === 'undefined') {
-              (fetchedProduct.khuyenmai as any).giatrikhuyenmai = 0;
-            }
-          } else {
-            fetchedProduct.khuyenmai = { tenchuongtrinh: '', giatrikhuyenmai: 0 } as any;
-          }
-          
-          detailedProduct = fetchedProduct as DetailedProduct;
-          setDetailedProductMap(prev => ({
-            ...prev,
-            [masanpham]: detailedProduct!
-          }));
-        }
-      }
-      
-      if (detailedProduct) {
-        setSelectedProduct(detailedProduct);
-        setProductDetailVisible(true);
-      } else {
-        message.error('Không thể tải thông tin chi tiết sản phẩm!');
-      }
-    } catch (error) {
-      console.error('Error fetching product details:', error);
-      message.error('Lỗi khi tải thông tin chi tiết sản phẩm!');
-    } finally {
-      setLoading(false);
+  const viewProductDetails = (product: Product) => {
+    fetchProductDetail(product.masanpham);
+  };  // Add product to cart
+  const addToCart = (product: Product, quantity: number = 1, selectedUnit?: string) => {
+    // Kiểm tra sản phẩm có chitietdonvi không
+    if (!product.chitietdonvi || product.chitietdonvi.length === 0) {
+      message.error(`Sản phẩm ${product.tensanpham} không có thông tin đơn vị tính!`);
+      return;
     }
-  };
 
-  // Add product to cart
-  const addToCart = (product: PharmacyProduct, quantity: number = 1) => {
-    const detailedProduct = detailedProductMap[product.masanpham];
-    
-    if (!detailedProduct || !detailedProduct.chitietdonvi || detailedProduct.chitietdonvi.length === 0) {
-      message.error('Không đủ thông tin về đơn giá sản phẩm!');
+    // Check if product is prescription-only and we're not in prescription mode
+    if (product.thuockedon && !prescriptionMode) {
+      Modal.confirm({
+        title: 'Thuốc kê đơn',
+        content: 'Sản phẩm này là thuốc kê đơn. Bạn cần chuyển sang chế độ bán theo đơn thuốc.',
+        okText: 'Chuyển sang chế độ đơn thuốc',
+        cancelText: 'Hủy',
+        onOk: () => {
+          setPrescriptionMode(true);
+          setCustomerInfoVisible(true);
+        }
+      });
       return;
     }
     
-    // Get price and unit details
-    const priceInfo = detailedProduct.chitietdonvi[0];
-    const price = priceInfo.giabanSauKhuyenMai || priceInfo.giaban;
-    const unit = priceInfo.donvitinh.donvitinh;
+    // Lấy đơn vị tính và giá được chọn hoặc mặc định
+    let unitToUse = selectedUnit;
     
-    // Get main image url
-    const mainImage = detailedProduct.anhsanpham?.find(img => img.ismain === true)?.url 
-      || detailedProduct.anhsanpham?.[0]?.url;
-    
-    // Check if product already exists in cart
-    const existingItemIndex = cart.findIndex(item => item.masanpham === product.masanpham);
-    
-    if (existingItemIndex !== -1) {
-      // Update quantity if product already in cart
-      const updatedCart = [...cart];
-      const totalQuantity = updatedCart[existingItemIndex].soluong + quantity;
+    // Nếu không có đơn vị được chọn, kiểm tra xem sản phẩm có đơn vị đã được chọn trước đó không
+    if (!unitToUse) {
+      // Kiểm tra trong state productUnitSelections
+      unitToUse = productUnitSelections[product.masanpham];
       
-      // Ensure we don't exceed available stock
-      if (totalQuantity > product.soluong) {
-        message.warning(`Chỉ còn ${product.soluong} sản phẩm trong kho!`);
-        updatedCart[existingItemIndex].soluong = product.soluong;
+      // Nếu vẫn không có, lấy từ getDefaultPriceAndUnit
+      if (!unitToUse) {
+        const defaultUnitInfo = getDefaultPriceAndUnit(product);
+        unitToUse = defaultUnitInfo.unit;
+          // Nếu vẫn không có đơn vị, tìm đơn vị cơ bản (có định lượng là 1)
+        if (!unitToUse) {
+          // Ưu tiên đơn vị có định lượng lớn nhất (thường là đơn vị đóng gói lớn nhất)
+          const sortedUnits = [...product.chitietdonvi].sort((a, b) => (b.dinhluong || 0) - (a.dinhluong || 0));
+          
+          if (sortedUnits.length > 0) {
+            unitToUse = sortedUnits[0].donvitinh?.donvitinh;
+            console.log(`Sử dụng đơn vị có định lượng lớn nhất cho ${product.tensanpham}:`, unitToUse, 'định lượng:', sortedUnits[0].dinhluong);
+          }
+          
+          // Nếu vẫn không có, thử tìm đơn vị cơ bản (định lượng = 1)
+          if (!unitToUse) {
+            const baseUnit = product.chitietdonvi.find(detail => detail.dinhluong === 1);
+            if (baseUnit && baseUnit.donvitinh) {
+              unitToUse = baseUnit.donvitinh.donvitinh;
+              console.log(`Sử dụng đơn vị cơ bản cho ${product.tensanpham}:`, unitToUse);
+            } 
+            // Nếu không có đơn vị cơ bản, lấy đơn vị đầu tiên
+            else if (product.chitietdonvi.length > 0) {
+              unitToUse = product.chitietdonvi[0].donvitinh?.donvitinh;
+              console.log(`Sử dụng đơn vị đầu tiên cho ${product.tensanpham}:`, unitToUse);
+            }
+          }
+        }
+      }
+    }
+    
+    // Kiểm tra lại xem có đơn vị tính không
+    if (!unitToUse) {
+      message.error(`Không thể xác định đơn vị tính cho sản phẩm ${product.tensanpham}!`);
+      return;
+    }
+    
+    // Cập nhật lại state để lưu đơn vị vừa được chọn
+    setProductUnitSelections(prev => ({
+      ...prev,
+      [product.masanpham]: unitToUse as string
+    }));
+    
+    const unitDetail = product.chitietdonvi.find(detail => detail.donvitinh.donvitinh === unitToUse);
+    
+    // Nếu không tìm thấy chi tiết đơn vị, thử lấy đơn vị đầu tiên
+    if (!unitDetail && product.chitietdonvi.length > 0) {
+      unitToUse = product.chitietdonvi[0].donvitinh?.donvitinh;
+      const firstUnitDetail = product.chitietdonvi[0];
+      
+      if (firstUnitDetail) {
+        console.log(`Không tìm thấy đơn vị ${unitToUse}, sử dụng đơn vị đầu tiên thay thế:`, firstUnitDetail.donvitinh?.donvitinh);
+        // Cập nhật lại state
+        setProductUnitSelections(prev => ({
+          ...prev,
+          [product.masanpham]: firstUnitDetail.donvitinh?.donvitinh as string
+        }));
+        return addToCart(product, quantity, firstUnitDetail.donvitinh?.donvitinh); // Gọi lại hàm với đơn vị đầu tiên
+      }
+    }
+    
+    if (!unitDetail) {
+      message.error(`Không tìm thấy thông tin đơn vị tính ${unitToUse} cho sản phẩm ${product.tensanpham}!`);
+      console.error('Các đơn vị tính hiện có:', product.chitietdonvi.map(d => d.donvitinh.donvitinh));
+      return;
+    }    
+    // Tính giá dựa trên đơn vị tính được chọn
+    const price = unitDetail.giaban;
+    const priceAfterDiscount = unitDetail.giabanSauKhuyenMai !== undefined ? 
+      unitDetail.giabanSauKhuyenMai : price;
+    const mainImage = getMainImage(product);
+    
+    // Log thông tin chi tiết đơn vị tính được chọn
+    console.log(`Thông tin chi tiết đơn vị tính ${unitToUse} cho sản phẩm ${product.tensanpham}:`, {
+      donvitinh: unitToUse,
+      dinhluong: unitDetail.dinhluong,
+      soLuongTrongKho: product.soluong || 0,
+      dongia: price,
+      dongiaSauKhuyenMai: priceAfterDiscount
+    });
+    
+    // Kiểm tra sản phẩm với đơn vị tính này đã có trong giỏ hàng chưa
+    const existingItemIndex = cart.findIndex(item => 
+      item.masanpham === product.masanpham && item.donvitinh === unitToUse
+    );
+      if (existingItemIndex !== -1) {
+      // Cập nhật số lượng nếu sản phẩm đã có trong giỏ
+      const updatedCart = [...cart];
+      const totalQuantity = updatedCart[existingItemIndex].soluong + quantity;      
+      // Tính số lượng tối đa dựa trên định lượng của đơn vị
+      const maxQuantityForUnit = calculateMaxQuantityForUnit(product, unitDetail);
+      
+      console.log(`Cập nhật số lượng cho sản phẩm đã có trong giỏ ${product.tensanpham} (${unitToUse}):`, {
+        soLuongHienTai: updatedCart[existingItemIndex].soluong,
+        soLuongTong: totalQuantity,
+        maxQuantityForUnit
+      });
+        
+      if (totalQuantity > maxQuantityForUnit) {
+        message.warning(`Chỉ còn ${maxQuantityForUnit} ${unitToUse} trong kho!`);
+        updatedCart[existingItemIndex].soluong = maxQuantityForUnit;
       } else {
         updatedCart[existingItemIndex].soluong = totalQuantity;
       }
       
-      setCart(updatedCart);
-    } else {
-      // Add new item to cart
-      const newItem: CartItem = {
-        key: product.masanpham,
+      setCart(updatedCart);    } else {
+      // Thêm sản phẩm mới vào giỏ hàng
+      // Tính số lượng tối đa dựa trên định lượng của đơn vị
+      const maxQuantityForUnit = calculateMaxQuantityForUnit(product, unitDetail);
+        
+      if (maxQuantityForUnit <= 0) {
+        message.warning(`Sản phẩm ${product.tensanpham} (${unitToUse}) đã hết hàng!`);
+        console.warn(`Không thể thêm ${product.tensanpham} (${unitToUse}) vào giỏ hàng vì maxQuantityForUnit = ${maxQuantityForUnit}`);
+        return;
+      }
+      
+      // Lấy danh sách các đơn vị tính có sẵn
+      const availableUnits = product.chitietdonvi.map(detail => detail.donvitinh.donvitinh);
+      
+      const newItem = {
+        key: `${product.masanpham}-${unitToUse}`,
         masanpham: product.masanpham,
         tensanpham: product.tensanpham,
-        soluong: Math.min(quantity, product.soluong),
-        dongia: price,
-        donvitinh: unit,
-        giaban: price,
+        soluong: Math.min(quantity, maxQuantityForUnit),
+        dongia: priceAfterDiscount,
+        giaGoc: price !== priceAfterDiscount ? price : null,
+        donvitinh: unitToUse,
+        availableUnits: availableUnits, // Thêm mảng đơn vị tính có sẵn
         anhSanPham: mainImage,
-        thuocKedon: detailedProduct.thuockedon
+        thuocKedon: product.thuockedon,
+        manhaphang: product.manhaphang,
+        ngaynhap: product.ngaynhap,
+        dinhluong: unitDetail.dinhluong // Store the ratio for this unit
       };
       
       setCart([...cart, newItem]);
     }
     
-    message.success(`Đã thêm ${product.tensanpham} vào giỏ hàng!`);
+    message.success(`Đã thêm ${product.tensanpham} (${unitToUse}) vào giỏ hàng!`);
   };
 
   // Update item quantity in cart
-  const updateCartItemQuantity = (masanpham: string, quantity: number) => {
+  const updateCartItemQuantity = (itemKey: string, quantity: number) => {
+    // Extract product code and unit from key (format: "masanpham-donvitinh")
+    const [masanpham, donvitinh] = itemKey.split('-');
+    
     const product = products.find(p => p.masanpham === masanpham);
     
     if (!product) {
       message.error('Sản phẩm không tồn tại trong kho!');
+      return;    }
+    
+    // Find unit detail to get dinhluong (ratio)
+    const unitDetail = product.chitietdonvi.find(detail => detail.donvitinh.donvitinh === donvitinh);
+    
+    if (!unitDetail) {
+      message.error('Không tìm thấy thông tin đơn vị tính!');
       return;
     }
     
-    // Check if quantity exceeds available stock
-    if (quantity > product.soluong) {
-      message.warning(`Chỉ còn ${product.soluong} sản phẩm trong kho!`);
-      quantity = product.soluong;
+    // Sử dụng hàm đã được chuẩn hóa để tính số lượng tối đa
+    const maxQuantityForUnit = calculateMaxQuantityForUnit(product, unitDetail);
+    
+    // Check if quantity exceeds available stock (considering unit ratio)
+    if (quantity > maxQuantityForUnit) {
+      message.warning(`Chỉ còn ${maxQuantityForUnit} ${donvitinh} trong kho!`);
+      quantity = maxQuantityForUnit;
     }
     
     // Update cart
     const updatedCart = cart.map(item => {
-      if (item.masanpham === masanpham) {
+      if (item.key === itemKey) {
         return { ...item, soluong: quantity };
       }
       return item;
@@ -407,11 +375,53 @@ const StaffSalesComponent = () => {
   };
 
   // Remove item from cart
-  const removeFromCart = (masanpham: string) => {
-    setCart(cart.filter(item => item.masanpham !== masanpham));
+  const removeFromCart = (itemKey: string) => {
+    setCart(cart.filter(item => item.key !== itemKey));
     message.success('Đã xóa sản phẩm khỏi giỏ hàng!');
   };
 
+  // Handle unit change
+  const handleUnitChange = (itemKey: string, newUnit: string) => {
+    // Extract the product code from the key
+    const [masanpham] = itemKey.split('-');
+    
+    // Tìm sản phẩm trong danh sách sản phẩm
+    const product = products.find(p => p.masanpham === masanpham);
+    if (!product) {
+      message.error('Không tìm thấy thông tin sản phẩm!');
+      return;
+    }
+    
+    // Tìm thông tin đơn vị tính mới
+    const unitDetail = product.chitietdonvi.find(detail => detail.donvitinh.donvitinh === newUnit);
+    if (!unitDetail) {
+      message.error('Không tìm thấy thông tin đơn vị tính!');
+      return;
+    }
+    
+    // Tính giá mới dựa trên đơn vị tính mới
+    const price = unitDetail.giaban;
+    const priceAfterDiscount = unitDetail.giabanSauKhuyenMai !== undefined ? 
+      unitDetail.giabanSauKhuyenMai : price;
+    
+    // Cập nhật giỏ hàng với đơn vị tính và giá mới
+    const updatedCart = cart.map(item => {
+      if (item.key === itemKey) {
+        // Create a new key with the new unit
+        const newKey = `${masanpham}-${newUnit}`;
+        return {
+          ...item,
+          key: newKey,
+          donvitinh: newUnit,
+          dongia: priceAfterDiscount,
+          giaGoc: price !== priceAfterDiscount ? price : null
+        };
+      }
+      return item;
+    });
+    
+    setCart(updatedCart);
+  };
   // Handle checkout
   const handleCheckout = () => {
     if (cart.length === 0) {
@@ -419,67 +429,145 @@ const StaffSalesComponent = () => {
       return;
     }
     
+    if (prescriptionMode && !customerForm.getFieldValue('hoTen')) {
+      message.warning('Vui lòng nhập thông tin khách hàng trước khi thanh toán!');
+      setCustomerInfoVisible(true);
+      return;
+    }
+    
+    // Calculate original total (before discounts)
+    const originalTotal = cart.reduce((total, item) => {
+      return total + (item.giaGoc || item.dongia) * item.soluong;
+    }, 0);
+    
+    // Calculate discount (original - final)
+    const directDiscount = originalTotal - cartTotal;
+    
     setPaymentModalVisible(true);
     
     // Pre-fill payment form
     paymentForm.setFieldsValue({
       paymentMethod: 'CASH',
       deliveryMethod: 'PICKUP',
+      originalTotal: originalTotal,
+      directDiscount: directDiscount,
       totalAmount: cartTotal,
       discount: 0,
       shippingFee: 0,
       finalAmount: cartTotal,
     });
-  };
-
-  // Confirm checkout
+  };  // Confirm checkout
   const confirmCheckout = async (values: any) => {
-    if (!pharmacy) {
-      message.error('Không tìm thấy thông tin chi nhánh!');
-      return;
-    }
+    setCheckoutLoading(true);
     
     try {
-      setCheckoutLoading(true);
-      
-      const orderDetails = cart.map(item => ({
+      // Prepare order details
+      const orderDetails: PurchaseOrderDetail[] = cart.map(item => ({
         masanpham: item.masanpham,
         soluong: item.soluong,
         giaban: item.dongia,
         donvitinh: item.donvitinh
       }));
       
-      const orderData = {
-        phuongthucthanhtoan: values.paymentMethod,
-        hinhthucnhanhang: values.deliveryMethod,
-        mavoucher: "VC00000", // Default value as required by API
-        tongtien: values.totalAmount,
-        giamgiatructiep: values.discount || 0,
-        thanhtien: values.finalAmount,
+      // Prepare request data according to API requirements
+      const purchaseOrderData: CreatePurchaseOrderRequest = {
+        phuongthucthanhtoan: values.paymentMethod === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản ngân hàng',
+        hinhthucnhanhang: 'Nhận hàng tại nhà thuốc',
+        mavoucher: null, // Always null as requested
+        tongtien: values.originalTotal, // Original total (before discounts)
+        giamgiatructiep: values.directDiscount, // Direct discount (original - final)
+        thanhtien: values.finalAmount, // Final amount after all discounts
         phivanchuyen: values.shippingFee || 0,
-        machinhhanh: pharmacy.machinhanh,
+        machinhanh: pharmacy?.machinhanh || '',
         details: orderDetails
       };
       
-      const result = await createPurchaseOrder(orderData);
+      console.log('Purchase order data:', JSON.stringify(purchaseOrderData, null, 2));
       
-      if (result) {
-        // Success
-        message.success('Đặt hàng thành công!');
-        setPaymentModalVisible(false);
+      // Call API to create purchase order
+      const response = await createPurchaseOrder(purchaseOrderData);
+      console.log('API response:', response);
+        if (response && response.statusCode === 201) {
+        // Update inventory for all products in cart
+        try {
+          // Process each item in the cart and update inventory
+          const updateInventoryPromises = cart.map(async (item) => {
+            // Find product in products list to get current inventory
+            const product = products.find(p => p.masanpham === item.masanpham);
+            
+            if (product) {
+              // Get the definition of the current unit
+              const unitDetail = product.chitietdonvi.find(
+                detail => detail.donvitinh.donvitinh === item.donvitinh
+              );
+              
+              if (unitDetail) {                // Calculate new inventory using the correct formula:
+                // New inventory = Current inventory - (Sold quantity / Definition ratio)
+                const currentInventory = product.soluong || 0;
+                const soldQuantity = item.soluong;
+                const definitionRatio = unitDetail.dinhluong;
+                
+                // Đảm bảo định lượng có giá trị hợp lệ và không bằng 0
+                const safeDefinitionRatio = (definitionRatio && definitionRatio > 0) ? definitionRatio : 1;
+                
+                // Calculate how much base inventory is being reduced
+                // Công thức: Khi bán SL đơn vị với định lượng là DL, số lượng cơ bản giảm là SL/DL
+                // Ví dụ: Bán 2 hộp, mỗi hộp có 10 viên (DL=10), giảm 2/10 = 0.2 của đơn vị cơ bản
+                const inventoryReduction = soldQuantity / safeDefinitionRatio;
+                
+                // Calculate new inventory level (can be decimal)
+                const newInventory = currentInventory - inventoryReduction;
+                
+                console.log(`Updating inventory for ${product.masanpham}:`, {
+                  product: product.tensanpham,
+                  currentInventory,
+                  soldQuantity,
+                  definitionRatio,
+                  inventoryReduction,
+                  newInventory
+                });
+                
+                // Update inventory in backend
+                if (pharmacy?.machinhanh) {
+                  await updateTonKho(
+                    pharmacy.machinhanh,
+                    product.masanpham,
+                    parseFloat(newInventory.toFixed(2))  // Round to 2 decimal places
+                  );
+                }
+              }
+            }
+          });
+          
+          // Wait for all inventory updates to complete
+          await Promise.all(updateInventoryPromises);
+          console.log('All inventory updates completed successfully');
+          
+        } catch (inventoryError) {
+          console.error('Error updating inventory:', inventoryError);
+          message.warning('Đơn hàng đã thanh toán nhưng có lỗi khi cập nhật tồn kho');
+        }
         
-        // Clear cart
+        // Update UI
+        setPaymentModalVisible(false);
         setCart([]);
         
-        // Show success modal with order information
+        // Show success modal
         Modal.success({
-          title: 'Đặt hàng thành công!',
+          title: 'Thanh toán thành công!',
           content: (
             <div>
-              <p className="text-lg mb-2">Mã đơn hàng: <strong>{result.data.madonhang}</strong></p>
-              <p>Tổng tiền: {values.finalAmount.toLocaleString('vi-VN')} VNĐ</p>
-              <p>Phương thức thanh toán: {values.paymentMethod === 'CASH' ? 'Tiền mặt' : 'Thẻ'}</p>
-              <p>Thời gian: {dayjs().format('DD/MM/YYYY HH:mm')}</p>
+              <p className="text-lg mb-2">Mã đơn hàng: <strong>{response.data.madonhang}</strong></p>
+              <p>Tổng tiền gốc: {values.originalTotal.toLocaleString('vi-VN')} VNĐ</p>
+              <p>Giảm giá khuyến mãi: {values.directDiscount.toLocaleString('vi-VN')} VNĐ</p>
+              <p>Giảm giá thêm: {values.discount.toLocaleString('vi-VN')} VNĐ</p>
+              <p>Phí vận chuyển: {values.shippingFee.toLocaleString('vi-VN')} VNĐ</p>
+              <p>Thành tiền: {values.finalAmount.toLocaleString('vi-VN')} VNĐ</p>
+              <p>Phương thức thanh toán: {values.paymentMethod === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản ngân hàng'}</p>
+              <p>Thời gian: {new Date().toLocaleString('vi-VN')}</p>
+              {prescriptionMode && (
+                <p>Khách hàng: {customerForm.getFieldValue('hoTen')}</p>
+              )}
             </div>
           ),
           okText: 'In hóa đơn',
@@ -487,312 +575,1034 @@ const StaffSalesComponent = () => {
             icon: <PrinterOutlined />
           },
           onOk: () => {
-            // Print functionality can be added here
             message.info('Chức năng in hóa đơn đang phát triển!');
+          }        });
+
+        // Nếu đang trong chế độ bán theo đơn thuốc, lưu thông tin vào đơn thuốc tư vấn
+        if (prescriptionMode && customerForm.getFieldValue('hoTen')) {
+          try {
+            const donThuocTuVanData = {
+              madonhang: response.data.madonhang, // Sử dụng mã đơn hàng vừa tạo
+              hoten: customerForm.getFieldValue('hoTen'),
+              sodienthoai: customerForm.getFieldValue('soDienThoai') || '',
+              ghichu: customerForm.getFieldValue('ghiChu') || ''
+            };
+
+            const donThuocResponse = await createDonThuocTuVan(donThuocTuVanData);
+            console.log('Đã lưu thông tin đơn thuốc tư vấn:', donThuocResponse);
+            message.success('Đã lưu thông tin đơn thuốc tư vấn thành công!');
+          } catch (donThuocError) {
+            console.error('Lỗi khi lưu thông tin đơn thuốc tư vấn:', donThuocError);
+            message.warning('Đơn hàng đã thanh toán nhưng có lỗi khi lưu thông tin đơn thuốc tư vấn');
           }
-        });
-        
-        // Refresh product list to get updated quantities
-        if (pharmacy) {
-          fetchProducts(pharmacy.machinhanh);
         }
+        
+        // Reset prescription mode
+        setPrescriptionMode(false);
+        
+        // Refresh products to get updated inventory
+        fetchProducts();
+      } else {
+        message.error('Thanh toán thất bại. Vui lòng thử lại!');
       }
     } catch (error) {
-      console.error('Checkout error:', error);
-      message.error('Đặt hàng thất bại!');
+      console.error('Error during checkout:', error);
+      message.error('Đã xảy ra lỗi khi thanh toán. Vui lòng thử lại!');
     } finally {
       setCheckoutLoading(false);
     }
   };
 
-  // Render product card
-  const renderProductCard = (product: PharmacyProduct) => {
-    const detailedProduct = detailedProductMap[product.masanpham];
-    const mainImage = detailedProduct?.anhsanpham?.find(img => img.ismain === true)?.url 
-      || detailedProduct?.anhsanpham?.[0]?.url;
-    const price = detailedProduct?.chitietdonvi?.[0]?.giabanSauKhuyenMai 
-      || detailedProduct?.chitietdonvi?.[0]?.giaban || 0;
-    const unit = detailedProduct?.chitietdonvi?.[0]?.donvitinh.donvitinh || '';
+  // Hàm fetch sản phẩm từ nhà thuốc
+  const fetchProducts = async () => {
+    setLoading(true);
+    try {
+      if (!user || !user.id) {
+        message.error('Không tìm thấy thông tin người dùng!');
+        setLoading(false);
+        return;
+      }
+      const pharmacyData = await getPharmacyByEmployeeId(user.id);
+      const pharmacy = pharmacyData?.[0];
+      if (!pharmacy.machinhanh) {
+        console.error('Không có thông tin chi nhánh nhà thuốc');
+        message.warning('Vui lòng đợi đến khi thông tin chi nhánh được tải xong');
+        return;
+      }
+
+      // Lấy danh sách sản phẩm trong nhà thuốc
+      console.log('Mã chi nhánh:', pharmacy.machinhanh);
+      const pharmacyProductsResponse = await getListProductInPharmacy(pharmacy.machinhanh);
+      console.log('API Response:', pharmacyProductsResponse);
+      
+      // Debug dữ liệu đầu ra từ API
+      if (pharmacyProductsResponse) {
+        console.log('Cấu trúc data:', Object.keys(pharmacyProductsResponse));
+        
+        if (pharmacyProductsResponse.data) {
+          console.log('Cấu trúc data.data:', Object.keys(pharmacyProductsResponse.data));
+          
+          // Kiểm tra nếu data chứa một message
+          if (
+            typeof pharmacyProductsResponse.data === 'object' &&
+            !Array.isArray(pharmacyProductsResponse.data) &&
+            'message' in pharmacyProductsResponse.data
+          ) {
+            if (typeof pharmacyProductsResponse.data === 'object' && pharmacyProductsResponse.data !== null && 'message' in pharmacyProductsResponse.data) {
+              console.log('Message:', (pharmacyProductsResponse.data as { message?: string }).message);
+            }
+          }
+          
+          // Kiểm tra nếu data chứa thành phần data
+          if (
+            pharmacyProductsResponse.data &&
+            typeof pharmacyProductsResponse.data === 'object' &&
+            !Array.isArray(pharmacyProductsResponse.data) &&
+            'data' in pharmacyProductsResponse.data
+          ) {
+            const innerData = (pharmacyProductsResponse.data as any).data;
+            if (Array.isArray(innerData)) {
+              console.log('data.data là một mảng với', innerData.length, 'phần tử');
+              if (innerData.length > 0) {
+                console.log('Phần tử đầu tiên:', innerData[0]);
+              }
+            } else {
+              console.log('data.data không phải mảng:', typeof innerData);
+              console.log('Kết quả JSON.stringify:', JSON.stringify(innerData).substring(0, 200) + '...');
+            }
+          }
+        }
+      }
+      
+      // Xem hình ảnh: API Response có cấu trúc: 
+      // {data: {data: [...], message: '...', success: true, totalProducts: 9}, meta: {...}}
+      let pharmacyProducts: any[] = [];
+      
+      if (
+        pharmacyProductsResponse?.data &&
+        typeof pharmacyProductsResponse.data === 'object' &&
+        !Array.isArray(pharmacyProductsResponse.data) &&
+        'data' in pharmacyProductsResponse.data &&
+        Array.isArray((pharmacyProductsResponse.data as any).data)
+      ) {
+        // Trường hợp API trả về {data: {data: [...]}}
+        pharmacyProducts = (pharmacyProductsResponse.data as any).data;
+      } else if (
+        pharmacyProductsResponse?.data &&
+        !Array.isArray(pharmacyProductsResponse.data) &&
+        (pharmacyProductsResponse.data as any).data
+      ) {
+        // Trường hợp API trả về {data: {data: [{},...,{}]}} nhưng không phải mảng
+        console.log('Dữ liệu không phải mảng, kiểm tra cấu trúc:', (pharmacyProductsResponse.data as any).data);
+        // Thử chuyển đổi từ đối tượng sang mảng bằng cách trích xuất giá trị
+        const objectData = (pharmacyProductsResponse.data as any).data;
+        pharmacyProducts = Object.values(objectData).filter(item => typeof item === 'object' && item !== null);
+      } else if (pharmacyProductsResponse?.data && Array.isArray(pharmacyProductsResponse.data)) {
+        // Trường hợp API trả về {data: [...]}
+        pharmacyProducts = pharmacyProductsResponse.data;
+      } else {
+        // Trích xuất giá trị thông báo để hiển thị
+        let apiMessage = 'Không tìm thấy sản phẩm';
+        if (
+          pharmacyProductsResponse?.data &&
+          typeof pharmacyProductsResponse.data === 'object' &&
+          !Array.isArray(pharmacyProductsResponse.data) &&
+          'message' in pharmacyProductsResponse.data
+        ) {
+          apiMessage = (pharmacyProductsResponse.data as { message?: string }).message || apiMessage;
+        }
+        console.log('Thông báo từ API:', apiMessage);
+      }
+      
+      console.log('Pharmacy Products:', pharmacyProducts);
+
+      if (pharmacyProducts.length === 0) {
+        message.info('Không có sản phẩm nào trong kho của nhà thuốc');
+        setProducts([]);
+        setFilteredProducts([]);
+        setPagination(prev => ({
+          ...prev,
+          total: 0
+        }));
+        return;
+      }
+      
+      // Lấy thông tin chi tiết cho từng sản phẩm
+      const productDetailsPromises = pharmacyProducts.map(async (pharmacyProduct) => {
+        try {
+          console.log('Đang lấy chi tiết sản phẩm:', pharmacyProduct);
+          
+          // Kiểm tra và đảm bảo pharmacyProduct có thuộc tính masanpham
+          const productCode = pharmacyProduct.masanpham;
+          if (!productCode) {
+            console.error('Sản phẩm không có mã:', pharmacyProduct);
+            return null;
+          }
+          
+          const productDetail = await getProductByMaSanPham(productCode);
+          if (productDetail) {
+            // Kết hợp thông tin sản phẩm chi tiết với thông tin số lượng từ kho nhà thuốc
+            // Kiểm tra xem sản phẩm đã được nhập kho (có mã nhập hàng) hay không
+            const hasBeenReceived = Boolean(pharmacyProduct.manhaphang);
+            
+            return {
+              ...productDetail,
+              // Nếu sản phẩm đã được nhập kho, sử dụng số lượng từ API
+              // Nếu chưa nhập kho, đánh dấu là null để hiển thị khác biệt
+              soluong: hasBeenReceived ? pharmacyProduct.soluong : null,
+              manhaphang: pharmacyProduct.manhaphang,
+              ngaynhap: pharmacyProduct.ngaynhap || pharmacyProduct.ngaygui,
+              hasBeenReceived: hasBeenReceived, // Thêm flag để biết sản phẩm đã nhập kho hay chưa
+            };
+          } else {
+            console.error(`Không tìm thấy thông tin chi tiết cho sản phẩm ${productCode}`);
+          }
+          return null;
+        } catch (error) {
+          console.error(`Lỗi khi lấy chi tiết sản phẩm:`, error);
+          return null;
+        }
+      });
+      
+      const productDetails = await Promise.all(productDetailsPromises);
+      const validProducts = productDetails.filter(product => product !== null) as Product[];
+      
+      console.log('Số lượng sản phẩm hợp lệ:', validProducts.length);
+      if (validProducts.length > 0) {
+        console.log('Mẫu sản phẩm đầu tiên:', validProducts[0]);
+      }
+      
+      setProducts(validProducts);
+      setFilteredProducts(validProducts);
+      setPagination(prev => ({
+        ...prev,
+        total: validProducts.length
+      }));
+      
+      if (validProducts.length > 0) {
+        message.success(`Đã tải ${validProducts.length} sản phẩm thành công`);
+      } else {
+        message.warning('Không có sản phẩm nào được tải thành công');
+      }
+      
+    } catch (error) {
+      console.error('Lỗi khi lấy danh sách sản phẩm:', error);
+      message.error('Không thể tải danh sách sản phẩm');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Hàm lấy chi tiết sản phẩm
+  const fetchProductDetail = async (masanpham: string) => {
+    try {
+      const product = await getProductByMaSanPham(masanpham);
+      if (product) {
+        // Tìm sản phẩm trong danh sách sản phẩm đã tải về để lấy thông tin tồn kho
+        const existingProduct = products.find(p => p.masanpham === masanpham);
+        
+        // Lấy đơn vị đã được chọn từ state (nếu có)
+        const selectedUnit = productUnitSelections[masanpham];
+        
+        // Gán đơn vị đã chọn và thông tin tồn kho vào product để sử dụng trong modal
+        const enhancedProduct = {
+          ...product,
+          selectedUnit,
+          // Ghi đè các thông tin liên quan đến tồn kho từ sản phẩm đã có
+          soluong: existingProduct ? existingProduct.soluong : null,
+          hasBeenReceived: existingProduct ? existingProduct.hasBeenReceived : false,
+          manhaphang: existingProduct ? existingProduct.manhaphang : null,
+          ngaynhap: existingProduct ? existingProduct.ngaynhap : null
+        };
+        
+        setSelectedProduct(enhancedProduct);
+        setProductDetailVisible(true);
+      } else {
+        message.error('Không tìm thấy thông tin sản phẩm');
+      }
+    } catch (error) {
+      console.error('Lỗi khi lấy chi tiết sản phẩm:', error);
+      message.error('Không thể tải chi tiết sản phẩm');
+    }
+  };
+  
+  // Fetch order history data
+  const fetchOrderHistory = async () => {
+    if (!pharmacy?.machinhanh) {
+      message.error('Không có thông tin chi nhánh để lấy lịch sử đơn hàng');
+      return;
+    }
+    
+    setOrderHistoryLoading(true);
+    try {
+      const orderData = await getOderByMaChiNhanh(pharmacy.machinhanh);
+      setOrderHistoryData(orderData);
+      console.log('Lịch sử đơn hàng:', orderData);
+    } catch (error) {
+      console.error('Lỗi khi lấy lịch sử đơn hàng:', error);
+      message.error('Không thể lấy lịch sử đơn hàng');
+    } finally {
+      setOrderHistoryLoading(false);
+    }
+  };
+  
+  // Handle opening order history modal
+  const handleOpenOrderHistory = () => {
+    setOrderHistoryVisible(true);
+    fetchOrderHistory();
+  };
+  
+  // View order detail
+  const handleViewOrderDetail = (order: OrderItem) => {
+    setSelectedOrder(order);
+    setOrderDetailVisible(true);
+  };
+    // Handle invoice download
+  const handleDownloadInvoice = async (madonhang: string) => {
+    console.log("Handling invoice download for:", madonhang);
+    
+    if (!madonhang) {
+      message.error("Mã đơn hàng không hợp lệ");
+      return;
+    }
+    
+    setCheckoutLoading(true);
+    message.loading({ content: "Đang tạo hoá đơn...", key: "invoice-loading" });
+    
+    try {
+      const success = await generateInvoice(madonhang);
+      if (success) {
+        message.success({ content: "Đang tải xuống hoá đơn", key: "invoice-loading" });
+      } else {
+        message.error({ content: "Không thể tạo hoá đơn", key: "invoice-loading" });
+      }
+    } catch (error) {
+      console.error("Error in handleDownloadInvoice:", error);
+      message.error({ content: "Lỗi khi tạo hoá đơn", key: "invoice-loading" });
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
+
+  // Gọi API khi component mount
+  useEffect(() => {
+    // Fetch pharmacy data for the current user
+    const fetchPharmacyData = async () => {
+      try {
+        if (user?.id) {
+          setLoading(true);
+          const pharmacyData = await getPharmacyByEmployeeId(user.id);
+          
+          if (pharmacyData && pharmacyData.length > 0) {
+            const userPharmacy = pharmacyData[0];
+            
+            // Get detailed pharmacy information
+            const detailedPharmacy = await findOne(userPharmacy.machinhanh);
+            
+            if (detailedPharmacy) {
+              // Combine the data
+              const combinedPharmacy = {
+                ...userPharmacy,
+                ...detailedPharmacy
+              };
+              setPharmacy(combinedPharmacy);
+              
+              // Fetch products after we have pharmacy data
+              await fetchProducts();
+              
+            } else {
+              setPharmacy(userPharmacy);
+              
+              // Fetch products after we have pharmacy data
+              await fetchProducts();
+            }
+          } else {
+            message.error('Không tìm thấy thông tin chi nhánh cho nhân viên này!');
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching pharmacy data:', error);
+        message.error('Lỗi khi lấy thông tin chi nhánh!');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPharmacyData();
+  }, [user]);
+  
+  // Hàm lấy ảnh chính của sản phẩm
+  const getMainImage = (product: Product): string | undefined => {
+    if (!product.anhsanpham || product.anhsanpham.length === 0) return undefined;
+    
+    // Ưu tiên ảnh có ismain = true
+    const mainImage = product.anhsanpham.find(img => img.ismain === true);
+    return mainImage ? mainImage.url : product.anhsanpham[0].url;
+  };
+  // Hàm lấy giá và đơn vị tính mặc định
+  const getDefaultPriceAndUnit = (product: Product) => {
+    // Kiểm tra kỹ lưỡng xem sản phẩm có chitietdonvi không
+    if (!product.chitietdonvi || product.chitietdonvi.length === 0) {
+      console.warn(`Sản phẩm ${product.tensanpham} (${product.masanpham}) không có thông tin đơn vị tính`);
+      return { price: 0, priceAfterDiscount: 0, unit: '' };
+    }
+    
+    try {      // Lọc các đơn vị tính hợp lệ (có đầy đủ thông tin)
+      const validUnits = product.chitietdonvi.filter(
+        unit => unit.donvitinh && unit.donvitinh.donvitinh && unit.giaban !== undefined
+      );
+      
+      // Log thông tin chi tiết về các đơn vị tính có sẵn
+      console.log(`Thông tin chi tiết các đơn vị tính của ${product.tensanpham}:`, 
+        validUnits.map(unit => ({
+          donvitinh: unit.donvitinh?.donvitinh,
+          dinhluong: unit.dinhluong,
+          giaban: unit.giaban
+        }))
+      );
+      
+      if (validUnits.length === 0) {
+        console.warn(`Sản phẩm ${product.tensanpham} (${product.masanpham}) không có đơn vị tính hợp lệ`);
+        return { price: 0, priceAfterDiscount: 0, unit: '' };
+      }
+      
+      // Kiểm tra xem sản phẩm có đơn vị đã được chọn trước đó không
+      const storedUnit = productUnitSelections[product.masanpham];
+      if (storedUnit) {
+        const selectedUnit = validUnits.find(unit => unit.donvitinh?.donvitinh === storedUnit);
+        if (selectedUnit) {
+          // Sử dụng đơn vị đã chọn trước đó
+          const price = selectedUnit.giaban;
+          const priceAfterDiscount = selectedUnit.giabanSauKhuyenMai !== undefined 
+            ? selectedUnit.giabanSauKhuyenMai 
+            : price;
+          return {
+            price: price,
+            priceAfterDiscount: priceAfterDiscount,
+            unit: storedUnit
+          };
+        }
+      }
+        // Tìm đơn vị cơ bản (định lượng = 1) nếu có
+      let defaultUnit = validUnits.find(unit => unit.dinhluong === 1);
+      
+      // Nếu không có đơn vị cơ bản hoặc đã có đơn vị được chọn trước đó, sử dụng đơn vị đầu tiên
+      if (!defaultUnit || storedUnit) {
+        // Sắp xếp các đơn vị tính theo định lượng từ lớn đến nhỏ
+        const sortedUnits = [...validUnits].sort((a, b) => (b.dinhluong || 0) - (a.dinhluong || 0));
+        defaultUnit = sortedUnits[0]; // Lấy đơn vị có định lượng lớn nhất
+      }
+      
+      if (!defaultUnit || !defaultUnit.donvitinh) {
+        console.error(`Không thể xác định đơn vị tính mặc định cho sản phẩm ${product.tensanpham} (${product.masanpham})`);
+        // Nếu không tìm được đơn vị mặc định, trả về kết quả rỗng
+        return { price: 0, priceAfterDiscount: 0, unit: '' };
+      }
+      
+      // Ưu tiên giá sau khuyến mãi nếu có
+      const price = defaultUnit.giaban;
+      const priceAfterDiscount = defaultUnit.giabanSauKhuyenMai !== undefined 
+        ? defaultUnit.giabanSauKhuyenMai 
+        : price;
+      
+      // Lưu lại đơn vị mặc định đã chọn để sử dụng lại sau này
+      const unitName = defaultUnit.donvitinh.donvitinh;
+      if (unitName && !productUnitSelections[product.masanpham]) {
+        setProductUnitSelections(prev => ({
+          ...prev,
+          [product.masanpham]: unitName
+        }));
+      }
+      
+      return {
+        price: price,
+        priceAfterDiscount: priceAfterDiscount,
+        unit: unitName || ''
+      };
+    } catch (error) {
+      console.error(`Lỗi khi lấy đơn vị tính mặc định cho sản phẩm ${product.tensanpham} (${product.masanpham}):`, error);
+      return { price: 0, priceAfterDiscount: 0, unit: '' };
+    }
+  };  
+  // Helper function to get unit info outside of renderProductCard
+  const getUnitInfo = (product: Product, unitName: string) => {
+    const unitDetail = product.chitietdonvi.find(detail => detail.donvitinh.donvitinh === unitName);
+    if (!unitDetail) return { price: 0, priceAfterDiscount: 0 };
+    
+    const unitPrice = unitDetail.giaban;
+    const unitPriceAfterDiscount = unitDetail.giabanSauKhuyenMai !== undefined ? 
+      unitDetail.giabanSauKhuyenMai : unitPrice;
+    
+    return {
+      price: unitPrice,
+      priceAfterDiscount: unitPriceAfterDiscount
+    };
+  };
+    // Hàm tính toán số lượng tối đa cho một đơn vị tính
+  const calculateMaxQuantityForUnit = (product: Product, unitDetail: any) => {
+    // Đảm bảo định lượng có giá trị hợp lệ và không bằng 0
+    const dinhluong = (unitDetail.dinhluong && unitDetail.dinhluong > 0) ? unitDetail.dinhluong : 1;
+    
+    // Công thức đúng: Số lượng hiển thị = Giá trị trong DB × Định lượng
+    const maxQuantityForUnit = Math.floor((product.soluong || 0) * dinhluong);
+    
+    console.log(`Tính toán số lượng tối đa cho ${product.tensanpham} (${unitDetail.donvitinh?.donvitinh}):`, {
+      soLuongTrongKho: product.soluong || 0,
+      dinhluong: dinhluong,
+      congThuc: `${product.soluong || 0} × ${dinhluong}`,
+      ketQua: maxQuantityForUnit
+    });
+    
+    return maxQuantityForUnit;
+  };
+  
+  // Cập nhật hàm renderProductCard
+  const renderProductCard = (product: Product) => {
+    const mainImage = getMainImage(product);
+    const { price, priceAfterDiscount, unit } = getDefaultPriceAndUnit(product);
+    const hasDiscount = price !== priceAfterDiscount;
+    
+    // Use the selectedUnit from our global state or default to the unit from product
+    const selectedUnit = productUnitSelections[product.masanpham] || unit;
+    
+    // Lấy giá dựa trên đơn vị được chọn
+    const selectedUnitInfo = getUnitInfo(product, selectedUnit);
+    const displayPrice = selectedUnitInfo.price;
+    const displayPriceAfterDiscount = selectedUnitInfo.priceAfterDiscount;
+    const displayHasDiscount = displayPrice !== displayPriceAfterDiscount;
     
     return (
       <Card 
         hoverable
         className="h-full"
-        cover={
-          <div className="h-40 flex items-center justify-center p-2 bg-gray-50">
+        bodyStyle={{ padding: '8px' }}
+      >
+        {/* Product image */}
+        <div className="relative">
+          <div className="h-28 flex items-center justify-center p-1 bg-gray-50">
+            {product.khuyenmai && typeof (product.khuyenmai as any).giatrikhuyenmai === 'number' && (product.khuyenmai as any).giatrikhuyenmai > 0 && (
+              <div className="absolute top-0 right-0 bg-red-600 text-white px-2 py-0.5 text-xs font-bold z-10">
+                -{(product.khuyenmai as any).giatrikhuyenmai}%
+              </div>
+            )}
             {mainImage ? (
               <Image
                 src={mainImage}
                 alt={product.tensanpham}
-                className="max-h-full object-contain"
+                height={80}
+                className="object-contain"
                 preview={false}
               />
             ) : (
               <div className="flex items-center justify-center h-full w-full bg-gray-100">
-                <InboxOutlined style={{ fontSize: '3rem', color: '#d9d9d9' }} />
+                <InboxOutlined style={{ fontSize: '1.5rem', color: '#d9d9d9' }} />
               </div>
             )}
           </div>
-        }
-        actions={[
-          <Tooltip title="Xem chi tiết" key="view">
-            <Button 
-              type="text" 
-              icon={<InfoCircleOutlined />} 
-              onClick={() => viewProductDetails(product.masanpham)}
+          
+          {product.thuockedon && (
+            <Tag color="orange" className="absolute top-1 left-1 text-xs py-0 px-1 m-0">Kê đơn</Tag>
+          )}
+        </div>
+        
+        {/* Product name and info */}
+        <div className="px-1 py-1">
+          <Tooltip title={product.tensanpham}>
+            <div className="truncate text-sm font-medium mb-1">{product.tensanpham}</div>
+          </Tooltip>
+          
+          <div className="text-xs text-gray-500 mb-1">{product.masanpham}</div>
+          
+          <div className="flex justify-between items-center mb-2">
+            {product.hasBeenReceived ? (
+              (() => {
+                // Tìm đơn vị cơ bản (định lượng = 1)
+                const baseUnitDetail = product.chitietdonvi.find(detail => detail.dinhluong === 1);
+                // Tìm đơn vị được chọn
+                const selectedUnitDetail = product.chitietdonvi.find(detail => detail.donvitinh.donvitinh === selectedUnit);
+                
+                if (!baseUnitDetail || !selectedUnitDetail) {
+                  return (
+                    <Badge 
+                      count={product.soluong || 0} 
+                      overflowCount={999}
+                      size="small"
+                      color={(product.soluong || 0) > 10 ? 'green' : (product.soluong || 0) > 5 ? 'gold' : 'red'}
+                      showZero
+                    />
+                  );
+                }                // Số lượng hiện tại là đơn vị cơ bản, để hiển thị cho đơn vị khác, 
+                // ta nhân với định lượng của đơn vị đó
+                // Công thức đúng: Số lượng hiển thị = Giá trị trong DB × Định lượng
+                const displayQuantity = selectedUnitDetail.dinhluong && selectedUnitDetail.dinhluong > 0
+                  ? Math.floor((product.soluong || 0) * selectedUnitDetail.dinhluong)
+                  : (product.soluong || 0);
+                
+                return (
+                  <Badge 
+                    count={displayQuantity} 
+                    overflowCount={999}
+                    size="small"
+                    color={displayQuantity > 10 ? 'green' : displayQuantity > 5 ? 'gold' : 'red'}
+                    showZero
+                  />
+                );
+              })()
+            ) : (
+              <Tag color="blue" className="text-xs">Chưa nhập kho</Tag>
+            )}
+          </div>
+          
+          {/* Price and unit display */}
+          <div className="mb-2">
+            {displayHasDiscount ? (
+              <>
+                <Text delete type="secondary" className="block text-xs">
+                  {displayPrice.toLocaleString('vi-VN')}đ / {selectedUnit || 'Không có'}
+                </Text>
+                <Text className="text-red-600 text-sm font-medium">
+                  {displayPriceAfterDiscount.toLocaleString('vi-VN')}đ / {selectedUnit || 'Không có'}
+                </Text>
+              </>
+            ) : (
+              <Text className="text-red-600 text-sm font-medium">
+                {displayPrice.toLocaleString('vi-VN')}đ / {selectedUnit || 'Không có'}
+              </Text>
+            )}
+          </div>
+            {/* Unit selection */}
+          <Select
+            size="small"
+            value={selectedUnit || ''}
+            style={{ width: '100%', marginBottom: '8px' }}            onChange={(value) => {
+              // Only update if there's a valid value
+              if (value) {
+                // Tìm chi tiết đơn vị tính được chọn
+                const selectedUnitDetail = product.chitietdonvi.find(detail => 
+                  detail.donvitinh?.donvitinh === value
+                );
+                
+                console.log(`Đã chọn đơn vị tính ${value} cho sản phẩm ${product.tensanpham}:`, {
+                  donvitinh: value,
+                  dinhluong: selectedUnitDetail?.dinhluong,
+                  soLuongTrongKho: product.soluong || 0,
+                  soLuongTinh: selectedUnitDetail?.dinhluong && selectedUnitDetail.dinhluong > 0
+                    ? Math.floor((product.soluong || 0) / selectedUnitDetail.dinhluong)
+                    : (product.soluong || 0)
+                });
+                
+                setProductUnitSelections(prev => ({
+                  ...prev,
+                  [product.masanpham]: value as string
+                }));
+              }
+            }}            options={
+              product.chitietdonvi && product.chitietdonvi.length > 0 
+                ? [...product.chitietdonvi]
+                    // Sắp xếp đơn vị tính theo định lượng từ lớn đến nhỏ
+                    .sort((a, b) => (b.dinhluong || 0) - (a.dinhluong || 0))
+                    .map(detail => {
+                      // Tính số lượng hiển thị cho đơn vị này
+                      const stock = detail.dinhluong && detail.dinhluong > 0
+                        ? Math.floor((product.soluong || 0) * detail.dinhluong)
+                        : (product.soluong || 0);
+                      
+                      return {
+                        label: `${detail.donvitinh?.donvitinh || 'Không có'} (SL: ${stock})`,
+                        value: detail.donvitinh?.donvitinh || ''
+                      };
+                    })
+                : [{ label: 'Không có', value: '' }]
+            }
+          />
+          
+          {/* Action buttons */}
+          <div className="flex gap-2">
+            <Button
+              icon={<EyeOutlined />}
+              onClick={() => viewProductDetails(product)}
+              size="small"
+              style={{ width: '50%' }}
             />
-          </Tooltip>,
-          <Tooltip title="Thêm vào giỏ" key="add">
             <Button 
               type="primary" 
               icon={<ShoppingCartOutlined />} 
-              onClick={() => addToCart(product)}
+              onClick={() => addToCart(product, 1, selectedUnit)}
+              size="small"
               className="bg-blue-600"
-            >
-              Thêm
-            </Button>
-          </Tooltip>,
-        ]}
-      >
-        <Card.Meta
-          title={
-            <Tooltip title={product.tensanpham}>
-              <div className="truncate">{product.tensanpham}</div>
-            </Tooltip>
-          }
-          description={
-            <div>
-              <div className="flex justify-between items-center">
-                <Text type="secondary">{product.masanpham}</Text>
-                <Badge 
-                  count={product.soluong} 
-                  overflowCount={999}
-                  color={product.soluong > 10 ? 'green' : product.soluong > 5 ? 'gold' : 'red'}
-                  showZero
-                />
-              </div>
-              <div className="mt-2 flex justify-between items-center">
-                <Text strong className="text-red-600">
-                  {price.toLocaleString('vi-VN')} đ
-                </Text>
-                <Text type="secondary">/{unit}</Text>
-              </div>
-              
-              {detailedProduct?.thuockedon && (
-                <Tag color="orange" className="mt-2">Thuốc kê đơn</Tag>
-              )}
-            </div>
-          }
-        />
+              style={{ width: '50%' }}
+            />
+          </div>
+        </div>
       </Card>
     );
   };
-
+  
   // Cart columns definition
   const cartColumns = [
     {
       title: 'Sản phẩm',
       key: 'product',
-      render: (record: CartItem) => (
-        <div className="flex items-center">
+      width: '50%',
+      render: (record: any) => (
+        <div className="flex items-start">
           {record.anhSanPham ? (
             <Image
               src={record.anhSanPham}
               alt={record.tensanpham}
-              width={50}
-              height={50}
-              className="object-cover mr-3"
+              width={40}
+              height={40}
+              className="object-cover mr-2"
               preview={false}
             />
           ) : (
-            <div className="w-[50px] h-[50px] bg-gray-100 flex items-center justify-center mr-3">
+            <div className="w-[40px] h-[40px] bg-gray-100 flex items-center justify-center mr-2">
               <InboxOutlined style={{ color: '#d9d9d9' }} />
             </div>
           )}
-          <div>
+          <div className="flex flex-col">
             <Tooltip title={record.tensanpham}>
-              <div className="font-medium truncate max-w-[200px]">{record.tensanpham}</div>
+              <div className="font-medium truncate max-w-[150px] text-sm">{record.tensanpham}</div>
             </Tooltip>
             <div className="text-gray-500 text-xs">{record.masanpham}</div>
-            {record.thuocKedon && <Tag color="orange">Kê đơn</Tag>}
+            <div className="mt-1 flex items-center gap-1">              <Text className="text-xs">{record.donvitinh} (ĐL: {record.dinhluong})</Text>
+              {record.thuocKedon && <Tag color="orange" style={{ fontSize: '10px', lineHeight: '16px', padding: '0 4px', margin: 0 }}>Kê đơn</Tag>}
+            </div>
           </div>
         </div>
       ),
     },
     {
-      title: 'Đơn giá',
+      title: 'Giá',
       dataIndex: 'dongia',
       key: 'dongia',
-      render: (dongia: number) => `${dongia.toLocaleString('vi-VN')} đ`,
+      width: '20%',
+      render: (dongia: number, record: any) => {
+        const hasDiscount = record.giaGoc && record.giaGoc > dongia;
+        return hasDiscount ? (
+          <div className="text-xs">
+            <Text delete type="secondary" className="block">
+              {record.giaGoc.toLocaleString('vi-VN')} đ
+            </Text>
+            <Text className="text-red-600">
+              {dongia.toLocaleString('vi-VN')} đ
+            </Text>
+          </div>
+        ) : (
+          <div className="text-xs">{dongia.toLocaleString('vi-VN')} đ</div>
+        );
+      },
     },
     {
-      title: 'Số lượng',
+      title: 'SL',
       key: 'soluong',
-      render: (record: CartItem) => (
+      width: '20%',
+      render: (record: any) => (
         <div className="flex items-center">
           <Button
             icon={<MinusOutlined />}
-            onClick={() => updateCartItemQuantity(record.masanpham, Math.max(1, record.soluong - 1))}
+            onClick={() => updateCartItemQuantity(record.key, Math.max(1, record.soluong - 1))}
             size="small"
-          />
-          <InputNumber
+            style={{ padding: '0 4px', minWidth: '24px', height: '24px' }}
+          />          <InputNumber
             min={1}
             value={record.soluong}
-            onChange={(value) => updateCartItemQuantity(record.masanpham, Number(value))}
-            style={{ width: 60, margin: '0 8px' }}
+            onChange={(value) => {
+              // Avoid using a Form field with name="quantity" directly
+              if (value !== null) {
+                updateCartItemQuantity(record.key, Number(value));
+              }
+            }}
+            style={{ width: 40, margin: '0 2px' }}
+            size="small"
           />
           <Button
             icon={<PlusOutlined />}
-            onClick={() => updateCartItemQuantity(record.masanpham, record.soluong + 1)}
+            onClick={() => updateCartItemQuantity(record.key, record.soluong + 1)}
             size="small"
+            style={{ padding: '0 4px', minWidth: '24px', height: '24px' }}
           />
         </div>
       ),
     },
     {
-      title: 'Thành tiền',
-      key: 'total',
-      render: (record: CartItem) => (
-        <Text strong className="text-red-600">
-          {(record.dongia * record.soluong).toLocaleString('vi-VN')} đ
-        </Text>
-      ),
-    },
-    {
-      title: 'Thao tác',
+      title: '',
       key: 'action',
-      render: (record: CartItem) => (
+      width: '10%',
+      render: (record: any) => (
         <Button
           danger
           icon={<DeleteOutlined />}
-          onClick={() => removeFromCart(record.masanpham)}
-        >
-          Xóa
-        </Button>
+          onClick={() => removeFromCart(record.key)}
+          size="small"
+          type="text"
+          style={{ padding: '0', minWidth: '24px' }}
+        />
       ),
     },
   ];
 
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {/* Product listing section */}
-      <div className="md:col-span-2">
-        <Card className="mb-6">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
-            <div className="w-full md:w-auto">
-              <Input.Search
-                placeholder="Tìm kiếm sản phẩm..."
-                allowClear
-                enterButton="Tìm kiếm"
-                size="large"
-                onSearch={handleSearch}
-                className="max-w-md"
-                prefix={<SearchOutlined />}
-              />
+    <div>
+      {/* Header Section with Pharmacy Info and Quick Actions */}
+      <Card className="mb-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+          <div>
+            {loading ? (
+              <Spin size="small" className="mr-2" />
+            ) : pharmacy ? (
+              <>
+                <Title level={4} className="m-0">{pharmacy.tennhathuoc || `Nhà thuốc Long Châu - ${pharmacy.machinhanh}`}</Title>
+                <Text type="secondary">{pharmacy.diachi || `${pharmacy.diachicuthe}, ${pharmacy.tenduong}, ${pharmacy.phuong}, ${pharmacy.quan}, ${pharmacy.thanhpho}`}</Text>
+              </>
+            ) : (
+              <Text>Không có thông tin chi nhánh</Text>
+            )}
+          </div>
+          
+          <div className="mt-4 md:mt-0 flex flex-wrap gap-2">
+            <Button 
+              icon={<ScanOutlined />} 
+              onClick={() => setBarcodeModalVisible(true)}
+            >
+              Quét mã vạch
+            </Button>
+            <Button 
+              icon={<FileTextOutlined />} 
+              type={prescriptionMode ? 'primary' : 'default'}
+              onClick={() => {
+                setPrescriptionMode(!prescriptionMode);
+                if (!prescriptionMode) {
+                  setCustomerInfoVisible(true);
+                }
+              }}
+            >
+              {prescriptionMode ? 'Đang bán theo đơn' : 'Bán theo đơn thuốc'}
+            </Button>
+            <Button 
+              icon={<HistoryOutlined />}
+              onClick={handleOpenOrderHistory}
+            >
+              Lịch sử bán hàng
+            </Button>
+          </div>
+        </div>
+        
+        {prescriptionMode && (
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <div className="flex items-center">
+              <MedicineBoxOutlined className="text-blue-500 mr-2" />
+              <Text strong>Chế độ bán theo đơn thuốc</Text>
+              <Button 
+                type="link" 
+                size="small" 
+                className="ml-auto"
+                onClick={() => setCustomerInfoVisible(true)}
+              >
+                {customerForm.getFieldValue('hoTen') ? 'Sửa thông tin khách hàng' : 'Thêm thông tin khách hàng'}
+              </Button>
             </div>
-            
-            <div className="w-full md:w-auto">
-              <Select
-                placeholder="Lọc theo danh mục"
-                style={{ width: 200 }}
-                size="large"
-                value={selectedCategory}
-                onChange={handleCategoryChange}
-                options={categories}
-              />
+            {customerForm.getFieldValue('hoTen') && (
+              <div className="mt-2">
+                <Text>Khách hàng: <strong>{customerForm.getFieldValue('hoTen')}</strong></Text>
+                {customerForm.getFieldValue('soDienThoai') && (
+                  <Text className="ml-4">SĐT: {customerForm.getFieldValue('soDienThoai')}</Text>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
+
+      {/* Main Content */}
+      <Tabs activeKey={activeTab} onChange={setActiveTab} className="mb-4">
+        <TabPane 
+          tab={
+            <span>
+              <ShoppingCartOutlined />
+              Sản phẩm
+            </span>
+          } 
+          key="products"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+            {/* Product listing section */}
+            <div className="md:col-span-3">
+              <Card className="mb-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+                  <div className="w-full md:w-auto">
+                    <Input.Search
+                      placeholder="Tìm kiếm sản phẩm..."
+                      allowClear
+                      enterButton="Tìm kiếm"
+                      size="large"
+                      onSearch={handleSearch}
+                      className="max-w-md"
+                      prefix={<SearchOutlined />}
+                    />
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Select
+                      placeholder="Lọc theo danh mục"
+                      style={{ width: 200 }}
+                      size="large"
+                      value={selectedCategory}
+                      onChange={handleCategoryChange}
+                      options={mockCategories}
+                    />
+                    <Button 
+                      icon={<FilterOutlined />} 
+                      size="large"
+                      onClick={() => setFilterDrawerVisible(true)}
+                    >
+                      Lọc
+                    </Button>
+                  </div>
+                </div>
+
+                {loading ? (
+                  <div className="flex justify-center items-center py-20">
+                    <Spin size="large" />
+                  </div>
+                ) : filteredProducts.length === 0 ? (
+                  <Empty description="Không tìm thấy sản phẩm nào" />
+                ) : (
+                  <>
+                    <Row gutter={[16, 16]}>
+                      {getCurrentPageData().map((product) => (
+                        <Col xs={24} sm={12} lg={8} key={product.masanpham}>
+                          {renderProductCard(product)}
+                        </Col>
+                      ))}
+                    </Row>
+                    
+                    <div className="mt-6 flex justify-center">
+                      <Pagination
+                        current={pagination.current}
+                        pageSize={pagination.pageSize}
+                        total={pagination.total}
+                        onChange={handlePaginationChange}
+                        showSizeChanger
+                        pageSizeOptions={['12', '24', '36']}
+                      />
+                    </div>
+                  </>
+                )}
+              </Card>
+            </div>
+
+            {/* Cart section */}
+            <div className="md:col-span-2">
+              <Card 
+                title={
+                  <div className="flex items-center">
+                    <ShoppingCartOutlined style={{ fontSize: '1.2rem', marginRight: 8 }} />
+                    <span>Giỏ hàng ({cart.length})</span>
+                  </div>
+                }
+                extra={
+                  <Button 
+                    type="primary" 
+                    danger 
+                    size="small"
+                    disabled={cart.length === 0}
+                    onClick={() => setCart([])}
+                  >
+                    Xóa tất cả
+                  </Button>
+                }
+                className="sticky top-4"
+              >
+                {cart.length === 0 ? (
+                  <Empty description="Giỏ hàng trống" />
+                ) : (
+                  <>
+                    <div className="max-h-[500px] overflow-y-auto mb-4">
+                      <Table
+                        dataSource={cart}
+                        columns={cartColumns}
+                        pagination={false}
+                        rowKey="key"
+                        size="small"
+                      />
+                    </div>
+                    
+                    <Divider />
+                    
+                    <div className="flex justify-between items-center mb-4">
+                      <Text strong>Tổng tiền:</Text>
+                      <Text strong className="text-xl text-red-600">
+                        {cartTotal.toLocaleString('vi-VN')} đ
+                      </Text>
+                    </div>
+                    
+                    <Button
+                      type="primary"
+                      icon={<CheckOutlined />}
+                      size="large"
+                      block
+                      onClick={handleCheckout}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      Thanh toán
+                    </Button>
+                  </>
+                )}
+              </Card>
             </div>
           </div>
-
-          {loading ? (
-            <div className="flex justify-center items-center py-20">
-              <Spin size="large" />
-            </div>
-          ) : filteredProducts.length === 0 ? (
-            <Empty description="Không tìm thấy sản phẩm nào" />
-          ) : (
-            <>
-              <Row gutter={[16, 16]}>
-                {getCurrentPageData().map((product) => (
-                  <Col xs={24} sm={12} lg={8} key={product.masanpham}>
-                    {renderProductCard(product)}
-                  </Col>
-                ))}
-              </Row>
-              
-              <div className="mt-6 flex justify-center">
-                <Pagination
-                  current={pagination.current}
-                  pageSize={pagination.pageSize}
-                  total={pagination.total}
-                  onChange={handlePaginationChange}
-                  showSizeChanger
-                  pageSizeOptions={['12', '24', '36']}
-                />
-              </div>
-            </>
-          )}
-        </Card>
-      </div>
-
-      {/* Cart and checkout section */}
-      <div className="md:col-span-1">
-        <Card 
-          title={
-            <div className="flex items-center">
-              <ShoppingCartOutlined style={{ fontSize: '1.2rem', marginRight: 8 }} />
-              <span>Giỏ hàng ({cart.length})</span>
-            </div>
-          }
-          extra={
-            <Button 
-              type="primary" 
-              danger 
-              size="small"
-              disabled={cart.length === 0}
-              onClick={() => setCart([])}
-            >
-              Xóa tất cả
-            </Button>
-          }
-          className="sticky top-4"
+        </TabPane>
+        
+        <TabPane 
+          tab={
+            <span>
+              <HeartOutlined />
+              Sản phẩm bán chạy
+            </span>
+          } 
+          key="popular"
         >
-          {cart.length === 0 ? (
-            <Empty description="Giỏ hàng trống" />
-          ) : (
-            <>
-              <div className="max-h-[500px] overflow-y-auto mb-4">
-                <Table
-                  dataSource={cart}
-                  columns={cartColumns}
-                  pagination={false}
-                  rowKey="masanpham"
-                  size="small"
-                />
-              </div>
-              
-              <Divider />
-              
-              <div className="flex justify-between items-center mb-4">
-                <Text strong>Tổng tiền:</Text>
-                <Text strong className="text-xl text-red-600">
-                  {cartTotal.toLocaleString('vi-VN')} đ
-                </Text>
-              </div>
-              
-              <Button
-                type="primary"
-                icon={<CheckOutlined />}
-                size="large"
-                block
-                onClick={handleCheckout}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                Thanh toán
-              </Button>
-            </>
-          )}
-        </Card>
-      </div>
+          <Card>
+            <Row gutter={[16, 16]}>
+              {products.slice(0, 3).map(product => (
+                <Col xs={24} sm={12} md={8} key={product.masanpham}>
+                  <Card className="h-full">
+                    <div className="flex">
+                      <div className="mr-4">
+                        <Image
+                          src={getMainImage(product)}
+                          alt={product.tensanpham}
+                          width={80}
+                          height={80}
+                          className="object-contain"
+                          preview={false}
+                        />
+                      </div>
+                      <div>
+                        <Text strong className="block mb-1">{product.tensanpham}</Text>
+                        <Text type="secondary" className="block mb-1">{product.masanpham}</Text>
+                        <Text className="text-red-600 block mb-2">
+                          {getDefaultPriceAndUnit(product).priceAfterDiscount.toLocaleString('vi-VN')} đ/
+                          {getDefaultPriceAndUnit(product).unit}
+                        </Text>                        <Button 
+                          type="primary" 
+                          size="small" 
+                          icon={<ShoppingCartOutlined />}
+                          onClick={() => addToCart(product, 1, getDefaultPriceAndUnit(product).unit)}
+                        >
+                          Thêm
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          </Card>
+        </TabPane>
+      </Tabs>
 
       {/* Product detail modal */}
       <Modal
@@ -815,10 +1625,8 @@ const StaffSalesComponent = () => {
             icon={<ShoppingCartOutlined />}
             onClick={() => {
               if (selectedProduct) {
-                const product = products.find(p => p.masanpham === selectedProduct.masanpham);
-                if (product) {
-                  addToCart(product);
-                }
+                // Sử dụng đơn vị đã được chọn khi thêm vào giỏ hàng
+                addToCart(selectedProduct, 1, selectedProduct.selectedUnit);
               }
               setProductDetailVisible(false);
             }}
@@ -831,10 +1639,15 @@ const StaffSalesComponent = () => {
           <div>
             <Row gutter={24}>
               <Col span={10}>
-                <div className="flex justify-center mb-4">
+                <div className="flex justify-center mb-4 relative">
+                  {selectedProduct.khuyenmai && selectedProduct.khuyenmai.giatrikhuyenmai > 0 && (
+                    <div className="absolute top-0 right-0 bg-red-600 text-white px-2 py-1 text-xs font-bold z-10">
+                      -{selectedProduct.khuyenmai.giatrikhuyenmai}%
+                    </div>
+                  )}
                   {selectedProduct.anhsanpham && selectedProduct.anhsanpham.length > 0 ? (
                     <Image
-                      src={selectedProduct.anhsanpham.find(img => img.ismain)?.url || selectedProduct.anhsanpham[0].url}
+                      src={getMainImage(selectedProduct)}
                       alt={selectedProduct.tensanpham}
                       height={200}
                       className="object-contain"
@@ -846,35 +1659,78 @@ const StaffSalesComponent = () => {
                   )}
                 </div>
                 
-                {selectedProduct.anhsanpham && selectedProduct.anhsanpham.length > 1 && (
-                  <div className="flex gap-2 overflow-x-auto py-2">
-                    {selectedProduct.anhsanpham.map((img, index) => (
-                      <Image
-                        key={index}
-                        src={img.url}
-                        alt={`${selectedProduct.tensanpham} - ${index}`}
-                        width={60}
-                        height={60}
-                        className="object-cover border rounded"
-                      />
-                    ))}
-                  </div>
-                )}
-                
                 <Divider />
                 
                 <div>
-                  <Text strong>Giá bán:</Text>
-                  <div className="text-red-600 text-xl font-bold my-2">
-                    {(selectedProduct.chitietdonvi?.[0]?.giabanSauKhuyenMai || 
-                      selectedProduct.chitietdonvi?.[0]?.giaban || 0).toLocaleString('vi-VN')} đ
-                    <Text type="secondary" className="text-sm ml-1">
-                      /{selectedProduct.chitietdonvi?.[0]?.donvitinh?.donvitinh}
-                    </Text>
-                  </div>
+                  {selectedProduct.chitietdonvi && selectedProduct.chitietdonvi.length > 0 && (
+                    <>
+                      <Text strong>Giá bán theo đơn vị tính:</Text>
+                      {selectedProduct.chitietdonvi.map((unit: any, index: number) => {
+                        // Kiểm tra xem có giảm giá không
+                        const hasDiscount = unit.giabanSauKhuyenMai !== undefined && 
+                          unit.giabanSauKhuyenMai !== null && 
+                          unit.giabanSauKhuyenMai !== unit.giaban;
+                          
+                        const discountPercent = hasDiscount 
+                          ? Math.round((1 - (unit.giabanSauKhuyenMai / unit.giaban)) * 100) 
+                          : 0;
+                          
+                        const finalPrice = hasDiscount ? unit.giabanSauKhuyenMai : unit.giaban;
+                        
+                        // Xác định đơn vị hiện tại có phải là đơn vị đang được chọn không
+                        const isCurrentUnit = unit.donvitinh?.donvitinh === (selectedProduct.selectedUnit || selectedProduct.chitietdonvi?.[0]?.donvitinh?.donvitinh);
+                        
+                        return (
+                          <div 
+                            key={index} 
+                            className={`my-2 py-1 px-2 rounded ${isCurrentUnit ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'}`}
+                            onClick={() => {
+                              // Cập nhật đơn vị tính được chọn khi người dùng click vào
+                              const newUnit = unit.donvitinh?.donvitinh;
+                              setProductUnitSelections(prev => ({
+                                ...prev,
+                                [selectedProduct.masanpham]: newUnit
+                              }));
+                              setSelectedProduct({
+                                ...selectedProduct,
+                                selectedUnit: newUnit
+                              });
+                            }}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <div className="text-sm mb-1 flex justify-between items-center">
+                              <div>
+                                <span className="font-medium">{unit.donvitinh?.donvitinh}</span>
+                                {unit.dinhluong > 1 && 
+                                  <span className="text-gray-500 ml-1">({unit.dinhluong} đơn vị)</span>
+                                }
+                              </div>
+                              {hasDiscount && (
+                                <Tag color="red" className="ml-2 text-xs">
+                                  -{discountPercent}%
+                                </Tag>
+                              )}
+                            </div>
+                            <div className="text-red-600 text-lg font-bold flex items-center">
+                              {hasDiscount && (
+                                <Text delete type="secondary" className="mr-2">
+                                  {unit.giaban.toLocaleString('vi-VN')} đ
+                                </Text>
+                              )}
+                              <span>{finalPrice.toLocaleString('vi-VN')} đ</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
                   
                   <div className="mt-4">
                     <Text strong>Mã sản phẩm:</Text> {selectedProduct.masanpham}
+                  </div>
+                  
+                  <div className="mt-2">
+                    <Text strong>Danh mục:</Text> {selectedProduct.danhmuc?.tendanhmuc}
                   </div>
                   
                   <div className="mt-2">
@@ -882,13 +1738,102 @@ const StaffSalesComponent = () => {
                   </div>
                   
                   <div className="mt-2">
-                    <Text strong>Danh mục:</Text> {selectedProduct.danhmuc?.tendanhmuc}
+                    <div className="flex justify-between items-center mb-2">
+                      <Text strong>Đơn vị tính:</Text>
+                      <Select
+                        size="small"
+                        value={selectedProduct.selectedUnit || selectedProduct.chitietdonvi?.[0]?.donvitinh?.donvitinh || ''}
+                        style={{ width: '120px' }}
+                        onChange={(value) => {
+                          // Cập nhật đơn vị tính được chọn trong state toàn cục
+                          setProductUnitSelections(prev => ({
+                            ...prev,
+                            [selectedProduct.masanpham]: value as string
+                          }));
+                          // Cập nhật đơn vị tính trong selectedProduct
+                          setSelectedProduct({
+                            ...selectedProduct,
+                            selectedUnit: value as string
+                          });
+                        }}
+                        options={
+                          selectedProduct.chitietdonvi && selectedProduct.chitietdonvi.length > 0 
+                            ? selectedProduct.chitietdonvi.map((detail: any) => ({
+                                label: detail.donvitinh.donvitinh,
+                                value: detail.donvitinh.donvitinh
+                              }))
+                            : [{ label: 'Không có', value: '' }]
+                        }
+                      />
+                    </div>
+                    
+                    <div className="mt-2">
+                      <Text strong>Tồn kho:</Text>{' '}
+                      {selectedProduct.hasBeenReceived ? (
+                        (() => {
+                          // Lấy đơn vị hiện tại được chọn
+                          const currentUnitName = selectedProduct.selectedUnit || selectedProduct.chitietdonvi?.[0]?.donvitinh?.donvitinh || '';
+                          
+                          // Tìm đơn vị cơ bản (định lượng = 1)
+                          const baseUnitDetail = selectedProduct.chitietdonvi?.find(
+                            (detail: any) => detail.dinhluong === 1
+                          );
+                          
+                          // Tìm thông tin chi tiết của đơn vị được chọn
+                          const selectedUnitDetail: {
+                            donvitinh: { donvitinh: string };
+                            giaban: number;
+                            giabanSauKhuyenMai?: number;
+                            dinhluong: number;
+                          } | undefined = selectedProduct.chitietdonvi?.find(
+                            (detail: any) => detail.donvitinh?.donvitinh === currentUnitName
+                          );
+                          
+                          if (!baseUnitDetail || !selectedUnitDetail) {
+                            return (
+                              <span className="font-medium text-red-600">
+                                {selectedProduct.soluong || 0} {currentUnitName}
+                              </span>
+                            );
+                          }
+                          
+                          // Tính toán số lượng tồn kho dựa trên định lượng của đơn vị
+                          // Công thức: soluong (số lượng đơn vị cơ bản) * dinhluong của đơn vị hiện tại
+                          const displayQuantity = Math.floor((selectedProduct.soluong || 0) * selectedUnitDetail.dinhluong);
+                          
+                          // Tạo class color dựa trên số lượng sau khi đã tính theo đơn vị
+                          const colorClass = displayQuantity > 10 
+                            ? 'text-green-600' 
+                            : displayQuantity > 5 
+                              ? 'text-orange-500' 
+                              : 'text-red-600';
+                              
+                          return (
+                            <span className={`font-medium ${colorClass}`}>
+                              {displayQuantity} {currentUnitName}
+                            </span>
+                          );
+                        })()
+                      ) : (
+                        <Tag color="blue" className="text-xs">Chưa nhập kho</Tag>
+                      )}
+                    </div>
                   </div>
                   
-                  {selectedProduct.thuockedon && (
-                    <div className="mt-3">
-                      <Tag color="orange">Thuốc kê đơn</Tag>
+                  {selectedProduct.ngaynhap && (
+                    <div className="mt-2">
+                      <Text strong>Ngày nhập:</Text> {new Date(selectedProduct.ngaynhap).toLocaleDateString('vi-VN')}
                     </div>
+                  )}
+                  
+                  {selectedProduct.manhaphang && (
+                    <div className="mt-2">
+                      <Text strong>Mã nhập hàng:</Text> {selectedProduct.manhaphang}
+                    </div>
+                  )}
+                  
+                  {selectedProduct.thuockedon && (
+                    <Tag color="orange" className="mt-2">Thuốc kê đơn</Tag>
                   )}
                 </div>
               </Col>
@@ -898,52 +1843,36 @@ const StaffSalesComponent = () => {
                 
                 <Divider />
                 
-                <div className="mb-4">
-                  <Text strong>Mô tả:</Text>
-                  <div className="mt-1 text-gray-700">{selectedProduct.motangan}</div>
-                </div>
-                
-                <div className="mb-4">
-                  <Text strong>Công dụng:</Text>
-                  <div className="mt-1 text-gray-700">{selectedProduct.congdung}</div>
-                </div>
-                
-                <div className="mb-4">
-                  <Text strong>Chỉ định:</Text>
-                  <div className="mt-1 text-gray-700">{selectedProduct.chidinh}</div>
-                </div>
-                
-                {selectedProduct.chongchidinh && (
+                {selectedProduct.motangan && (
                   <div className="mb-4">
-                    <Text strong>Chống chỉ định:</Text>
-                    <div className="mt-1 text-gray-700">{selectedProduct.chongchidinh}</div>
+                    <Text strong>Mô tả:</Text>
+                    <div className="mt-1 text-gray-700">{selectedProduct.motangan}</div>
+                  </div>
+                )}
+                
+                {selectedProduct.congdung && (
+                  <div className="mb-4">
+                    <Text strong>Công dụng:</Text>
+                    <div className="mt-1 text-gray-700">{selectedProduct.congdung}</div>
+                  </div>
+                )}
+                
+                {selectedProduct.chidinh && (
+                  <div className="mb-4">
+                    <Text strong>Chỉ định:</Text>
+                                       <div className="mt-1 text-gray-700">{selectedProduct.chidinh}</div>
                   </div>
                 )}
                 
                 {selectedProduct.luuy && (
-                  <div className="mb-4">
-                    <Text strong type="danger">Lưu ý:</Text>
-                    <div className="mt-1 text-red-600">{selectedProduct.luuy}</div>
+                  <div className="bg-blue-50 p-3 border border-blue-200 rounded-md mt-4">
+                    <div className="flex items-center mb-2">
+                      <InfoCircleOutlined className="text-blue-500 mr-2" />
+                      <Text strong>Lưu ý:</Text>
+                    </div>
+                    <Paragraph>{selectedProduct.luuy}</Paragraph>
                   </div>
                 )}
-                
-                {selectedProduct.chitietthanhphan && selectedProduct.chitietthanhphan.length > 0 && (
-                  <div className="mb-4">
-                    <Text strong>Thành phần:</Text>
-                    <ul className="list-disc pl-5 mt-1">
-                      {selectedProduct.chitietthanhphan.map((tp, index) => (
-                        <li key={index}>
-                          {tp.thanhphan.tenthanhphan}: {tp.hamluong}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                
-                <div>
-                  <Text strong>Hạn sử dụng:</Text>{' '}
-                  {selectedProduct.hansudung} ngày kể từ ngày sản xuất
-                </div>
               </Col>
             </Row>
           </div>
@@ -975,6 +1904,17 @@ const StaffSalesComponent = () => {
             <Text strong>Nhân viên: </Text>
             <Text className="ml-2">{user?.hoten}</Text>
           </div>
+
+          {prescriptionMode && customerForm.getFieldValue('hoTen') && (
+            <div className="flex items-center mt-2">
+              <UserOutlined className="mr-2" />
+              <Text strong>Khách hàng: </Text>
+              <Text className="ml-2">{customerForm.getFieldValue('hoTen')}</Text>
+              {customerForm.getFieldValue('soDienThoai') && (
+                <Text className="ml-4">SĐT: {customerForm.getFieldValue('soDienThoai')}</Text>
+              )}
+            </div>
+          )}
         </div>
         
         <Divider />
@@ -997,7 +1937,7 @@ const StaffSalesComponent = () => {
                     <DollarOutlined /> Tiền mặt
                   </Option>
                   <Option value="CARD">
-                    <CreditCardOutlined /> Thẻ
+                    <CreditCardOutlined /> Chuyển khoảng ngân hàng
                   </Option>
                 </Select>
               </Form.Item>
@@ -1011,8 +1951,41 @@ const StaffSalesComponent = () => {
                 initialValue="PICKUP"
               >
                 <Select>
-                  <Option value="PICKUP">Nhận tại cửa hàng</Option>
+                  <Option value="PICKUP">Nhận hàng tại nhà thuốc</Option>
                 </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+            <Row gutter={16} className="mt-4">
+            <Col span={12}>
+              <Form.Item
+                name="originalTotal"
+                label="Tổng tiền gốc"
+                tooltip="Tổng tiền trước khi áp dụng khuyến mãi"
+              >
+                <InputNumber
+                  style={{ width: '100%' }}
+                  formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => Number(value?.replace(/\$\s?|(,*)/g, '') || 0) as 0}
+                  addonAfter="VNĐ"
+                  disabled
+                />
+              </Form.Item>
+            </Col>
+            
+            <Col span={12}>
+              <Form.Item
+                name="directDiscount"
+                label="Giảm giá khuyến mãi"
+                tooltip="Số tiền được giảm từ các chương trình khuyến mãi"
+              >
+                <InputNumber
+                  style={{ width: '100%' }}
+                  formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => Number(value?.replace(/\$\s?|(,*)/g, '') || 0) as 0}
+                  addonAfter="VNĐ"
+                  disabled
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -1021,12 +1994,13 @@ const StaffSalesComponent = () => {
             <Col span={12}>
               <Form.Item
                 name="totalAmount"
-                label="Tổng tiền hàng"
+                label="Tổng tiền sau khuyến mãi"
+                tooltip="Tổng tiền sau khi áp dụng khuyến mãi"
               >
                 <InputNumber
                   style={{ width: '100%' }}
                   formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={((value: string | undefined) => Number((value || '').replace(/\$\s?|(,*)/g, ''))) as any}
+                  parser={value => Number(value?.replace(/\$\s?|(,*)/g, '') || 0) as 0}
                   addonAfter="VNĐ"
                   disabled
                 />
@@ -1036,13 +2010,14 @@ const StaffSalesComponent = () => {
             <Col span={12}>
               <Form.Item
                 name="discount"
-                label="Giảm giá"
+                label="Giảm giá thêm"
                 initialValue={0}
+                tooltip="Giảm giá thêm do nhân viên áp dụng"
               >
                 <InputNumber 
                   style={{ width: '100%' }}
                   formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={((value: string | undefined) => Number((value || '').replace(/\$\s?|(,*)/g, ''))) as any}
+                  parser={value => Number(value?.replace(/\$\s?|(,*)/g, '') || 0) as 0}
                   addonAfter="VNĐ"
                   min={0}
                   onChange={val => {
@@ -1067,7 +2042,7 @@ const StaffSalesComponent = () => {
                 <InputNumber
                   style={{ width: '100%' }}
                   formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={((value: string | undefined) => Number((value || '').replace(/\$\s?|(,*)/g, ''))) as any}
+                  parser={value => Number(value?.replace(/\$\s?|(,*)/g, '') || 0) as 0}
                   addonAfter="VNĐ"
                   min={0}
                   onChange={val => {
@@ -1089,7 +2064,7 @@ const StaffSalesComponent = () => {
                 <InputNumber
                   style={{ width: '100%' }}
                   formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+                  parser={(value) => value!.replace(/\$\s?|(,*)/g, '')}
                   addonAfter="VNĐ"
                   disabled
                 />
@@ -1124,6 +2099,380 @@ const StaffSalesComponent = () => {
             </Button>
           </div>
         </Form>
+      </Modal>
+
+      {/* Filter drawer */}
+      <Drawer
+        title="Lọc sản phẩm"
+        placement="right"
+        onClose={() => setFilterDrawerVisible(false)}
+        open={filterDrawerVisible}
+        width={320}
+      >
+        <div className="mb-6">
+          <Text strong className="block mb-2">Danh mục</Text>
+          <Radio.Group className="flex flex-col gap-2" value={selectedCategory}>
+            {mockCategories.map((category) => (
+              <Radio value={category.value} key={category.value} onChange={() => {
+                handleCategoryChange(category.value);
+                setFilterDrawerVisible(false);
+              }}>
+                {category.label}
+              </Radio>
+            ))}
+          </Radio.Group>
+        </div>
+        
+        <Divider />
+        
+        <div className="mb-6">
+          <Text strong className="block mb-2">Giá bán</Text>
+          <div className="flex items-center">
+            <InputNumber
+              style={{ width: '100%' }}
+              placeholder="Từ"
+              formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+              parser={(value) => value!.replace(/\$\s?|(,*)/g, '')}
+            />
+            <div className="mx-2">-</div>
+            <InputNumber
+              style={{ width: '100%' }}
+              placeholder="Đến"
+              formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+              parser={(value) => value!.replace(/\$\s?|(,*)/g, '')}
+            />
+          </div>
+        </div>
+        
+        <Divider />
+        
+        <div className="mb-6">
+          <Text strong className="block mb-2">Loại thuốc</Text>
+          <div className="flex flex-col gap-2">
+            <Checkbox>Thuốc kê đơn</Checkbox>
+            <Checkbox>Thuốc không kê đơn</Checkbox>
+          </div>
+        </div>
+        
+        <div className="flex justify-end gap-2 mt-6">
+          <Button onClick={() => setFilterDrawerVisible(false)}>Hủy</Button>
+          <Button type="primary" onClick={() => setFilterDrawerVisible(false)}>Áp dụng</Button>
+        </div>
+      </Drawer>
+
+      {/* Customer info modal */}
+      <Modal
+        title="Thông tin khách hàng"
+        open={customerInfoVisible}
+        onCancel={() => setCustomerInfoVisible(false)}
+        footer={null}
+      >
+        <Form
+          form={customerForm}
+          layout="vertical"
+          onFinish={(values) => {
+            setCustomerInfoVisible(false);
+            message.success('Đã lưu thông tin khách hàng!');
+          }}
+        >
+          <Form.Item
+            name="hoTen"
+            label="Họ tên khách hàng"
+          >
+            <Input placeholder="Nhập họ tên khách hàng" />
+          </Form.Item>
+          
+          <Form.Item
+            name="soDienThoai"
+            label="Số điện thoại"
+          >
+            <Input placeholder="Nhập số điện thoại" />
+          </Form.Item>
+          
+          <Form.Item
+            name="ghiChu"
+            label="Ghi chú"
+          >
+            <Input.TextArea placeholder="Nhập ghi chú" rows={3} />
+          </Form.Item>
+          
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setCustomerInfoVisible(false)}>Hủy</Button>
+            <Button type="primary" htmlType="submit">Lưu thông tin</Button>
+          </div>
+        </Form>
+      </Modal>
+
+      {/* Order history modal */}
+      <Modal
+        title="Lịch sử bán hàng"
+        open={orderHistoryVisible}
+        onCancel={() => setOrderHistoryVisible(false)}
+        footer={null}
+        width={800}
+      >
+        <div className="mb-4 flex justify-between">
+          <div className="flex gap-2">
+            <Select 
+              defaultValue="today" 
+              style={{ width: 150 }}
+              options={[
+                { value: 'today', label: 'Hôm nay' },
+                { value: 'yesterday', label: 'Hôm qua' },
+                { value: 'week', label: 'Tuần này' },
+                { value: 'month', label: 'Tháng này' },
+              ]}
+            />
+            <Button icon={<SearchOutlined />} onClick={fetchOrderHistory}>Tìm kiếm</Button>
+          </div>
+          <Button icon={<PrinterOutlined />}>Xuất báo cáo</Button>
+        </div>
+          <Table
+          loading={orderHistoryLoading}
+          dataSource={orderHistoryData.map(order => ({
+            ...order,
+            key: order.madonhang
+          }))}
+          columns={[
+            {
+              title: 'Mã đơn hàng',
+              dataIndex: 'madonhang',
+              key: 'madonhang',
+            },
+            {
+              title: 'Ngày bán',
+              dataIndex: 'ngaymuahang',
+              key: 'ngaymuahang',
+              render: (ngaymuahang) => {
+                const date = new Date(ngaymuahang);
+                return date.toLocaleDateString('vi-VN');
+              }
+            },
+            {
+              title: 'Khách hàng',
+              dataIndex: 'nguoinhan',
+              key: 'nguoinhan',
+            },
+            {
+              title: 'Tổng tiền',
+              dataIndex: 'thanhtien',
+              key: 'thanhtien',
+              render: (thanhtien) => `${thanhtien.toLocaleString('vi-VN')} đ`,
+            },
+            {
+              title: 'Trạng thái',
+              dataIndex: 'trangthai',
+              key: 'trangthai',
+              render: (trangthai) => {
+                let color = 'blue';
+                if (trangthai === 'Hoàn thành') color = 'green';
+                if (trangthai === 'Đã xác nhận') color = 'green';
+                if (trangthai === 'Đã hủy') color = 'red';
+                if (trangthai === 'Đang xử lý') color = 'orange';
+                if (trangthai === 'Chờ xác nhận') color = 'gold';
+                
+                return <Tag color={color}>{trangthai}</Tag>;
+              },
+            },
+            {
+              title: 'Thao tác',
+              key: 'action',              render: (_, record) => (
+                <Space>
+                  <Button size="small" icon={<InfoCircleOutlined />} onClick={() => handleViewOrderDetail(record)}>Chi tiết</Button>                  <Button 
+                    size="small" 
+                    icon={<PrinterOutlined />}
+                    onClick={() => {
+                      try {
+                        handleDownloadInvoice(record.madonhang);
+                      } catch (error) {
+                        console.error("Error handling print click:", error);
+                        message.error("Không thể tạo hoá đơn");
+                      }
+                    }}
+                  >
+                    In
+                  </Button>
+                </Space>
+              ),
+            },
+          ]}
+          pagination={{ pageSize: 5 }}
+        />
+      </Modal>
+
+      {/* Order Detail Modal */}
+      <Modal
+        title="Chi tiết đơn hàng"
+        open={orderDetailVisible}
+        onCancel={() => setOrderDetailVisible(false)}
+        footer={null}
+        width={800}
+      >
+        {selectedOrder ? (
+          <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <p className="mb-1"><Text strong>Mã đơn hàng:</Text> {selectedOrder.madonhang}</p>
+                <p className="mb-1"><Text strong>Ngày mua hàng:</Text> {new Date(selectedOrder.ngaymuahang).toLocaleDateString('vi-VN')}</p>
+                <p className="mb-1"><Text strong>Tổng tiền:</Text> {selectedOrder.thanhtien.toLocaleString('vi-VN')} đ</p>
+                <p className="mb-1"><Text strong>Giảm giá trực tiếp:</Text> {selectedOrder.giamgiatructiep.toLocaleString('vi-VN')} đ</p>
+                <p className="mb-1"><Text strong>Phí vận chuyển:</Text> {selectedOrder.phivanchuyen.toLocaleString('vi-VN')} đ</p>
+                {selectedOrder.mavoucher && (
+                  <p className="mb-1"><Text strong>Mã voucher:</Text> {selectedOrder.mavoucher}</p>
+                )}
+              </div>
+              <div>
+                <p className="mb-1"><Text strong>Khách hàng:</Text> {selectedOrder.nguoinhan}</p>
+                <p className="mb-1"><Text strong>Số điện thoại:</Text> {selectedOrder.sodienthoainguoinhan}</p>
+                <p className="mb-1"><Text strong>Phương thức thanh toán:</Text> {selectedOrder.phuongthucthanhtoan}</p>
+                <p className="mb-1"><Text strong>Hình thức nhận hàng:</Text> {selectedOrder.hinhthucnhanhang}</p>
+                <p className="mb-1"><Text strong>Trạng thái:</Text> <Tag color={selectedOrder.trangthai === 'Đã xác nhận' ? 'green' : 'blue'}>{selectedOrder.trangthai}</Tag></p>
+                <p className="mb-1"><Text strong>Người bán:</Text> {selectedOrder.nguoiban}</p>
+              </div>
+            </div>
+
+            {selectedOrder.ghichu && (
+              <div className="bg-gray-50 p-3 rounded-md mb-4">
+                <Text strong>Ghi chú:</Text>
+                <p>{selectedOrder.ghichu}</p>
+              </div>
+            )}
+
+            <Divider orientation="left">Danh sách sản phẩm</Divider>
+            
+            <div className="overflow-auto">
+              <Table
+                dataSource={selectedOrder.sanpham.map((item, index) => ({
+                  ...item,
+                  key: index,
+                  thanhtien: item.giaban * item.soluong
+                }))}
+                columns={[
+                  {
+                    title: 'Sản phẩm',
+                    dataIndex: 'tensanpham',
+                    key: 'tensanpham',
+                    render: (tensanpham, record: any) => (
+                      <div className="flex items-center">
+                        {record.url && (
+                          <Avatar 
+                            src={record.url} 
+                            shape="square" 
+                            size={40} 
+                            className="mr-2"
+                            style={{ flexShrink: 0 }}
+                          />
+                        )}
+                        <span style={{ maxWidth: '280px' }} className="line-clamp-2">{tensanpham}</span>
+                      </div>
+                    ),
+                  },
+                  {
+                    title: 'Đơn vị tính',
+                    dataIndex: 'donvitinh',
+                    key: 'donvitinh',
+                    width: 100,
+                  },
+                  {
+                    title: 'Số lượng',
+                    dataIndex: 'soluong',
+                    key: 'soluong',
+                    width: 100,
+                    align: 'center' as const,
+                  },
+                  {
+                    title: 'Đơn giá',
+                    dataIndex: 'giaban',
+                    key: 'giaban',
+                    width: 120,
+                    render: (giaban) => `${giaban.toLocaleString('vi-VN')} đ`,
+                    align: 'right' as const,
+                  },
+                  {
+                    title: 'Thành tiền',
+                    dataIndex: 'thanhtien',
+                    key: 'thanhtien',
+                    width: 120,
+                    render: (thanhtien) => `${thanhtien.toLocaleString('vi-VN')} đ`,
+                    align: 'right' as const,
+                  },
+                ]}
+                pagination={false}
+                bordered
+                summary={() => (
+                  <Table.Summary fixed>
+                    <Table.Summary.Row>
+                      <Table.Summary.Cell index={0} colSpan={4} align="right">
+                        <Text strong>Tổng tiền:</Text>
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={1} align="right">
+                        <Text strong>{(selectedOrder.thanhtien ?? 0).toLocaleString('vi-VN')} đ</Text>
+                      </Table.Summary.Cell>
+                    </Table.Summary.Row>
+                  </Table.Summary>
+                )}
+              />
+            </div>            <div className="mt-4 flex justify-end">
+              <Space>
+                <Button onClick={() => setOrderDetailVisible(false)}>Đóng</Button>                <Button 
+                  icon={<PrinterOutlined />} 
+                  type="primary"
+                  onClick={() => {
+                    try {
+                      console.log("Print button clicked for order:", selectedOrder.madonhang);
+                      handleDownloadInvoice(selectedOrder.madonhang);
+                    } catch (error) {
+                      console.error("Error handling print button click:", error);
+                      message.error("Không thể tạo hoá đơn");
+                    }
+                  }}
+                  loading={checkoutLoading}
+                >
+                  In đơn hàng
+                </Button>
+              </Space>
+            </div>
+          </div>
+        ) : (
+          <div className="py-8 text-center">
+            <Spin size="large" />
+            <p className="mt-4">Đang tải thông tin đơn hàng...</p>
+          </div>
+        )}
+      </Modal>
+
+      {/* Barcode scanner modal */}
+      <Modal
+        title="Quét mã vạch"
+        open={barcodeModalVisible}
+        onCancel={() => setBarcodeModalVisible(false)}
+        footer={null}
+      >
+        <div className="flex flex-col items-center">
+          <div className="border-2 border-dashed border-gray-300 p-4 w-full mb-4 bg-gray-50 rounded-md">
+            <div className="h-40 flex items-center justify-center">
+              <ScanOutlined style={{ fontSize: '5rem', color: '#d9d9d9' }} />
+            </div>
+          </div>
+          <Text className="mb-4">Đặt mã vạch vào vùng quét</Text>
+          <div className="w-full">
+            <Input 
+              placeholder="Hoặc nhập mã sản phẩm" 
+              size="large" 
+              suffix={<SearchOutlined />} 
+            />
+          </div>
+          <Button 
+            type="primary" 
+            className="mt-4" 
+            onClick={() => {
+              message.info('Chức năng quét mã vạch đang phát triển!');
+              setBarcodeModalVisible(false);
+            }}
+          >
+            Tìm kiếm
+          </Button>
+        </div>
       </Modal>
     </div>
   );

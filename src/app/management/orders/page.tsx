@@ -8,9 +8,12 @@ import {
     FileAddOutlined,
     DashboardOutlined,
     LogoutOutlined,
+    InboxOutlined,
 } from '@ant-design/icons';
 import CreateOrderForm from './CreateOrderForm'; // Tạo component này cho form tạo đơn
 import OrderList from './OderList'; // Tạo component này cho danh sách đơn hàng
+import ReceiveProductsComponent from '../receive/ReceiveProductsComponent';
+import StaffSalesComponent from '../Staff-sales/StaffSalesComponent';
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
@@ -69,6 +72,16 @@ export default function OrderManagement() {
                             icon: <DashboardOutlined />,
                             label: 'Danh sách đơn hàng',
                         },
+                         {
+                            key: 'receive_products',
+                            icon: <InboxOutlined />,
+                            label: 'Nhập hàng',
+                        },
+                        {
+                            key: 'staff_sales',
+                            icon: <InboxOutlined />,
+                            label: 'Bán hàng',
+                        },
                         {
                             key: 'logout',
                             icon: <LogoutOutlined />,
@@ -95,6 +108,8 @@ export default function OrderManagement() {
                 <Content style={{ margin: '24px 16px', minHeight: 280 }}>
                     {selectedKey === 'create_order' && <CreateOrderForm />}
                     {selectedKey === 'orders' && <OrderList />}
+                    {selectedKey === 'receive_products' && <ReceiveProductsComponent />}                
+                    {selectedKey === 'staff_sales' && <StaffSalesComponent />} 
                 </Content>
             </Layout>
         </Layout>

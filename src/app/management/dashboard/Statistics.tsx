@@ -171,8 +171,8 @@ export default function Statistics() {
                         <ResponsiveContainer width="100%" height={220}>
                             <BarChart data={revenueByMonth}>
                                 <XAxis dataKey="month" fontSize={12} />
-                                <YAxis tickFormatter={v => (+v).toLocaleString('vi-VN') + 'đ'} />
-                                <Tooltip formatter={v => (+v).toLocaleString('vi-VN') + 'đ'} />
+                                <YAxis tickFormatter={(v: number) => (+v).toLocaleString('vi-VN') + 'đ'} />
+                                <Tooltip formatter={(v: number) => (+v).toLocaleString('vi-VN') + 'đ'} />
                                 <Bar dataKey="revenue" fill="#52c41a" />
                             </BarChart>
                         </ResponsiveContainer>
@@ -203,7 +203,7 @@ export default function Statistics() {
                                     outerRadius={80}
                                     // Không để label hoặc chỉ để label nhỏ
                                     labelLine={false}
-                                    label={({ name }) => name}
+                                    label={({ name }: { name: string }) => name}
                                 >
                                     {topProducts.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

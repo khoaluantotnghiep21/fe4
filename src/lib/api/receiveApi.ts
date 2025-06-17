@@ -196,3 +196,75 @@ export const updateReceiptStatus = async (
   }
 };
 
+/**
+ * Update inventory quantity for a product in a pharmacy branch
+ * @param machinhanh Pharmacy branch code
+ * @param masanpham Product code
+ * @param soluongtonkho New inventory quantity
+ * @returns Promise with API response
+ */
+export const updateTonKho = async (
+  machinhanh: string,
+  masanpham: string,
+  soluongtonkho: number
+): Promise<ApiResponse> => {
+  try {
+    const response = await axiosClient.put(
+      `/pharmacy-product/updateTonKho/${machinhanh}/${masanpham}`, 
+      { soluongtonkho }
+    );
+    return response.data;
+  } catch (error: any) {
+    console.error(`Error updating inventory for product ${masanpham} in branch ${machinhanh}:`, error);
+    
+    // Handle specific error cases
+    const errorResponse = error.response?.data;
+    if (error.response?.status === 404) {
+      throw new Error(errorResponse?.message || `Không tìm thấy sản phẩm ${masanpham} trong chi nhánh ${machinhanh}`);
+    }
+    
+    throw error;
+  }
+
+  
+};
+
+/**
+ * Interface cho yêu cầu tạo đơn thuốc tư vấn
+ */
+interface DonThuocTuVanRequest {
+  madonhang?: string;
+  hoten: string;
+  sodienthoai: string;
+  ghichu: string;
+}
+
+/**
+ * Tạo mới đơn thuốc tư vấn
+ * @param donThuocTuVanData Dữ liệu đơn thuốc tư vấn
+ * @returns Promise với response API
+ */
+export const createDonThuocTuVan = async (
+  donThuocTuVanData: DonThuocTuVanRequest
+): Promise<ApiResponse> => {
+  try {
+    const response = await axiosClient.post(
+      '/don-thuoc-tu-van/createDonThuocTuVan',
+      donThuocTuVanData
+    );
+    return response.data;
+  } catch (error: any) {
+    console.error('Lỗi khi tạo đơn thuốc tư vấn:', error);
+      // Xử lý các trường hợp lỗi cụ thể
+    const errorResponse = error.response?.data;
+    if (error.response?.status === 400) {
+      throw new Error(errorResponse?.message ?? 'Dữ liệu đơn thuốc tư vấn không hợp lệ');
+    }
+    if (error.response?.status === 404) {
+      throw new Error(errorResponse?.message ?? 'Không tìm thấy thông tin liên quan');
+    }
+    
+    throw error;
+  }
+};
+
