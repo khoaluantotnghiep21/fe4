@@ -18,6 +18,7 @@ interface UnitDetail {
   };
   dinhluong: number;
   giaban: number;
+  giabanSauKhuyenMai?: number;
   parentUnit?: UnitDetail;
 }
 
@@ -97,6 +98,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
         price: selectedUnit.giaban,
         image: mainImage,
         quantity: 1,
+        slug: product.slug,
       });
       message.success(
         `${product.tensanpham} (${formatUnitString(selectedUnit)}) đã được thêm vào giỏ hàng!`
@@ -124,7 +126,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
 
   return (
     <div
-      className="block h-full relative cursor-pointer group"
+      className="block h-full flex flex-col relative cursor-pointer group"
       ref={cardRef}
       onMouseEnter={() => setIsFlipped(true)}
       onMouseLeave={() => setIsFlipped(false)}
@@ -164,28 +166,31 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
             </div>
 
             {/* Product name */}
-            <div className="flex flex-col items-center justify-center min-h-[2rem] mb-2">
-              <h2 className="text-base font-semibold text-gray-800 text-center line-clamp-2">
+            <div className="flex flex-col items-center justify-center min-h-[3.2rem] mb-2 px-1">
+              <h2 className="text-base font-semibold text-gray-800 text-center line-clamp-2 break-words">
                 {product.tensanpham}
               </h2>
             </div>
 
-            {/* Price and brand */}
-            <div className="text-center mt-auto flex flex-col justify-end flex-grow">
-              <p className="text-lg font-bold text-red-600">
-                {selectedUnit?.giaban
-                  ? `${selectedUnit.giaban.toLocaleString('vi-VN')}đ/${selectedUnit.donvitinh.donvitinh}`
-                  : 'Liên hệ'}
-              </p>
-              <p className="text-xs text-gray-400 line-through">
-                {selectedUnit?.giaban
-                  ? `${(selectedUnit.giaban + 10000).toLocaleString('vi-VN')}đ`
-                  : 'Liên hệ'}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                {product.thuonghieu?.tenthuonghieu || 'Không xác định'}
-              </p>
-              <p className="text-xs text-blue-500 mt-1">Lật để xem chi tiết</p>
+            {/* Price and brand (Front) */}
+            <div className="flex flex-col items-center justify-center mb-2 min-h-[2.5rem]">
+              {selectedUnit?.giabanSauKhuyenMai !== undefined && selectedUnit.giabanSauKhuyenMai < selectedUnit.giaban ? (
+                <>
+                  <span className="text-xl font-bold text-red-600 text-center leading-tight">
+                    {selectedUnit.giabanSauKhuyenMai.toLocaleString('vi-VN')}đ
+                    <span className="text-xs text-gray-500 font-normal">/{selectedUnit.donvitinh.donvitinh}</span>
+                  </span>
+                  <span className="text-xs text-gray-400 line-through text-center block">
+                    {selectedUnit.giaban.toLocaleString('vi-VN')}đ
+                  </span>
+                </>
+              ) : (
+                <span className="text-xl font-bold text-red-600 text-center leading-tight">
+                  {selectedUnit?.giaban
+                    ? `${selectedUnit.giaban.toLocaleString('vi-VN')}đ/${selectedUnit.donvitinh.donvitinh}`
+                    : 'Liên hệ'}
+                </span>
+              )}
             </div>
           </div>
 
@@ -214,9 +219,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
                   <div className="flex flex-wrap justify-center gap-1.5 h-8 items-center">
                     {sortedUnits.map((unit) => (
                       <Button
+                        disabled={true}
                         key={`${unit.donvitinh.donvitinh}-${unit.dinhluong}`}
                         onClick={(e) => {
                           e.preventDefault();
+                          e.stopPropagation(); // Thêm dòng này để ngăn chuyển trang
                           if (
                             selectedUnit?.donvitinh.donvitinh !== unit.donvitinh.donvitinh ||
                             selectedUnit?.dinhluong !== unit.dinhluong
@@ -224,12 +231,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
                             handleUnitChange(unit);
                           }
                         }}
-                        className={`px-2 py-1 border rounded-md text-xs font-medium transition ${
-                          selectedUnit?.donvitinh.donvitinh === unit.donvitinh.donvitinh &&
+                        className={`px-2 py-1 border rounded-md text-xs font-medium transition ${selectedUnit?.donvitinh.donvitinh === unit.donvitinh.donvitinh &&
                           selectedUnit?.dinhluong === unit.dinhluong
-                            ? 'bg-blue-500 text-white border-blue-500'
-                            : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50'
-                        }`}
+                          ? 'bg-blue-500 text-white border-blue-500'
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50'
+                          }`}
                       >
                         {unit.donvitinh.donvitinh}
                       </Button>
@@ -271,33 +277,29 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, buttonText }) => {
               ))}
             </div>
 
-            {/* Product description */}
-            <div className="flex-grow overflow-auto mb-2">
-              <h3 className="text-sm font-medium mb-1">Mô tả:</h3>
-              <p className="text-xs text-gray-600 line-clamp-3">{shortDescription}</p>
-            </div>
 
             {/* Price */}
-            <p className="text-lg font-bold text-red-600 text-center">
-              {selectedUnit?.giaban
-                ? `${selectedUnit.giaban.toLocaleString('vi-VN')}đ/${selectedUnit.donvitinh.donvitinh}`
-                : 'Liên hệ'}
-            </p>
+            {/* Price (Back) */}
+            <div className="flex flex-col items-center justify-center mb-2 min-h-[2.5rem]">
+              <span className="text-xl font-bold text-red-600 text-center leading-tight">
+                {selectedUnit?.giaban
+                  ? `${selectedUnit.giaban.toLocaleString('vi-VN')}đ/${selectedUnit.donvitinh.donvitinh}`
+                  : 'Liên hệ'}
+              </span>
+            </div>
 
             {/* Add to cart button */}
-            <div className="mt-2">
+            <div className="mt-auto">
               <Button
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  handleAddToCart(e);
+                  router.push(`/products/${product.slug}`);
                 }}
                 className="w-full"
                 type="primary"
-                loading={loading}
-                disabled={!selectedUnit}
               >
-                {loading ? 'Đang xử lý...' : buttonText}
+                Xem chi tiết
               </Button>
             </div>
           </div>

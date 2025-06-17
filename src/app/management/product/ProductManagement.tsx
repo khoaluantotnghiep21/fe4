@@ -164,7 +164,7 @@ export default function ProductManagement({
 
       setSearchLoading(true);
       try {
-        const response = await getProductBySearch(value, { page: 1, take: 12 });
+        const response = await getProductBySearch(value, { page: 1 });
         if (Array.isArray(response.data)) {
           const normalizedProducts = response.data.map((product: any) => ({
             ...product,

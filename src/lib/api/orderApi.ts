@@ -40,14 +40,15 @@ export interface CreatePurchaseOrderResponse {
         machinhanh: string | null;
     };
 }
-export interface GiaoHangDTO{
+export interface GiaoHangDTO {
     nguoinhan: string;
     sodienthoainguoinhan: string;
-    diachinguoinhan: string | null;
-    madonhang: string;
     thoigiannhan: string;
+    diachinguoinhan: string | null;
+    thoigiandukien?: string | null;
+    madonhang: string;
 }
-export interface GiaoHangInterface{
+export interface GiaoHangInterface {
     statusCode: number;
     message: string;
     data: GiaoHangDTO
@@ -65,16 +66,17 @@ export interface OrderItem {
     ngaymuahang?: string;
     giamgiatructiep?: number;
     hoten?: string;
-    nguoinhan?:string,
-    machinhanh?:string,
-    sodienthoainguoinhan?:string,
-    diachinguoinhan?:string,
-    thoigiannhan?:string,
-    diachi?:string;
-    sodienthoai?:string;
-    thanhtien? : number;
+    nguoinhan?: string,
+    machinhanh?: string,
+    sodienthoainguoinhan?: string,
+    diachinguoinhan?: string,
+    thoigiannhan?: string,
+    diachi?: string;
+    sodienthoai?: string;
+    thanhtien?: number;
     tongtien?: number;
     phuongthucthanhtoan?: string;
+    hinhthucnhanhang?: string;
 }
 
 
@@ -85,8 +87,8 @@ export async function getAllOrders(status?: string) {
     return Array.isArray(res.data?.data) ? res.data.data : [];
 }
 
-export async function updateOrderStatus(madonhang: string, trangthai: string) {
-    return axiosClient.patch(`/purchase-order/updateStatus/${madonhang}`, { trangthai });
+export async function updateOrderStatus(madonhang: string, status: string) {
+  return axiosClient.put(`/purchase-order/updateStatus/${madonhang}`, { status });
 }
 
 export async function createPurchaseOrder(orderData: CreatePurchaseOrderRequest): Promise<CreatePurchaseOrderResponse | null> {
@@ -164,7 +166,7 @@ export async function createVnpayOrder(madonhang: string): Promise<string> {
         } else {
             console.error("Error fetching user orders:", error);
         }
-        return  "";
+        return "";
     }
 }
 
@@ -224,6 +226,21 @@ export async function createGiaoHang(orderData: GiaoHangDTO): Promise<GiaoHangIn
         } else {
             message.error("Có lỗi xảy ra khi đặt hàng!");
         }
+        return null;
+    }
+
+
+}
+
+// Trong orderApi.ts
+export async function getDeliveryByMaDonHang(madonhang: string): Promise<any> {
+    try {
+        const response = await axiosClient.get(`/delivery/getDeliveryDetailsByMadonhang/${madonhang}`);
+        if (response.data && response.data.data) {
+            return response.data.data; 
+        }
+        return null;
+    } catch (error) {
         return null;
     }
 }

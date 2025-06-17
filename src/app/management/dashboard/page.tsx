@@ -20,6 +20,9 @@ import {
 import UserManagement from '../info-user/UserManagement';
 import PharmacyManagement from '../pharmacy/PharmacyManagement';
 import ProductReceiptManagement from '../receive/ProductReceiptManagement';
+import OrderManagement from "@/app/management/orders/page";
+import OrderList from '../orders/OderList';
+import Statistics from './Statistics';
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
@@ -164,59 +167,16 @@ export default function AdminDashboard() {
                 </Header>
                 <Content style={{ margin: '24px 16px', minHeight: 280 }}>
                     {selectedKey === 'dashboard' && (
-                        <>
-                            <Row gutter={16}>
-                                <Col span={6}>
-                                    <Card>
-                                        <Statistic
-                                            title="Tổng người dùng"
-                                            value={1280}
-                                            valueStyle={{ color: '#3f8600' }}
-                                        />
-                                    </Card>
-                                </Col>
-                                <Col span={6}>
-                                    <Card>
-                                        <Statistic
-                                            title="Sản phẩm"
-                                            value={356}
-                                            valueStyle={{ color: '#1890ff' }}
-                                        />
-                                    </Card>
-                                </Col>
-                                <Col span={6}>
-                                    <Card>
-                                        <Statistic
-                                            title="Đơn hàng hôm nay"
-                                            value={28}
-                                            valueStyle={{ color: '#722ed1' }}
-                                        />
-                                    </Card>
-                                </Col>
-                                <Col span={6}>
-                                    <Card>
-                                        <Statistic
-                                            title="Doanh thu hôm nay"
-                                            value={12560000}
-                                            valueStyle={{ color: '#cf1322' }}
-                                            suffix="đ"
-                                        />
-                                    </Card>
-                                </Col>
-                            </Row>
-                            <div className="mt-8">
-                                <Title level={4}>Hoạt động gần đây</Title>
-                                <Card>
-                                    <p>Không có hoạt động nào gần đây</p>
-                                </Card>
-                            </div>
-                        </>
+                        <Statistics
+                        />
                     )}
                     {selectedKey === 'products' && (
                         <ProductManagement onExpiredStatusChange={setExpiredStatus} />
                     )}
                     {selectedKey === 'users' && <UserManagement />}
                     {selectedKey === 'promotions' && <PromotionManagement />}
+                    {selectedKey === 'orders' && <OrderList />}
+
                      {selectedKey === 'pharmacys' && <PharmacyManagement />}
                      {selectedKey === 'pharmacy_products' && <ProductReceiptManagement />}
                 </Content>
