@@ -12,7 +12,7 @@ export interface PurchaseOrderDetail {
 export interface CreatePurchaseOrderRequest {
     phuongthucthanhtoan: string;
     hinhthucnhanhang: string;
-    mavoucher: string; // Bắt buộc phải có, sử dụng VC00000 làm mặc định
+    mavoucher: string | null; 
     tongtien: number;
     giamgiatructiep: number;
     thanhtien: number;
@@ -93,18 +93,22 @@ export async function updateOrderStatus(madonhang: string, status: string) {
 
 export async function createPurchaseOrder(orderData: CreatePurchaseOrderRequest): Promise<CreatePurchaseOrderResponse | null> {
     try {
+        console.log('Sending order data to API:', JSON.stringify(orderData, null, 2));
         const response = await axiosClient.post('/purchase-order/createNewPurchaseOrder', orderData);
+        console.log('API response received:', JSON.stringify(response.data, null, 2));
 
         if (response.data && response.data.statusCode == 201) {
             message.success("Đặt hàng thành công!");
             return response.data;
         } else {
-            message.error("Đặt hàng thất bại!");
+            console.error("API returned error:", response.data);
+            message.error(response.data?.message ?? "Đặt hàng thất bại!");
             return null;
         }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
         console.error("Error creating purchase order:", error);
+        console.error("Error details:", error.response?.data ?? error.message);
 
         if (error.response?.data?.message) {
             message.error(`Lỗi: ${error.response.data.message}`);
@@ -118,7 +122,7 @@ export async function createPurchaseOrder(orderData: CreatePurchaseOrderRequest)
 export async function getUserOrders(phoneNumber: string): Promise<OrderItem[]> {
     try {
         const response = await axiosClient.get(`/order/getUserOrders/${phoneNumber}`);
-        if (response.data && response.data.data) {
+        if (response.data?.data) {
             return response.data.data;
         }
         return [];
@@ -135,7 +139,7 @@ export async function getUserOrders(phoneNumber: string): Promise<OrderItem[]> {
 export async function getOderByUserId(id: string): Promise<OrderItem[]> {
     try {
         const response = await axiosClient.get(`/purchase-order/getOderByUserId/${id}`);
-        if (response.data && response.data.data) {
+        if (response.data?.data) {
             return response.data.data;
         }
         return [];
@@ -152,7 +156,7 @@ export async function getOderByUserId(id: string): Promise<OrderItem[]> {
 export async function createVnpayOrder(madonhang: string): Promise<string> {
     try {
         const response = await axiosClient.get(`/purchase-order/create-payment-url/web/${madonhang}`);
-        if (response.data && response.data.data) {
+        if (response.data?.data) {
             return response.data.data.data.url;
         }
         return "";
@@ -188,7 +192,7 @@ export async function cancelOrder(orderId: string): Promise<boolean> {
 export async function getOderByMaDonHang(madonhang: string): Promise<OrderItem[]> {
     try {
         const response = await axiosClient.get(`/purchase-order/getOrderByMadonhang/${madonhang}`);
-        if (response.data && response.data.data) {
+        if (response.data?.data) {
             return response.data.data;
         }
         return [];

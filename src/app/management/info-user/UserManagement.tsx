@@ -165,7 +165,8 @@ const UserManagement: FC = () => {
         }
     };
 
-    const handleRoleSubmit = async (values: { roleid: string[] }) => {
+    const handleRoleSubmit = async (values: any) => {
+
         try {
             setLoading(true);
             if (selectedUser && values.roleid) {
