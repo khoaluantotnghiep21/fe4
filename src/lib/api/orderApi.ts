@@ -40,14 +40,15 @@ export interface CreatePurchaseOrderResponse {
         machinhanh: string | null;
     };
 }
-export interface GiaoHangDTO{
+export interface GiaoHangDTO {
     nguoinhan: string;
     sodienthoainguoinhan: string;
-    diachinguoinhan: string | null;
-    madonhang: string;
     thoigiannhan: string;
+    diachinguoinhan: string | null;
+    thoigiandukien?: string | null;
+    madonhang: string;
 }
-export interface GiaoHangInterface{
+export interface GiaoHangInterface {
     statusCode: number;
     message: string;
     data: GiaoHangDTO
@@ -89,8 +90,8 @@ export async function getAllOrders(status?: string) {
     return Array.isArray(res.data?.data) ? res.data.data : [];
 }
 
-export async function updateOrderStatus(madonhang: string, trangthai: string) {
-    return axiosClient.patch(`/purchase-order/updateStatus/${madonhang}`, { trangthai });
+export async function updateOrderStatus(madonhang: string, status: string) {
+  return axiosClient.put(`/purchase-order/updateStatus/${madonhang}`, { status });
 }
 
 export async function createPurchaseOrder(orderData: CreatePurchaseOrderRequest): Promise<CreatePurchaseOrderResponse | null> {
@@ -168,7 +169,7 @@ export async function createVnpayOrder(madonhang: string): Promise<string> {
         } else {
             console.error("Error fetching user orders:", error);
         }
-        return  "";
+        return "";
     }
 }
 
