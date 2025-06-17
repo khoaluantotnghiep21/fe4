@@ -22,7 +22,7 @@ import PharmacyManagement from '../pharmacy/PharmacyManagement';
 import ProductReceiptManagement from '../receive/ProductReceiptManagement';
 import OrderManagement from "@/app/management/orders/page";
 import OrderList from '../orders/OderList';
-import Statistics from './Statistics';
+//import Statistics from './Statistics';
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
@@ -166,10 +166,10 @@ export default function AdminDashboard() {
                     </div>
                 </Header>
                 <Content style={{ margin: '24px 16px', minHeight: 280 }}>
-                    {selectedKey === 'dashboard' && (
+                    {/* {selectedKey === 'dashboard' && (
                         <Statistics
                         />
-                    )}
+                    )} */}
                     {selectedKey === 'products' && (
                         <ProductManagement onExpiredStatusChange={setExpiredStatus} />
                     )}

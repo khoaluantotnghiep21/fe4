@@ -172,9 +172,9 @@ const UserManagement: FC = () => {
             if (selectedUser && values.roleid) {
                 const success = await assignRoles(selectedUser.id, values.roleid);
                 if (success) {
-                    const roleNames = values.roleid
-                        .map((roleId) => rolesList.find((r) => r.id === roleId)?.namerole)
-                        .filter((name): name is string => !!name);
+                    const roleNames: string[] = (values.roleid as string[])
+                        .map((roleId: string) => rolesList.find((r: Role) => r.id === roleId)?.namerole)
+                        .filter((name: string | undefined): name is string => !!name);
 
                     const updatedUser = {
                         ...selectedUser,
