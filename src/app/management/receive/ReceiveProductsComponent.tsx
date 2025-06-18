@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useUser } from '@/context/UserContext';
 import { getPharmacyByEmployeeId, findOne } from '@/lib/api/pharmacyService';
 import { createMultipleProducts, getListProductInPharmacy, updateReceiptStatus } from '@/lib/api/receiveApi';
-import { Button, Card, Col, Form, Input, Row, Table, Typography, Modal, Select, Spin, Empty, Divider, InputNumber, Image, Avatar, Pagination, message } from 'antd';
+import { Button, Card, Col, Form, Input, Row, Table, Typography, Modal, Select, Spin, Empty, Divider, InputNumber, Image, Avatar, Pagination, message, Space } from 'antd';
 import { PlusOutlined, DeleteOutlined, InboxOutlined, SearchOutlined, ShopOutlined, EnvironmentOutlined } from '@ant-design/icons';
 import CustomNotification from '@/components/common/CustomNotificationProps';
 import { getProducts, getProductBySearch } from '@/lib/api/productApi';
@@ -133,7 +133,6 @@ const ReceiveProductsComponent = () => {
 
     fetchPharmacyData();
   }, [user]);
-
   // Search for products
   const handleProductSearch = async (searchText: string, page = 1) => {
     // Clear any existing timer
@@ -151,24 +150,20 @@ const ReceiveProductsComponent = () => {
     searchTimer.current = setTimeout(async () => {
       try {
         if (searchText.trim().length < 2) {
-          setProductSearch(prev => ({ 
-            ...prev, 
-            results: [],
-            isLoading: false 
-          }));
-          setPagination(prev => ({
-            ...prev,
-            current: 1,
-            total: 0
-          }));
+          // If search text is empty or too short, load all products instead
+          loadInitialProducts();
           return;
         }
 
+        console.log(`Searching for products with text "${searchText}", page ${page}`);
+        
         // Get products from API with pagination using search endpoint
         const response = await getProductBySearch(searchText, { 
           page: page, 
           take: pagination.pageSize,
         });
+        
+        console.log(`Found ${response.data.length} products, total: ${response.meta.total}`);
         
         setProductSearch(prev => ({ 
           ...prev, 
@@ -196,30 +191,40 @@ const ReceiveProductsComponent = () => {
       }
     }, 500);
   };
-  
-  // Handle pagination change
+    // Handle pagination change
   const handlePaginationChange = (page: number) => {
-    handleProductSearch(productSearch.searchText, page);
+    console.log(`Pagination changed to page ${page}`);
+    // If there's a search text, use search pagination, otherwise use general pagination
+    if (productSearch.searchText.trim().length >= 2) {
+      handleProductSearch(productSearch.searchText, page);
+    } else {
+      loadInitialProducts(page);
+    }
   };
-
   // Load initial product list
-  const loadInitialProducts = async () => {
+  const loadInitialProducts = async (page = 1) => {
     try {
       setProductSearch(prev => ({ ...prev, isLoading: true }));
+      
+      console.log(`Loading initial products, page: ${page}, pageSize: ${pagination.pageSize}`);
+      
       const response = await getProducts({ 
-        page: 1, 
+        page: page, 
         take: pagination.pageSize 
       });
+      
+      console.log(`Loaded ${response.data.length} products, total: ${response.meta.total}`);
       
       setProductSearch(prev => ({ 
         ...prev, 
         results: response.data, 
-        isLoading: false 
+        isLoading: false,
+        searchText: '' 
       }));
       
       setPagination(prev => ({
         ...prev,
-        current: 1,
+        current: page,
         total: response.meta.total
       }));
     } catch (error) {
@@ -230,6 +235,7 @@ const ReceiveProductsComponent = () => {
         current: 1,
         total: 0
       }));
+      message.error('Không thể tải danh sách sản phẩm');
     }
   };
   
@@ -268,8 +274,6 @@ const ReceiveProductsComponent = () => {
   };
   
   // Update receipt status
-  
-
   // Open product selection modal
   const openProductModal = (key: string) => {
     setSelectedRowIndex(key);
@@ -292,48 +296,35 @@ const ReceiveProductsComponent = () => {
     });
     
     // Load initial product list
-    loadInitialProducts();
+    loadInitialProducts(1);
   };
-
   // Handle product selection from search results
   const handleSelectProduct = (product: Product) => {
-    if (selectedRowIndex) {
-      setProducts(products.map(item => {
-        if (item.key === selectedRowIndex) {
-          return {
-            ...item,
-            masanpham: product.masanpham,
-            tensanpham: product.tensanpham,
-            productInfo: product
-          };
-        }
-        return item;
-      }));
-    } else {
-      // If adding a new product directly
-      const newKey = Date.now().toString();
-      setProducts([
-        ...products,
-        {
-          key: newKey,
-          masanpham: product.masanpham,
-          tensanpham: product.tensanpham,
-          soluong: '1',
-          productInfo: product
-        }
-      ]);
-    }
+    console.log("Selecting product:", product.tensanpham);
     
-    setProductModalVisible(false);
-    setSelectedRowIndex(null);
-  };
-  
-  // Add a new product row and immediately open product selection modal
-  const handleAddProduct = () => {
-    // Generate a key for the new row
+    // Always add a new product directly to the list
     const newKey = Date.now().toString();
-    // Open product selection modal with this key
-    openProductModal(newKey);
+    setProducts([
+      ...products,
+      {
+        key: newKey,
+        masanpham: product.masanpham,
+        tensanpham: product.tensanpham,
+        soluong: '1',
+        productInfo: product
+      }
+    ]);
+    
+    message.success(`Đã thêm sản phẩm: ${product.tensanpham}`);
+    
+    // Don't close the modal, allowing user to add multiple products
+  };    // Open the product selection modal to add products
+  const handleAddProduct = () => {
+    // Just open the product selection modal without setting a selected row
+    setSelectedRowIndex(null);
+    setProductModalVisible(true);
+    // Load initial product list
+    loadInitialProducts(1);
   };
 
   // Add a blank product row (manual entry)
@@ -625,6 +616,20 @@ const ReceiveProductsComponent = () => {
     },
   ];
 
+  // Load products when modal becomes visible
+  useEffect(() => {
+    if (productModalVisible) {
+      loadInitialProducts(1);
+    }
+    
+    return () => {
+      // Clear any pending timers on unmount
+      if (searchTimer.current) {
+        clearTimeout(searchTimer.current);
+      }
+    };
+  }, [productModalVisible]);
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6 border-b pb-4">
@@ -729,15 +734,13 @@ const ReceiveProductsComponent = () => {
         >
           Xác nhận nhập kho
         </Button>
-      </div>
-
-      {/* Product Selection Modal */}
+      </div>      {/* Product Selection Modal */}
       <Modal
-        title="Tìm kiếm sản phẩm"
+        title="Chọn sản phẩm cần nhập kho"
         open={productModalVisible}
         onCancel={() => setProductModalVisible(false)}
         footer={null}
-        width={700}
+        width={800}
         centered
         className="product-search-modal"
       >
@@ -801,11 +804,11 @@ const ReceiveProductsComponent = () => {
                   {
                     title: '',
                     key: 'action',
-                    width: 80,
-                    render: (_, record) => (
+                    width: 80,                    render: (_, record) => (
                       <Button 
                         type="primary" 
                         size="small"
+                        icon={<PlusOutlined />}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleSelectProduct(record);
@@ -844,24 +847,31 @@ const ReceiveProductsComponent = () => {
           </div>
         )}
 
-        <Divider />
-        
-        <div className="flex justify-between">
+        <Divider />          <div className="flex justify-between">
+          <Space>
+            <Button 
+              size="large" 
+              onClick={() => setProductModalVisible(false)}
+            >
+              Đóng
+            </Button>
+            <Button 
+              type="default" 
+              size="large"
+              onClick={() => {
+                handleAddBlankProduct();
+                setProductModalVisible(false);
+              }}
+            >
+              Nhập mã thủ công
+            </Button>
+          </Space>
           <Button 
-            size="large" 
+            type="primary" 
+            size="large"
             onClick={() => setProductModalVisible(false)}
           >
-            Đóng
-          </Button>
-          <Button 
-            type="default" 
-            size="large"
-            onClick={() => {
-              handleAddBlankProduct();
-              setProductModalVisible(false);
-            }}
-          >
-            Nhập mã thủ công
+            Hoàn thành
           </Button>
         </div>
       </Modal>

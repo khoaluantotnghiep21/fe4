@@ -108,6 +108,8 @@ export default function OrderManagement() {
                 <Content style={{ margin: '24px 16px', minHeight: 280 }}>
                     {selectedKey === 'create_order' && <CreateOrderForm />}
                     {selectedKey === 'orders' && <OrderList />}
+                    {selectedKey === 'receive_products' && <ReceiveProductsComponent />}    
+                    {selectedKey === 'staff_sales' && <StaffSalesComponent />} 
                 </Content>
             </Layout>
         </Layout>
