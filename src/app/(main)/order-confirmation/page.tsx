@@ -5,6 +5,13 @@ import { findOne, Pharmacy } from "@/lib/api/pharmacyService";
 import { getOderByMaDonHang, OrderItem } from "@/lib/api/orderApi";
 import { message } from "antd";
 import dayjs from "dayjs";
+import { StatusPurchase } from "./statusPurchase";
+
+interface Status {
+  value: StatusPurchase;
+  bgClass: string;
+  textClass: string;
+}
 
 export default function OrderConfirmation() {
   const searchParams = useSearchParams();
@@ -28,7 +35,63 @@ export default function OrderConfirmation() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Lấy các tham số từ URL và cập nhật orderDetails
+  const statuses: Status[] = [
+    {
+      value: StatusPurchase.Pending,
+      bgClass: "bg-yellow-100",
+      textClass: "text-yellow-700",
+    },
+    {
+      value: StatusPurchase.Confirmed,
+      bgClass: "bg-green-100",
+      textClass: "text-green-700",
+    },
+    {
+      value: StatusPurchase.Delivering,
+      bgClass: "bg-blue-100",
+      textClass: "text-blue-700",
+    },
+    {
+      value: StatusPurchase.Delivered,
+      bgClass: "bg-purple-100",
+      textClass: "text-purple-700",
+    },
+    {
+      value: StatusPurchase.Cancelled,
+      bgClass: "bg-red-100",
+      textClass: "text-red-700",
+    },
+  ];
+
+  const mapStatus = (status: string | undefined): StatusPurchase => {
+    if (!status) return StatusPurchase.Pending;
+
+    const normalizedStatus = status
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
+    switch (normalizedStatus) {
+      case "pending":
+      case "dang cho xac nhan":
+        return StatusPurchase.Pending;
+      case "confirmed":
+      case "da xac nhan":
+        return StatusPurchase.Confirmed;
+      case "delivering":
+      case "dang giao hang":
+        return StatusPurchase.Delivering;
+      case "delivered":
+      case "da giao hang":
+        return StatusPurchase.Delivered;
+      case "cancelled":
+      case "da huy":
+        return StatusPurchase.Cancelled;
+      default:
+        return StatusPurchase.Pending;
+    }
+  };
+
   useEffect(() => {
     const orderId = searchParams.get("orderId") || "";
     const orderCode = searchParams.get("orderCode") || "";
@@ -61,18 +124,15 @@ export default function OrderConfirmation() {
     });
   }, [searchParams]);
 
-  // Lấy chi tiết đơn hàng và thông tin nhà thuốc
   useEffect(() => {
-    // Kiểm tra searchParams có sẵn không
     if (!searchParams) {
       setError("Không thể đọc tham số URL. Vui lòng thử lại.");
       setLoading(false);
       return;
     }
 
-    // Sửa thành maDonHang để khớp với URL
-    const madonhang = searchParams.get("maDonHang");
-    if (!madonhang) {
+    const maDonHang = searchParams.get("maDonHang");
+    if (!maDonHang) {
       setError("Không tìm thấy mã đơn hàng trong URL.");
       setLoading(false);
       return;
@@ -83,7 +143,7 @@ export default function OrderConfirmation() {
         setLoading(true);
         setError(null);
 
-        const data = await getOderByMaDonHang(madonhang);
+        const data = await getOderByMaDonHang(maDonHang);
         if (!data || data.length === 0) {
           throw new Error("Không tìm thấy chi tiết đơn hàng.");
         }
@@ -96,7 +156,7 @@ export default function OrderConfirmation() {
         }
       } catch (error) {
         console.error("Lỗi khi lấy chi tiết đơn hàng:", error);
-        setError("Không thể tải thông tin đơn hàng. Vui lòng thử lại sau.");
+        setError("Không thể tải thông tin đơn hàng. Vui lòng thử lại!");
       } finally {
         setLoading(false);
       }
@@ -105,12 +165,10 @@ export default function OrderConfirmation() {
     fetchOrderDetails();
   }, [searchParams]);
 
-  // Hàm reload trang
   const handleReload = () => {
     window.location.reload();
   };
 
-  // Hàm sao chép mã đơn hàng
   const copyOrderCode = () => {
     const orderCode = orderItems[0]?.madonhang;
     if (orderCode) {
@@ -126,7 +184,6 @@ export default function OrderConfirmation() {
     }
   };
 
-  // Xử lý trạng thái tải và lỗi
   if (loading) {
     return <div className="max-w-5xl mx-auto py-6 px-4">Đang tải...</div>;
   }
@@ -145,12 +202,15 @@ export default function OrderConfirmation() {
     );
   }
 
-  const statusClass =
-    orderItems[0]?.trangthai === "Đã xác nhận"
-      ? "bg-green-100 text-green-700"
-      : orderItems[0]?.trangthai === "Đang chờ xác nhận"
-      ? "bg-blue-100 text-blue-700"
-      : "bg-red-100 text-red-700";
+  const mappedStatus = mapStatus(orderItems[0]?.trangthai);
+
+  const currentStatus = statuses.find(
+    (status) => status.value === mappedStatus
+  ) || {
+    value: StatusPurchase.Pending,
+    bgClass: "bg-gray-100",
+    textClass: "text-gray-700",
+  };
 
   return (
     <div className="max-w-5xl mx-auto py-6 px-4">
@@ -177,7 +237,6 @@ export default function OrderConfirmation() {
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        {/* Left Section */}
         <div className="col-span-2 bg-white p-4 rounded-md shadow border">
           <div className="mb-4">
             <p className="font-medium text-gray-700">Dự kiến nhận hàng</p>
@@ -216,7 +275,6 @@ export default function OrderConfirmation() {
           </div>
         </div>
 
-        {/* Right Section */}
         <div className="bg-white p-4 rounded-md shadow border">
           <p className="text-lg font-semibold mb-4">Thông tin thanh toán</p>
           <div className="flex justify-between mb-2">
@@ -260,9 +318,9 @@ export default function OrderConfirmation() {
             <div className="border-t pt-1">
               <p className="font-semibold text-lg">Trạng thái đơn hàng</p>
               <div
-                className={`inline-block mt-1 px-3 py-1 rounded-full justify-center text-sm font-medium ${statusClass}`}
+                className={`inline-block px-3 py-1 rounded-full justify-center text-sm font-medium ${currentStatus.bgClass} ${currentStatus.textClass}`}
               >
-                {orderItems[0]?.trangthai || "Không rõ trạng thái"}
+                {mappedStatus}
               </div>
             </div>
           </div>

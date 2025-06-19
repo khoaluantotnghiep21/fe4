@@ -164,7 +164,6 @@ export default function Checkout() {
         let giaoHangData: GiaoHangDTO = {
           nguoinhan: values.fullName,
           sodienthoainguoinhan: values.phone,
-          thoigiannhan: timestamp,
           diachinguoinhan: activeTab === 'delivery' ? values.address : '',
           madonhang: result.data.madonhang
         };
