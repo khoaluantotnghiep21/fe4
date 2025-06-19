@@ -6,7 +6,7 @@ import { Product } from '@/types/product.types';
  */
 interface ProductRequest {
   masanpham: string;
-  soluong: string;
+  soluong: number;
 }
 
 /**
@@ -72,10 +72,35 @@ export const createMultipleProducts = async (
       machinhanh,
       products
     });
-    return response.data;
+    
+    // Ensure we return a consistent success response regardless of the message
+    const responseData = response.data;
+    
+    // Force the statusCode to be 200 for any successful request
+    if (response.status >= 200 && response.status < 300) {
+      return {
+        statusCode: 200,
+        message: 'Nhập kho thành công',
+        timestamp: responseData.timestamp || new Date().toISOString(),
+        path: responseData.path || '/pharmacy-product/createMultipleProducts',
+        data: responseData.data
+      };
+    }
+    
+    // Return the response data as is if it doesn't need modification
+    return responseData;
   } catch (error: any) {
     console.error('Error adding multiple products to pharmacy:', error);
-    throw error;
+    
+    // Format error response
+    const errorResponse: ApiResponse = {
+      statusCode: error.response?.status || 500,
+      message: error.response?.data?.message || 'Lỗi khi thêm sản phẩm vào chi nhánh',
+      timestamp: new Date().toISOString(),
+      path: '/pharmacy-product/createMultipleProducts',
+    };
+    
+    throw errorResponse;
   }
 };
 
@@ -89,10 +114,21 @@ export const createMultipleProductsWithRequest = async (
 ): Promise<ApiResponse> => {
   try {
     const response = await axiosClient.post('/pharmacy-product/createMultipleProducts', request);
+    
+    // Return the response data
     return response.data;
   } catch (error: any) {
     console.error('Error adding multiple products to pharmacy:', error);
-    throw error;
+    
+    // Format error response
+    const errorResponse: ApiResponse = {
+      statusCode: error.response?.status || 500,
+      message: error.response?.data?.message || 'Lỗi khi thêm sản phẩm vào chi nhánh',
+      timestamp: new Date().toISOString(),
+      path: '/pharmacy-product/createMultipleProducts',
+    };
+    
+    throw errorResponse;
   }
 };
 
