@@ -150,21 +150,22 @@ export default function ProductManagement({
     } finally {
       setLoading(false);
     }
-  };
-
-  // Tạo hàm debounce để không gọi API liên tục khi người dùng đang gõ
+  };  // Tạo hàm debounce để không gọi API liên tục khi người dùng đang gõ
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedSearch = useRef(
     debounce(async (value: string) => {
       if (!value.trim()) {
         setSearchResults([]);
         setShowSearchResults(false);
+        // Nếu xóa hết ký tự tìm kiếm, load lại danh sách ban đầu
+        fetchProducts(1);
         return;
       }
 
       setSearchLoading(true);
       try {
-        const response = await getProductBySearch(value, { page: 1 });
+        // Tăng số lượng kết quả trả về để đảm bảo tìm được nhiều sản phẩm hơn
+        const response = await getProductBySearch(value, { page: 1, take: 50 });
         if (Array.isArray(response.data)) {
           const normalizedProducts = response.data.map((product: any) => ({
             ...product,
@@ -180,6 +181,11 @@ export default function ProductManagement({
           }));
           setSearchResults(normalizedProducts);
           setShowSearchResults(true);
+          
+          // Luôn cập nhật danh sách sản phẩm chính với kết quả tìm kiếm để hiển thị ngay
+          setProducts(normalizedProducts);
+          setTotalItems(response.meta.total);
+          console.log(`Tìm thấy ${normalizedProducts.length}/${response.meta.total} sản phẩm với từ khóa: "${value}"`);
         }
       } catch (error) {
         console.error('Error during live search:', error);
@@ -187,7 +193,7 @@ export default function ProductManagement({
       } finally {
         setSearchLoading(false);
       }
-    }, 500)  // Đợi 500ms sau khi người dùng ngừng gõ
+    }, 250)  // Giảm thời gian debounce xuống 250ms để phản hồi nhanh hơn
   ).current;
 
   // Thêm effect để lắng nghe click bên ngoài dropdown để đóng kết quả tìm kiếm
@@ -205,22 +211,62 @@ export default function ProductManagement({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, []);
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  }, []);  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchText(value);
 
-    if (value.trim().length > 1) {
+    // Bắt đầu tìm kiếm ngay khi có ký tự đầu tiên để cải thiện trải nghiệm người dùng
+    if (value.trim().length > 0) {
+      setSearchLoading(true); // Hiển thị trạng thái loading ngay lập tức
       debouncedSearch(value);
+      // Hiển thị kết quả tìm kiếm khi người dùng đang gõ
+      setShowSearchResults(true);
     } else {
       setSearchResults([]);
       setShowSearchResults(false);
+      // Nếu xóa hết ký tự tìm kiếm, load lại danh sách ban đầu
+      fetchProducts(1);
     }
-  };
-  const handleSearch = (value: string) => {
+  };  const handleSearch = (value: string) => {
     setSearchText(value);
     setCurrentPage(1);
-    fetchProducts(1, value);
+    
+    if (value.trim()) {
+      setLoading(true);
+      // Tìm kiếm ngay lập tức khi người dùng nhấn Enter hoặc nút tìm kiếm
+      getProductBySearch(value, { page: 1, take: 50 })
+        .then(response => {
+          if (Array.isArray(response.data)) {
+            const normalizedProducts = response.data.map((product: any) => ({
+              ...product,
+              khuyenmai: product.khuyenmai
+                ? {
+                  tenchuongtrinh: product.khuyenmai.tenchuongtrinh,
+                  giatrikhuyenmai:
+                    typeof (product.khuyenmai as any)?.giatrikhuyenmai === 'number'
+                      ? (product.khuyenmai as any).giatrikhuyenmai
+                      : 0,
+                }
+                : { tenchuongtrinh: '', giatrikhuyenmai: 0 },
+            }));
+            setProducts(normalizedProducts);
+            setTotalItems(response.meta.total);
+            console.log(`Tìm thấy ${normalizedProducts.length}/${response.meta.total} sản phẩm với từ khóa: "${value}"`);
+            
+            // Đóng kết quả tìm kiếm sau khi đã hiển thị sản phẩm trong bảng chính
+            setShowSearchResults(false);
+          }
+        })
+        .catch(error => {
+          console.error('Error during search:', error);
+          message.error('Lỗi khi tìm kiếm sản phẩm');
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    } else {
+      fetchProducts(1);
+    }
   };
 
   const viewProductDetail = async (masanpham: string) => {
@@ -518,18 +564,19 @@ export default function ProductManagement({
           key="1"
         >
           <div className="mb-6 flex justify-between items-center relative">
-            <div className="relative" style={{ width: 350 }}>
-            <Input.Search
-                            placeholder="Tìm kiếm theo tên, email, số điện thoại..."
-                            style={{ width: 350 }}
-                            value={searchText}
-                            onChange={e => setSearchText(e.target.value)}
-                            onSearch={() => { }}
-                            enterButton={<Button type="primary" icon={<SearchOutlined />}>Tìm kiếm</Button>}
-                            size="middle"
-                        />
+            <div className="relative" style={{ width: 350 }}>            <Input.Search
+                placeholder="Tìm kiếm theo tên, mã sản phẩm hoặc slug..."
+                style={{ width: 350 }}
+                value={searchText}
+                onChange={handleSearchChange}
+                onSearch={handleSearch} 
+                enterButton={<Button type="primary" icon={<SearchOutlined />}>Tìm kiếm</Button>}
+                size="middle"
+                allowClear
+                ref={searchInputRef}
+                loading={searchLoading}
+            />
 
-              {/* Dropdown kết quả tìm kiếm
               {showSearchResults && (
                 <div className="search-results-dropdown">
                   {searchLoading ? (
@@ -540,7 +587,7 @@ export default function ProductManagement({
                   ) : searchResults.length > 0 ? (
                     <List
                       itemLayout="horizontal"
-                      dataSource={searchResults}
+                      dataSource={searchResults.slice(0, 10)} // Chỉ hiển thị tối đa 10 kết quả trong dropdown
                       renderItem={item => (
                         <List.Item
                           onClick={() => handleResultClick(item)}
@@ -571,7 +618,7 @@ export default function ProductManagement({
                     </div>
                   ) : null}
                 </div>
-              )} */}
+              )}
             </div>
 
             <Button
@@ -868,8 +915,7 @@ export default function ProductManagement({
             </div>
           )
         )}
-      </Modal>
-      <style jsx global>{`
+      </Modal>      <style jsx global>{`
   @media (max-width: 900px) {
     .product-table .ant-table {
       font-size: 13px;
@@ -906,6 +952,51 @@ export default function ProductManagement({
     .ant-tabs-nav-list {
       flex-wrap: wrap;
     }
+  }
+  .search-results-dropdown {
+    position: absolute;
+    top: 40px;
+    left: 0;
+    width: 100%;
+    max-height: 400px;
+    overflow-y: auto;
+    background-color: white;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    box-shadow: 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
+    z-index: 1000;
+  }
+  .search-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .search-result-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  .search-result-item:hover {
+    background-color: #f5f5f5;
+  }
+  .search-result-title {
+    font-weight: 500;
+    color: #1890ff;
+  }
+  .search-result-hint {
+    font-size: 12px;
+    color: #888;
+    margin-top: 4px;
+  }
+  .empty-results {
+    padding: 16px;
+    text-align: center;
+    color: #888;
+  }
+  .search-result-info {
+    display: flex;
+    align-items: center;
   }
 `}</style>
     </div>
