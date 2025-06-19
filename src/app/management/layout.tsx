@@ -17,7 +17,9 @@ export default function ManagementLayout({
   if (isLoginPage) {
 
     return (
+      
       <div className="management-auth-layout relative min-h-screen w-full flex items-center justify-center">
+        
         <Image
           src="/assets/images/bg-login-admin.png"
           alt="Staff/Admin Login Background"
