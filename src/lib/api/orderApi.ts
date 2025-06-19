@@ -67,9 +67,11 @@ export interface OrderItem {
     nguoiban: string;
     machinhanh: string;
     thoigiannhan: string | null;
+    thoigiandukien: string | null;
     thanhtien: number;
     ngaymuahang: string;
     tongtien: number;
+    diachinguoinhan?: string | null;
     giamgiatructiep: number;
     phivanchuyen: number;
     phuongthucthanhtoan: string;
