@@ -181,7 +181,7 @@ export default function UserManagement() {
             } else {
                 // Đăng ký người dùng mới
                 const newUser = await register(values);
-                setUsers([...users, newUser]);
+                setUsers([...users, newUser]);``
                 message.success("Thêm người dùng thành công!");
             }
             setAddModalVisible(false);
@@ -300,15 +300,7 @@ export default function UserManagement() {
                         onClick={() => { setSelectedUser(record); setRoleModalVisible(true); }}
                         style={{ borderRadius: 6, background: '#e6f7ff', color: '#1890ff', border: 'none' }}
                     />
-                    <Button
-                        danger
-                        icon={<DeleteOutlined />}
-                        size="middle"
-                        shape="circle"
-                        title="Xóa"
-                        onClick={() => handleDelete(record.id)}
-                        style={{ borderRadius: 6 }}
-                    />
+                    
                 </Space>
             ),
         },
