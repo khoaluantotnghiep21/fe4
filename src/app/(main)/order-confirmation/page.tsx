@@ -110,8 +110,8 @@ export default function OrderConfirmation() {
     orderItems[0]?.trangthai == "Đã xác nhận"
       ? "bg-green-100 text-green-700"
       : orderItems[0]?.trangthai == "Đang chờ xác nhận"
-      ? "bg-blue-100 text-blue-700"
-      : "bg-red-100 text-red-700";
+        ? "bg-blue-100 text-blue-700"
+        : "bg-red-100 text-red-700";
 
   // Hàm sao chép mã đơn hàng
   const copyOrderCode = () => {
@@ -174,20 +174,27 @@ export default function OrderConfirmation() {
 
           <div className="border-t pt-4 space-y-2">
             <p className="font-medium">Nhận hàng tại</p>
-            {orderItems[0]?.machinhanh != "CN000000" ? (
-              <p className="text-black">
-                {pharmacy?.diachicuthe} {pharmacy?.tenduong} {pharmacy?.quan}{" "}
-                {pharmacy?.thanhpho || "..."}
-              </p>
-            ) : (
-              <p className="text-gray-500">
-                {orderItems[0]?.diachinguoinhan ? (
-                  <p className="text-black">{orderItems[0]?.diachinguoinhan}</p>
-                ) : (
-                  "Lỗi"
-                )}
-              </p>
-            )}
+            {
+              orderItems[0]?.machinhanh != "CN000000" ? (
+                <p className="text-black">
+                  {pharmacy?.diachicuthe} {pharmacy?.tenduong} {pharmacy?.quan}{" "}
+                  {pharmacy?.thanhpho || "..."}
+                </p>
+              ) : (
+                <p className="text-gray-500">
+                  {orderItems[0]?.diachinguoinhan ? (
+                    <p className="text-black">{orderItems[0]?.diachinguoinhan}</p>
+                  ) : (
+                    "Lỗi"
+                  )}
+                </p>
+              )
+            }
+
+            <p className="text-black">
+              {pharmacy?.diachicuthe} {pharmacy?.tenduong} {pharmacy?.quan}{" "}
+              {pharmacy?.thanhpho || "..."}
+            </p>
           </div>
         </div>
 

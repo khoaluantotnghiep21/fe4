@@ -326,14 +326,7 @@ export default function UserManagement() {
                             enterButton={<Button type="primary" icon={<SearchOutlined />}>Tìm kiếm</Button>}
                             size="middle"
                         />
-                        <Button
-                            type="primary"
-                            icon={<PlusOutlined />}
-                            size="middle"
-                            onClick={() => setAddModalVisible(true)}
-                        >
-                            Thêm người dùng
-                        </Button>
+                       
                     </div>
                     <Table
                         columns={columns}

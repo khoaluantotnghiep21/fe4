@@ -63,11 +63,6 @@ export default function OrderManagement() {
                     }}
                     items={[
                         {
-                            key: 'create_order',
-                            icon: <FileAddOutlined />,
-                            label: 'Tạo đơn hàng',
-                        },
-                        {
                             key: 'orders',
                             icon: <DashboardOutlined />,
                             label: 'Danh sách đơn hàng',
@@ -94,7 +89,6 @@ export default function OrderManagement() {
                 <Header style={{ background: '#fff', padding: '0 24px' }}>
                     <div className="flex justify-between items-center">
                         <Title level={3} style={{ margin: 0 }}>
-                            {selectedKey === 'create_order' && 'Tạo đơn hàng'}
                             {selectedKey === 'orders' && 'Danh sách đơn hàng'}
                         </Title>
                         <div className="flex items-center">
@@ -106,7 +100,7 @@ export default function OrderManagement() {
                     </div>
                 </Header>
                 <Content style={{ margin: '24px 16px', minHeight: 280 }}>
-                    {selectedKey === 'create_order' && <CreateOrderForm />}
+                   
                     {selectedKey === 'orders' && <OrderList />}
                     {selectedKey === 'receive_products' && <ReceiveProductsComponent />}    
                     {selectedKey === 'staff_sales' && <StaffSalesComponent />} 

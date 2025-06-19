@@ -27,7 +27,7 @@ export interface CreatePurchaseOrderResponse {
     data: {
         id: string;
         madonhang: string;
-        ngaymuahang: string;
+        ngaymuahang: Timestamp;
         userid: string;
         trangthai: string;
         phuongthucthanhtoan: string;
@@ -43,9 +43,7 @@ export interface CreatePurchaseOrderResponse {
 export interface GiaoHangDTO {
     nguoinhan: string;
     sodienthoainguoinhan: string;
-    thoigiannhan: string;
     diachinguoinhan: string | null;
-    thoigiandukien?: string | null;
     madonhang: string;
 }
 export interface GiaoHangInterface {
@@ -68,7 +66,7 @@ export interface OrderItem {
     machinhanh: string;
     thoigiannhan: string | null;
     thanhtien: number;
-    ngaymuahang: string;
+    ngaymuahang: Timestamp;
     tongtien: number;
     giamgiatructiep: number;
     phivanchuyen: number;
@@ -77,6 +75,7 @@ export interface OrderItem {
     hinhthucnhanhang: string;
     sodienthoainguoinhan: string;
     nguoinhan: string;
+    diachinguoinhan: string | null;
     ghichu: string;
     trangthai: string;
     sanpham: OrderProductItem[];
@@ -108,11 +107,7 @@ export async function createPurchaseOrder(orderData: CreatePurchaseOrderRequest)
             message.error(response.data?.message ?? "Đặt hàng thất bại!");
             return null;
         }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-        console.error("Error creating purchase order:", error);
-        console.error("Error details:", error.response?.data ?? error.message);
-
         if (error.response?.data?.message) {
             message.error(`Lỗi: ${error.response.data.message}`);
         } else {
