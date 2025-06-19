@@ -10,6 +10,7 @@ const orderStatusOptions = [
   { value: "Đang giao hàng", label: "Đang giao hàng" },
   { value: "Đã giao hàng", label: "Đã giao hàng" },
   { value: "Đã hủy", label: "Đã hủy" },
+  { value: "Hoàn thành", label: "Hoàn thành" }, // Thêm trạng thái Hoàn thành
 ];
 
 const statusMap: Record<string, string> = {
@@ -18,6 +19,7 @@ const statusMap: Record<string, string> = {
   "Đang giao hàng": "Delivering",
   "Đã giao hàng": "Delivered",
   "Đã hủy": "Cancelled",
+  "Hoàn thành": "Completed", // Thêm ánh xạ Hoàn thành
 };
 const statusMapReverse: Record<string, string> = Object.fromEntries(
   Object.entries(statusMap).map(([vi, en]) => [en, vi])
@@ -26,7 +28,11 @@ const statusMapReverse: Record<string, string> = Object.fromEntries(
 const apiStatus = statusMap[status] || status;
 getAllOrders(apiStatus);
 
-const editableStatus = ["Delivering", "Pending", "Delivering", "Confirmed", "Delivering", "Cancelled", "Đang chờ xác nhận", "Đã xác nhận", "Đang giao hàng", "Đã giao hàng", "Đã hủy"];
+const editableStatus = [
+  "Delivering", "Pending", "Delivering", "Confirmed", "Delivering", "Cancelled",
+  "Đang chờ xác nhận", "Đã xác nhận", "Đang giao hàng", "Đã giao hàng", "Đã hủy",
+  "Completed", "Hoàn thành" // Cho phép chỉnh sửa trạng thái Hoàn thành
+];
 
 export default function OrderList() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -163,7 +169,8 @@ export default function OrderList() {
                   trangthai === "Đã xác nhận" ? "cyan" :
                     trangthai === "Đang giao hàng" ? "blue" :
                       trangthai === "Đã giao hàng" ? "green" :
-                        trangthai === "Đã hủy" ? "red" : "default"
+                        trangthai === "Hoàn thành" ? "purple" : // Màu cho Hoàn thành
+                          trangthai === "Đã hủy" ? "red" : "default"
               }>
                 {trangthai}
               </Tag>
@@ -239,7 +246,8 @@ export default function OrderList() {
                     detailStatus === "Đã xác nhận" ? "cyan" :
                       detailStatus === "Đang giao hàng" ? "blue" :
                         detailStatus === "Đã giao hàng" ? "green" :
-                          detailStatus === "Đã hủy" ? "red" : "default"
+                          detailStatus === "Hoàn thành" ? "purple" : // Màu cho Hoàn thành
+                            detailStatus === "Đã hủy" ? "red" : "default"
                 }>
                   {detailStatus}
                 </Tag>

@@ -11,7 +11,7 @@ interface CartItem {
     soluong: number;
     dongia: number;
     trangthai: string;
-    ngaydat: string;
+    createat: string;
     madonhang: string;
     tongtien: number;
 }
@@ -22,6 +22,7 @@ export enum StatusPurchase {
     Delivering = 'Đang giao hàng',
     Delivered = 'Đã giao hàng',
     Cancelled = 'Đã hủy',
+    Completed = 'Hoàn thành'
 }
 
 const statusOptions = [
@@ -48,6 +49,31 @@ const CartLayout: React.FC = () => {
             message.error('Không lấy được chi tiết đơn hàng!');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const statusToVietnamese = (status: string) => {
+        switch (status) {
+            case 'Pending':
+            case StatusPurchase.Pending:
+                return 'Đang chờ xác nhận';
+            case 'Confirmed':
+            case StatusPurchase.Confirmed:
+                return 'Đã xác nhận';
+            case 'Delivering':
+            case StatusPurchase.Delivering:
+                return 'Đang giao hàng';
+            case 'Delivered':
+            case StatusPurchase.Delivered:
+                return 'Đã giao hàng';
+            case 'Cancelled':
+            case StatusPurchase.Cancelled:
+                return 'Đã hủy';
+            case 'Completed':
+            case StatusPurchase.Completed:
+                return 'Hoàn thành';
+            default:
+                return status;
         }
     };
 
@@ -88,21 +114,23 @@ const CartLayout: React.FC = () => {
             key: 'trangthai',
             render: (status: string) => {
                 let color = 'green';
-                if (status === StatusPurchase.Pending) color = 'orange';
-                if (status === StatusPurchase.Confirmed) color = 'geekblue';
-                if (status === StatusPurchase.Cancelled) color = 'volcano';
-                if (status === StatusPurchase.Delivering) color = 'cyan';
-                if (status === StatusPurchase.Delivered) color = 'green';
-                return <Tag color={color}>{status}</Tag>;
-            },
+                if (status === StatusPurchase.Pending || status === 'Pending') { color = 'orange'; }
+                if (status === StatusPurchase.Confirmed || status === 'Confirmed') { color = 'geekblue'; }
+                if (status === StatusPurchase.Cancelled || status === 'Cancelled') { color = 'volcano'; }
+                if (status === StatusPurchase.Delivering || status === 'Delivering') { color = 'cyan'; }
+                if (status === StatusPurchase.Delivered || status === 'Delivered') { color = 'green'; }
+                return <Tag color={color}>{statusToVietnamese(status)}</Tag>;
+            }
         },
         {
             title: 'Ngày đặt',
-            dataIndex: 'ngaydat',
-            key: 'ngaydat',
-            render: (date: string) =>
-                date && dayjs(date).isValid()
-                    ? dayjs(date).format('DD/MM/YYYY HH:mm')
+            dataIndex: 'createat',
+            key: 'createat',
+            render: (timestamp: string | number) =>
+                timestamp
+                    ? dayjs(timestamp).isValid()
+                        ? dayjs(timestamp).format('DD/MM/YYYY')
+                        : 'N/A'
                     : 'N/A',
         },
         {
@@ -145,13 +173,13 @@ const CartLayout: React.FC = () => {
                     soluong: item.soluong,
                     dongia: item.giaban,
                     trangthai: order.trangthai,
-                    ngaydat: order.ngaymuahang,
+                    createat: order.ngaymuahang,
                     madonhang: order.madonhang,
                     tongtien: order.thanhtien,
                 }))
             );
             mappedOrders.sort(
-                (a, b) => new Date(b.ngaydat).getTime() - new Date(a.ngaydat).getTime()
+                (a, b) => new Date(b.createat).getTime() - new Date(a.createat).getTime()
             );
 
             setOrders(mappedOrders);
@@ -175,7 +203,7 @@ const CartLayout: React.FC = () => {
             ? order.madonhang.toLowerCase().includes(searchMaDon.trim().toLowerCase())
             : true;
         const matchDate = selectedDate
-            ? dayjs(order.ngaydat).format('YYYY-MM-DD') === selectedDate
+            ? dayjs(order.createat).format('YYYY-MM-DD') === selectedDate
             : true;
         const matchStatus = status === 'all' ? true : order.trangthai === status;
         return matchMaDon && matchDate && matchStatus;
