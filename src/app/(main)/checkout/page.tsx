@@ -11,6 +11,7 @@ import 'dayjs/locale/vi';
 import axios from 'axios';
 import { findPharmacyByProvinces } from '@/lib/api/pharmacyService';
 dayjs.locale('vi');
+import { checkVoucherByMaVoucher } from '@/lib/api/voucherApi';
 
 interface CheckoutData {
   items: any[];
@@ -46,6 +47,8 @@ export default function Checkout() {
   const [selectedCityCode, setSelectedCityCode] = useState<number | null>(null);
   const [pharmacyData, setPharmacyData] = useState<any[]>([]);
 
+
+  const [voucherInput, setVoucherInput] = useState('');
   // Tạo danh sách ngày (hôm nay + 3 ngày tới)
   const days = Array.from({ length: 4 }, (_, i) => {
     const d = dayjs().add(i, 'day');
@@ -276,7 +279,53 @@ export default function Checkout() {
                     name="voucherCode"
                     label="Mã giảm giá (nếu có)"
                   >
-                    <Input placeholder="Nhập mã giảm giá" />
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                      <Input
+                        placeholder="Nhập mã giảm giá"
+                        value={voucherInput}
+                        onChange={e => setVoucherInput(e.target.value)}
+                        style={{ width: 200 }}
+                        disabled={formPickup.getFieldValue('voucherLoading')}
+                      />
+                      <Button
+                        type="primary"
+                        loading={formPickup.getFieldValue('voucherLoading')}
+                        onClick={async () => {
+                          if (!voucherInput) {
+                            message.warning('Vui lòng nhập mã giảm giá');
+                            return;
+                          }
+                          formPickup.setFieldsValue({ voucherLoading: true });
+                          try {
+                            const res = await checkVoucherByMaVoucher(voucherInput);
+                            const voucher = res.data;
+                            if (voucher && voucher.soluong > 0) {
+                              message.success(`Áp dụng mã thành công! Giảm giá: ${voucher.giatri.toLocaleString('vi-VN')}đ`);
+                              setCheckoutData(prev => prev ? ({
+                                ...prev,
+                                voucherDiscount: voucher.giatri,
+                                finalTotal: Math.max(0, prev.finalTotal - voucher.giatri),
+                                totalSavings: prev.totalSavings + voucher.giatri
+                              }) : prev);
+                            } else {
+                              message.error('Mã giảm giá không hợp lệ hoặc đã hết lượt sử dụng');
+                              setCheckoutData(prev => prev ? ({
+                                ...prev,
+                                voucherDiscount: 0,
+                                finalTotal: prev.subtotal - prev.directDiscount,
+                                totalSavings: prev.directDiscount
+                              }) : prev);
+                            }
+                          } catch (err) {
+                            message.error('Không thể kiểm tra mã giảm giá');
+                          } finally {
+                            formPickup.setFieldsValue({ voucherLoading: false });
+                          }
+                        }}
+                      >
+                        Áp dụng
+                      </Button>
+                    </div>
                   </Form.Item>
                   <Form.Item>
                     <Button
@@ -367,7 +416,7 @@ export default function Checkout() {
                         {pharmacyData.map(pharmacy => (
                           <Radio
                             key={pharmacy.id}
-                           value={pharmacy.machinhanh}
+                            value={pharmacy.machinhanh}
                             onChange={() => {
                               setMachinhanh(pharmacy.machinhanh);
                             }}
@@ -427,7 +476,53 @@ export default function Checkout() {
                     name="voucherCode"
                     label="Mã giảm giá (nếu có)"
                   >
-                    <Input placeholder="Nhập mã giảm giá" />
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                      <Input
+                        placeholder="Nhập mã giảm giá"
+                        value={voucherInput}
+                        onChange={e => setVoucherInput(e.target.value)}
+                        style={{ width: 200 }}
+                        disabled={formPickup.getFieldValue('voucherLoading')}
+                      />
+                      <Button
+                        type="primary"
+                        loading={formPickup.getFieldValue('voucherLoading')}
+                        onClick={async () => {
+                          if (!voucherInput) {
+                            message.warning('Vui lòng nhập mã giảm giá');
+                            return;
+                          }
+                          formPickup.setFieldsValue({ voucherLoading: true });
+                          try {
+                            const res = await checkVoucherByMaVoucher(voucherInput);
+                            const voucher = res.data;
+                            if (voucher && voucher.soluong > 0) {
+                              message.success(`Áp dụng mã thành công! Giảm giá: ${voucher.giatri.toLocaleString('vi-VN')}đ`);
+                              setCheckoutData(prev => prev ? ({
+                                ...prev,
+                                voucherDiscount: voucher.giatri,
+                                finalTotal: Math.max(0, prev.finalTotal - voucher.giatri),
+                                totalSavings: prev.totalSavings + voucher.giatri
+                              }) : prev);
+                            } else {
+                              message.error('Mã giảm giá không hợp lệ hoặc đã hết lượt sử dụng');
+                              setCheckoutData(prev => prev ? ({
+                                ...prev,
+                                voucherDiscount: 0,
+                                finalTotal: prev.subtotal - prev.directDiscount,
+                                totalSavings: prev.directDiscount
+                              }) : prev);
+                            }
+                          } catch (err) {
+                            message.error('Không thể kiểm tra mã giảm giá');
+                          } finally {
+                            formPickup.setFieldsValue({ voucherLoading: false });
+                          }
+                        }}
+                      >
+                        Áp dụng
+                      </Button>
+                    </div>
                   </Form.Item>
                   <Form.Item>
                     <Button
@@ -467,18 +562,18 @@ export default function Checkout() {
                   -{checkoutData.directDiscount.toLocaleString('vi-VN')}đ
                 </span>
               </div>
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center text-green-600">
                 <span>Giảm giá voucher</span>
                 <span className="font-bold">
-                  {checkoutData.voucherDiscount.toLocaleString('vi-VN')}đ
+                  -{checkoutData.voucherDiscount?.toLocaleString('vi-VN') || '0'}đ
                 </span>
               </div>
-              <div className="flex justify-between items-center border-t pt-4">
+                <div className="flex justify-between items-center border-t pt-4">
                 <span>Tiết kiệm được</span>
                 <span className="font-bold text-green-600">
-                  {checkoutData.totalSavings.toLocaleString('vi-VN')}đ
+                  {Math.min(checkoutData.totalSavings, checkoutData.subtotal).toLocaleString('vi-VN')}đ
                 </span>
-              </div>
+                </div>
               <div className="border-t pt-4">
                 <div className="flex justify-between items-center">
                   <span className="text-lg font-bold">Thành tiền</span>

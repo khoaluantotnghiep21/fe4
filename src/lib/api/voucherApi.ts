@@ -90,3 +90,8 @@ export async function deleteVoucher(mavoucher: string): Promise<boolean> {
     throw err;
   }
 }
+
+export async function checkVoucherByMaVoucher(mavoucher: string) {
+  const res = await axiosClient.get(`/voucher/getVoucherByMaVoucher/${mavoucher}`);
+  return res.data;
+}
