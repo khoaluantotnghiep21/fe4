@@ -314,8 +314,8 @@ export async function getSliderItems() {
       mobileHeight: 200,
     },
     {
-      desktopSrc: "/assets/images/slider1.png",
-      mobileSrc: "/assets/images/slider1_mobile.png",
+      desktopSrc: "/assets/images/slider2.png",
+      mobileSrc: "/assets/images/slider2_mobile.png",
       alt: "Sản phẩm mới Long Châu",
       desktopWidth: 960,
       desktopHeight: 300,

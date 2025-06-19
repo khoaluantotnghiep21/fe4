@@ -42,11 +42,11 @@ export default function RootLayout({
   }, []);
   return (
     <html lang="vi" className={`${geistSans.variable} ${geistMono.variable}`}>
-          <>
-      <title>Long Châu</title>
-      <meta name="description" content="Nhà thuốc Long Châu - Hệ thống nhà thuốc uy tín, chất lượng hàng đầu Việt Nam." />
-      <link rel="icon" href="/favicon.ico" />
-    </>
+      <>
+        <title>Long Châu</title>
+        <meta name="description" content="Nhà thuốc Long Châu - Hệ thống nhà thuốc uy tín, chất lượng hàng đầu Việt Nam." />
+
+      </>
       <body className="antialiased flex flex-col min-h-screen">
         {!ready ? (
           <div className="w-full h-screen flex items-center justify-center bg-white">
