@@ -12,7 +12,7 @@ export interface PurchaseOrderDetail {
 export interface CreatePurchaseOrderRequest {
     phuongthucthanhtoan: string;
     hinhthucnhanhang: string;
-    mavoucher: string | null; 
+    mavoucher: string | null;
     tongtien: number;
     giamgiatructiep: number;
     thanhtien: number;
@@ -55,31 +55,31 @@ export interface GiaoHangInterface {
 }
 
 export interface OrderProductItem {
-  tensanpham: string;
-  donvitinh: string;
-  soluong: number;
-  giaban: number;
-  url: string;
+    tensanpham: string;
+    donvitinh: string;
+    soluong: number;
+    giaban: number;
+    url: string;
 }
 
 export interface OrderItem {
-  madonhang: string;
-  nguoiban: string;
-  machinhanh: string;
-  thoigiannhan: string | null;
-  thanhtien: number;
-  ngaymuahang: string;
-  tongtien: number;
-  giamgiatructiep: number;
-  phivanchuyen: number;
-  phuongthucthanhtoan: string;
-  mavoucher: string | null;
-  hinhthucnhanhang: string;
-  sodienthoainguoinhan: string;
-  nguoinhan: string;
-  ghichu: string;
-  trangthai: string;
-  sanpham: OrderProductItem[];
+    madonhang: string;
+    nguoiban: string;
+    machinhanh: string;
+    thoigiannhan: string | null;
+    thanhtien: number;
+    ngaymuahang: string;
+    tongtien: number;
+    giamgiatructiep: number;
+    phivanchuyen: number;
+    phuongthucthanhtoan: string;
+    mavoucher: string | null;
+    hinhthucnhanhang: string;
+    sodienthoainguoinhan: string;
+    nguoinhan: string;
+    ghichu: string;
+    trangthai: string;
+    sanpham: OrderProductItem[];
 }
 
 
@@ -91,7 +91,7 @@ export async function getAllOrders(status?: string) {
 }
 
 export async function updateOrderStatus(madonhang: string, status: string) {
-  return axiosClient.put(`/purchase-order/updateStatus/${madonhang}`, { status });
+    return axiosClient.put(`/purchase-order/updateStatus/${madonhang}`, { status });
 }
 
 export async function createPurchaseOrder(orderData: CreatePurchaseOrderRequest): Promise<CreatePurchaseOrderResponse | null> {
@@ -154,6 +154,11 @@ export async function getOderByUserId(id: string): Promise<OrderItem[]> {
         }
         return [];
     }
+}
+
+export async function getOrdersByVoucher(mavoucher: string) {
+    const res = await axiosClient.get(`/purchase-order/getOrdersByVoucher/${mavoucher}`);
+    return res.data;
 }
 
 export async function createVnpayOrder(madonhang: string): Promise<string> {
@@ -258,15 +263,15 @@ export async function getOderByMaChiNhanh(machinhanh: string): Promise<OrderItem
 export async function generateInvoice(madonhang: string): Promise<boolean> {
     try {
         console.log("Generating invoice for order:", madonhang);
-        
-    
-        
+
+
+
         // Construct URL - use axios base URL to ensure consistency
         const baseURL = axiosClient.defaults.baseURL || process.env.NEXT_PUBLIC_API_URL;
         const invoiceURL = `${baseURL}/purchase-order/generate-invoice/${madonhang}`;
-        
+
         console.log("Requesting invoice from:", invoiceURL);
-        
+
         // Using axios instead of fetch for better error handling
         const response = await axiosClient.get(`/purchase-order/generate-invoice/${madonhang}`, {
             responseType: 'blob',
@@ -274,53 +279,53 @@ export async function generateInvoice(madonhang: string): Promise<boolean> {
                 'Accept': 'application/pdf,*/*'
             }
         });
-        
+
         // Check response
         if (response.status !== 200) {
             throw new Error(`Error ${response.status}: Invalid response`);
         }
-        
+
         const contentType = response.headers['content-type'] || 'application/pdf';
         console.log("Response received, content type:", contentType);
-        
+
         // Get the blob from the response
         const blob = new Blob([response.data], { type: contentType });
-        
+
         // Create a URL for the blob
         const url = window.URL.createObjectURL(blob);
-        
+
         // Create a temporary link element
         const link = document.createElement('a');
         link.href = url;
-        
+
         // Set the filename based on the order ID
         link.download = `hoa-don-${madonhang}.pdf`;
-        
+
         console.log("Initiating download...");
-        
+
         // Append to the document, click it, and clean up
         document.body.appendChild(link);
         link.click();
-        
+
         // Clean up
         setTimeout(() => {
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
         }, 100);
-        
+
         message.success("Tải xuống hoá đơn thành công");
         return true;
     } catch (error: any) {
         // Enhanced error handling
         console.error("Lỗi khi tạo hoặc tải xuống hoá đơn:", error);
-        
+
         // Check if the error has response data as blob
         if (error.response && error.response.data instanceof Blob) {
             // Try to read the blob as text to get error message
             try {
                 const text = await error.response.data.text();
                 console.error("Error response content:", text);
-                
+
                 // Try to parse as JSON if possible
                 try {
                     const json = JSON.parse(text);
@@ -334,7 +339,7 @@ export async function generateInvoice(madonhang: string): Promise<boolean> {
         } else {
             message.error("Không thể tạo hoá đơn: " + (error.message || "Lỗi không xác định"));
         }
-        
+
         return false;
     }
 }

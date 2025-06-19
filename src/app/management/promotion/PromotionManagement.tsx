@@ -30,6 +30,7 @@ import { Product } from '@/types/product.types';
 import { Voucher } from '@/types/voucher.types';
 import { createNewVoucher, CreateVoucherRequest, deleteVoucher, getAllVouchers, updateVoucher } from '@/lib/api/voucherApi';
 import { set } from 'lodash';
+import { getOrdersByVoucher } from '@/lib/api/orderApi';
 
 const { Title, Text } = Typography;
 // Removed TabPane import - using items prop instead
@@ -72,8 +73,10 @@ export default function PromotionManagement() {
 
 
   const [productTabDisabled, setProductTabDisabled] = useState(true);
+  const [orderlistTabDisabled, setOrderlistTabDisabled] = useState(true);
 
-  
+
+  const [searchOrderText, setSearchOrderText] = useState('');
   useEffect(() => {
     fetchPromotions();
   }, []);
@@ -115,6 +118,21 @@ export default function PromotionManagement() {
       }
 
       setProducts(data);
+    } catch (error) {
+      console.error('Error fetching products by promotion:', error);
+      message.error('Không thể tải danh sách sản phẩm trong chương trình khuyến mãi');
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  const fetchOrderListByVoucher = async (mavoucher: string) => {
+    setLoadingProducts(true);
+    try {
+      const data = await getOrdersByVoucher(mavoucher);
+
+      console.log('Fetched orders by voucher:', data);
+      setOrders(data.data);
     } catch (error) {
       console.error('Error fetching products by promotion:', error);
       message.error('Không thể tải danh sách sản phẩm trong chương trình khuyến mãi');
@@ -216,17 +234,14 @@ export default function PromotionManagement() {
   const handleDeleteKM = async (machuongtrinh: string) => {
     setLoading(true);
     try {
-      // Lấy danh sách sản phẩm trong chương trình khuyến mãi
-      const productsInPromotion = await findAllProductByPromotion(machuongtrinh);
 
-      // Nếu có sản phẩm, xóa từng sản phẩm khỏi chương trình trước
+      const productsInPromotion = await findAllProductByPromotion(machuongtrinh);
       if (productsInPromotion.length > 0) {
         for (const product of productsInPromotion) {
           await deleteProductFromPromotion(machuongtrinh, product.masanpham);
         }
       }
 
-      // Sau khi đã xóa hết sản phẩm, xóa chương trình khuyến mãi
       const success = await deletePromotion(machuongtrinh);
       if (success) {
         setPromotions(prev => prev.filter(p => p.machuongtrinh !== machuongtrinh));
@@ -265,6 +280,13 @@ export default function PromotionManagement() {
     setSelectedPromotion(promotion);
     setActiveTab('2');
     await fetchProductsByPromotion(promotion.machuongtrinh);
+  };
+
+  const handleViewOrderList = async (voucher: Voucher) => {
+    setOrderlistTabDisabled(false);
+    setSelectedVoucher(voucher);
+    setActiveTab('4');
+    await fetchOrderListByVoucher(voucher.mavoucher);
   };
 
   useEffect(() => {
@@ -408,6 +430,10 @@ export default function PromotionManagement() {
     },
   ];
 
+  const [orders, setOrders] = useState<any[]>([]);
+
+
+
   const columnsVoucher: ColumnsType<Voucher> = [
     {
       title: 'Mã voucher',
@@ -464,7 +490,7 @@ export default function PromotionManagement() {
     {
       title: 'Thao tác',
       key: 'action',
-      width: 250,
+      width: 300,
       render: (_, record) => {
         const isDisabled = record.mavoucher === 'VC00000';
         return (
@@ -487,6 +513,12 @@ export default function PromotionManagement() {
                 Xóa
               </Button>
             </Popconfirm>
+            <Button
+              icon={<FileSearchOutlined />}
+              onClick={() => handleViewOrderList(record)}
+            >
+              Hóa đơn đã dùng
+            </Button>
           </Space>
         );
       },
@@ -544,6 +576,47 @@ export default function PromotionManagement() {
         </Popconfirm>
       ),
     }
+  ];
+
+  const orderlistcolumns: ColumnsType<any> = [
+    {
+      title: 'Mã đơn hàng',
+      dataIndex: 'madonhang',
+      key: 'madonhang',
+      width: 150,
+    },
+    {
+      title: 'Ngày mua',
+      dataIndex: 'ngaydat',
+      key: 'ngaydat',
+      width: 130,
+      render: (date) => date ? dayjs(date).format('DD/MM/YYYY') : '',
+    },
+    {
+      title: 'Tổng tiền',
+      dataIndex: 'thanhtien',
+      key: 'thanhtien',
+      width: 120,
+      render: (value) => value != null ? `${Number(value).toLocaleString('vi-VN')}₫` : '',
+    },
+    {
+      title: 'Phương thức thanh toán',
+      dataIndex: 'phuongthucthanhtoan',
+      key: 'phuongthucthanhtoan',
+      width: 180,
+    },
+    {
+      title: 'Mã voucher',
+      dataIndex: 'mavoucher',
+      key: 'mavoucher',
+      width: 120,
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'trangthai',
+      key: 'trangthai',
+      width: 120,
+    },
   ];
 
   const handleTabChange = (key: string) => {
@@ -670,6 +743,13 @@ export default function PromotionManagement() {
 
     return matchSearch && matchStatus;
   });
+
+
+  const filteredOrders = orders.filter(order =>
+    order.madonhang?.toLowerCase().includes(searchOrderText.toLowerCase())
+  );
+
+
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">
       <Tabs activeKey={activeTab} onChange={handleTabChange} items={[
@@ -749,7 +829,7 @@ export default function PromotionManagement() {
                       <Text strong>Tên chương trình:</Text> {selectedPromotion.tenchuongtrinh}
                     </Col>
                     <Col span={8}>
-                      <Text strong>Giá trị khuyến mãi:</Text> {selectedPromotion.giatrikhuyenmai}%
+                      <Text strong>Giá trị khuyến mãi:</Text> {selectedPromotion.giatrikhuyenmai != null ? selectedPromotion.giatrikhuyenmai : 0}%
                     </Col>
                   </Row>
                 </Card>
@@ -822,8 +902,59 @@ export default function PromotionManagement() {
               />
             </>
           )
+        },
+        {
+          key: "4",
+          label: "Danh sách hóa đơn đã dùng voucher",
+          disabled: orderlistTabDisabled,
+          children: (
+            <div className="mb-4">
+              <Button
+                onClick={() => setActiveTab('3')}
+                className="mb-4"
+              >
+                &lt; Quay lại danh sách voucher
+              </Button>
+
+              <Input
+                placeholder="Tìm kiếm theo mã đơn hàng"
+                value={searchOrderText}
+                onChange={e => setSearchOrderText(e.target.value)}
+                style={{ width: 240 }}
+              />
+
+              {selectedVoucher && (
+                <Card className="mb-4">
+                  <Row gutter={16}>
+                    <Col span={8}>
+                      <Text strong>Mã voucher:</Text> {selectedVoucher.mavoucher}
+                    </Col>
+                    <Col span={8}>
+                      <Text strong>Mô tả:</Text> {selectedVoucher.mota}
+                    </Col>
+                    <Col span={8}>
+                      <Text strong>Giá trị khuyến mãi:</Text> {selectedVoucher.giatri != null ? selectedVoucher.giatri : 0}₫
+                    </Col>
+                  </Row>
+                </Card>
+              )}
+
+              <div className="mb-4 flex justify-between">
+                <Title level={5}>Danh sách đơn hàng áp dụng voucher</Title>
+              </div>
+
+              <Table
+                columns={orderlistcolumns}
+                dataSource={filteredOrders}
+                rowKey="id"
+                loading={loadingProducts}
+                pagination={{ pageSize: 10 }}
+              />
+            </div>
+          )
         }
       ]} />
+
       {/*Modal add khuyenmai*/}
       <Modal
         title={modalKhuyenMaiMode === 'createKhuyenMai' ? 'Thêm chương trình khuyến mãi' : 'Chỉnh sửa chương trình khuyến mãi'}
@@ -983,6 +1114,7 @@ export default function PromotionManagement() {
           </Form.Item>
         </Form>
       </Modal>
+
 
       {/* Modal for adding products to promotion */}
       <Modal
