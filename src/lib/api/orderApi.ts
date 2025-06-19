@@ -77,7 +77,6 @@ export interface OrderItem {
     hinhthucnhanhang: string;
     sodienthoainguoinhan: string;
     nguoinhan: string;
-    diachinguoinhan: string | null;
     ghichu: string;
     trangthai: string;
     sanpham: OrderProductItem[];
@@ -110,6 +109,8 @@ export async function createPurchaseOrder(orderData: CreatePurchaseOrderRequest)
             return null;
         }
     } catch (error: any) {
+        alert("ok")
+
         if (error.response?.data?.message) {
             message.error(`Lỗi: ${error.response.data.message}`);
         } else {
@@ -144,11 +145,11 @@ export async function getOderByUserId(id: string): Promise<OrderItem[]> {
         }
         return [];
     } catch (error) {
-        if (typeof window !== "undefined") {
-            message.error("Lỗi khi lấy danh sách đơn hàng");
-        } else {
-            console.error("Error fetching user orders:", error);
-        }
+        // if (typeof window !== "undefined") {
+        //     message.error("Lỗi khi lấy danh sách đơn hàng");
+        // } else {
+        //     console.error("Error fetching user orders:", error);
+        // }
         return [];
     }
 }

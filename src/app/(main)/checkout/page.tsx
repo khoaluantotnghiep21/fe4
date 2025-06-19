@@ -140,8 +140,6 @@ export default function Checkout() {
 
     showLoading();
     try {
-      const dateTimeString = `${selectedDate} ${selectedTime}`;
-      const timestamp = dayjs(dateTimeString, 'YYYY-MM-DD HH:mm:ss').format('YYYY-MM-DDTHH:mm:ss');
       const orderData: CreatePurchaseOrderRequest = {
         phuongthucthanhtoan: paymentMethod == 'COD' ? 'Thanh toán khi nhận hàng' : 'Chuyển khoản ngân hàng',
         hinhthucnhanhang: activeTab === 'pickup' ? 'Nhận hàng tại nhà thuốc' : 'Giao hàng tận nơi',
@@ -181,6 +179,7 @@ export default function Checkout() {
           }
         }
       } else {
+        return;
         message.error("Lỗi khi mua hàng! Vui lòng thử lại");
         console.log('Result is null, skipping block');
       }

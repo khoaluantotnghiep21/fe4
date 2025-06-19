@@ -69,9 +69,9 @@ axiosClient.interceptors.response.use(
     if (error.response) {
       const status = error.response.status;
 
-      if (status === 401) {
+      if (status === 401 || status === 403) {
         if (isClient) {
-          window.location.href = "/";
+          window.location.href = "/login"; // ✅ Redirect to sign-in page
         }
       }
 
@@ -87,5 +87,6 @@ axiosClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
 
 export default axiosClient;
