@@ -150,15 +150,6 @@ export default function RevenueStatistics() {
         </Col>
         <Col>
           <Button
-            type="primary"
-            style={{ marginLeft: 16, background: '#1890ff', borderColor: '#1890ff' }}
-            onClick={() => window.print()}
-          >
-            In thống kê
-          </Button>
-        </Col>
-        <Col>
-          <Button
             type="default"
             style={{ marginLeft: 8, background: '#fff', borderColor: '#52c41a', color: '#52c41a' }}
             onClick={handleExportExcel}
