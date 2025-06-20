@@ -680,7 +680,7 @@ const Header = () => {
                     alert("Vui lòng nhập mã đơn hàng");
                     return;
                   }
-                  window.location.href = `/order-confirmation?maDonHang=${encodeURIComponent(
+                  window.location.href = `/order-confirmation?madonhang=${encodeURIComponent(
                     orderCode.trim()
                   )}`;
                   setIsOrderModalOpen(false);
@@ -694,7 +694,7 @@ const Header = () => {
                   onChange={(e) => setOrderCode(e.target.value)}
                   onPressEnter={() => {
                     if (!orderCode.trim()) return;
-                    window.location.href = `/order-confirmation?maDonHang=${encodeURIComponent(
+                    window.location.href = `/order-confirmation?madonhang=${encodeURIComponent(
                       orderCode.trim()
                     )}`;
                     setIsOrderModalOpen(false);
