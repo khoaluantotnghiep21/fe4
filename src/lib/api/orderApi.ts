@@ -77,7 +77,6 @@ export interface OrderItem {
     hinhthucnhanhang: string;
     sodienthoainguoinhan: string;
     nguoinhan: string;
-    diachinguoinhan: string | null;
     ghichu: string;
     trangthai: string;
     sanpham: OrderProductItem[];
