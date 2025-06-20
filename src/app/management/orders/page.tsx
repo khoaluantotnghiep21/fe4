@@ -10,8 +10,8 @@ import {
     LogoutOutlined,
     InboxOutlined,
 } from '@ant-design/icons';
-import CreateOrderForm from './CreateOrderForm'; // Tạo component này cho form tạo đơn
-import OrderList from './OderList'; // Tạo component này cho danh sách đơn hàng
+import CreateOrderForm from './CreateOrderForm'; 
+import OrderList from './OderList'; 
 import ReceiveProductsComponent from '../receive/ReceiveProductsComponent';
 import StaffSalesComponent from '../Staff-sales/StaffSalesComponent';
 

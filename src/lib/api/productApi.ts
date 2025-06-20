@@ -123,6 +123,22 @@ export async function getProductByCode(
   }
 }
 
+export async function getProducstBySlug(
+  slug: string
+): Promise<Product | null> {
+  try {
+    const res = await axiosClient.get(`/product/findProductBySlug/${slug}`);
+    return res.data.data;
+  } catch (err) {
+    if (typeof window !== "undefined") {
+      message.error("Lỗi khi fetch chi tiết sản phẩm");
+    } else {
+      console.error("Lỗi khi fetch chi tiết sản phẩm:", err);
+    }
+    return null;
+  }
+}
+
 /**
  * Xóa sản phẩm theo mã sản phẩm
  * @param masanpham Mã sản phẩm cần xóa
@@ -298,8 +314,8 @@ export async function getSliderItems() {
       mobileHeight: 200,
     },
     {
-      desktopSrc: "/assets/images/slider1.png",
-      mobileSrc: "/assets/images/slider1_mobile.png",
+      desktopSrc: "/assets/images/slider2.png",
+      mobileSrc: "/assets/images/slider2_mobile.png",
       alt: "Sản phẩm mới Long Châu",
       desktopWidth: 960,
       desktopHeight: 300,

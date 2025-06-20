@@ -93,7 +93,7 @@ const Header = () => {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [orderCode, setOrderCode] = useState("");
-  
+
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false); // Track Dropdown state
   const [loais, setLoais] = useState<Loai[]>([]);
   const [danhMucByLoai, setDanhMucByLoai] = useState<Record<string, DanhMuc[]>>(
@@ -386,7 +386,10 @@ const Header = () => {
     {
       key: "search_order_lookup",
       label: (
-        <div onClick={() => setIsOrderModalOpen(true)} className="cursor-pointer">
+        <div
+          onClick={() => setIsOrderModalOpen(true)}
+          className="cursor-pointer"
+        >
           Tra cứu đơn hàng
         </div>
       ),
@@ -436,36 +439,9 @@ const Header = () => {
   const userMenuItems: MenuProps["items"] = [
     ...(user && user.roles && user.roles.includes("admin")
       ? [
-          {
-            key: "admin",
-            label: (
-              <Link href="/admin" onClick={() => showLoading()}>
-                Trang quản trị
-              </Link>
-            ),
-          },
-          {
-            key: "account-management",
-            label: (
-              <Link href="/admin/accounts" onClick={() => showLoading()}>
-                Quản lý tài khoản
-              </Link>
-            ),
-          },
         ]
       : []),
-    ...(user && user.roles && user.roles.includes("staff")
-      ? [
-          {
-            key: "order-management",
-            label: (
-              <Link href="/staff/orders" onClick={() => showLoading()}>
-                Quản lý đơn hàng
-              </Link>
-            ),
-          },
-        ]
-      : []),
+
     ...(user && user.roles && user.roles.includes("customer")
       ? [
           {
@@ -595,7 +571,6 @@ const Header = () => {
                   onFocus={() => setIsDropdownOpen(true)}
                   suffix={
                     <div style={{ display: "flex", gap: 4 }}>
-
                       <Button
                         icon={<AudioOutlined />}
                         type="text"
@@ -603,7 +578,7 @@ const Header = () => {
                         style={{ color: "#aaa" }}
                         onClick={() => setIsVoiceModalOpen(true)}
                       />
-                                      <Button
+                      <Button
                         icon={<SearchOutlined />}
                         onClick={handleSearch}
                         type="text"
@@ -694,38 +669,38 @@ const Header = () => {
                 </div>
               </Modal>
               <Modal
-  open={isOrderModalOpen}
-  title="Tra cứu đơn hàng"
-  onCancel={() => {
-    setIsOrderModalOpen(false);
-    setOrderCode("");
-  }}
-  onOk={() => {
-    if (!orderCode.trim()) {
-      alert("Vui lòng nhập mã đơn hàng");
-      return;
-    }
-    window.location.href = `/order-confirmation?maDonHang=${encodeURIComponent(
-      orderCode.trim()
-    )}`;
-    setIsOrderModalOpen(false);
-  }}
-  okText="Tra cứu"
-  cancelText="Hủy"
->
-  <Input
-    placeholder="Nhập mã đơn hàng"
-    value={orderCode}
-    onChange={(e) => setOrderCode(e.target.value)}
-    onPressEnter={() => {
-      if (!orderCode.trim()) return;
-      window.location.href = `/order-confirmation?maDonHang=${encodeURIComponent(
-        orderCode.trim()
-      )}`;
-      setIsOrderModalOpen(false);
-    }}
-  />
-</Modal>
+                open={isOrderModalOpen}
+                title="Tra cứu đơn hàng"
+                onCancel={() => {
+                  setIsOrderModalOpen(false);
+                  setOrderCode("");
+                }}
+                onOk={() => {
+                  if (!orderCode.trim()) {
+                    alert("Vui lòng nhập mã đơn hàng");
+                    return;
+                  }
+                  window.location.href = `/order-confirmation?maDonHang=${encodeURIComponent(
+                    orderCode.trim()
+                  )}`;
+                  setIsOrderModalOpen(false);
+                }}
+                okText="Tra cứu"
+                cancelText="Hủy"
+              >
+                <Input
+                  placeholder="Nhập mã đơn hàng"
+                  value={orderCode}
+                  onChange={(e) => setOrderCode(e.target.value)}
+                  onPressEnter={() => {
+                    if (!orderCode.trim()) return;
+                    window.location.href = `/order-confirmation?maDonHang=${encodeURIComponent(
+                      orderCode.trim()
+                    )}`;
+                    setIsOrderModalOpen(false);
+                  }}
+                />
+              </Modal>
 
               <div className="text-white custom-account">
                 {user ? (

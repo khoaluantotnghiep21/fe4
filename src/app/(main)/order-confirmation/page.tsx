@@ -92,64 +92,58 @@ export default function OrderConfirmation() {
     }
   };
 
+  // useEffect(() => {
+  //   const orderId = searchParams.get("orderId") || "";
+  //   const orderCode = searchParams.get("orderCode") || "";
+  //   const total = parseInt(searchParams.get("thanhTien") || "0", 10);
+  //   const status = decodeURIComponent(searchParams.get("status") || "");
+  //   const paymentMethod = decodeURIComponent(searchParams.get("paymentMethod") || "");
+  //   const shippingMethod = decodeURIComponent(searchParams.get("hinhThucNhanHang") || "");
+  //   const maChiNhanh = decodeURIComponent(searchParams.get("maChiNhanh") || "");
+  //   const date = searchParams.get("date") || "";
+  //   const discount = parseInt(searchParams.get("giamGiaTrucTiep") || "0", 10);
+  //   const ngayGiaoHang = decodeURIComponent(searchParams.get("ngayGiaoHang") || "");
+  //   const gioGiaoHang = decodeURIComponent(searchParams.get("gioGiaoHang") || "");
+  //   const tenNguoiNhan = decodeURIComponent(searchParams.get("tenNguoiNhan") || "");
+  //   const soDienThoai = decodeURIComponent(searchParams.get("soDienThoai") || "");
+
+  //   setOrderDetails({
+  //     orderId,
+  //     orderCode,
+  //     total,
+  //     status,
+  //     paymentMethod,
+  //     shippingMethod,
+  //     date,
+  //     discount,
+  //     ngayGiaoHang,
+  //     gioGiaoHang,
+  //     maChiNhanh,
+  //     tenNguoiNhan,
+  //     soDienThoai,
+  //   });
+  // }, [searchParams]);
+
   useEffect(() => {
-    const orderId = searchParams.get("orderId") || "";
-    const orderCode = searchParams.get("orderCode") || "";
-    const total = parseInt(searchParams.get("thanhTien") || "0", 10);
-    const status = decodeURIComponent(searchParams.get("status") || "");
-    const paymentMethod = decodeURIComponent(searchParams.get("paymentMethod") || "");
-    const shippingMethod = decodeURIComponent(searchParams.get("hinhThucNhanHang") || "");
-    const maChiNhanh = decodeURIComponent(searchParams.get("maChiNhanh") || "");
-    const date = searchParams.get("date") || "";
-    const discount = parseInt(searchParams.get("giamGiaTrucTiep") || "0", 10);
-    const ngayGiaoHang = decodeURIComponent(searchParams.get("ngayGiaoHang") || "");
-    const gioGiaoHang = decodeURIComponent(searchParams.get("gioGiaoHang") || "");
-    const tenNguoiNhan = decodeURIComponent(searchParams.get("tenNguoiNhan") || "");
-    const soDienThoai = decodeURIComponent(searchParams.get("soDienThoai") || "");
-
-    setOrderDetails({
-      orderId,
-      orderCode,
-      total,
-      status,
-      paymentMethod,
-      shippingMethod,
-      date,
-      discount,
-      ngayGiaoHang,
-      gioGiaoHang,
-      maChiNhanh,
-      tenNguoiNhan,
-      soDienThoai,
-    });
-  }, [searchParams]);
-
-  useEffect(() => {
-    if (!searchParams) {
-      setError("Không thể đọc tham số URL. Vui lòng thử lại.");
-      setLoading(false);
-      return;
-    }
-
-    const maDonHang = searchParams.get("maDonHang");
+    const maDonHang = searchParams.get("madonhang");
     if (!maDonHang) {
-      setError("Không tìm thấy mã đơn hàng trong URL.");
-      setLoading(false);
-      return;
+      // Delay the error slightly to allow hydration
+      const timer = setTimeout(() => {
+        setError("Không tìm thấy mã đơn hàng trong URL.");
+        setLoading(false);
+      }, 100);
+      return () => clearTimeout(timer);
     }
-
+  
     const fetchOrderDetails = async () => {
       try {
         setLoading(true);
         setError(null);
-
         const data = await getOderByMaDonHang(maDonHang);
         if (!data || data.length === 0) {
           throw new Error("Không tìm thấy chi tiết đơn hàng.");
         }
-
         setOrderItems(data);
-
         if (data[0]?.machinhanh) {
           const pharmacyData = await findOne(data[0].machinhanh);
           setPharmacy(pharmacyData);
@@ -161,9 +155,10 @@ export default function OrderConfirmation() {
         setLoading(false);
       }
     };
-
+  
     fetchOrderDetails();
   }, [searchParams]);
+  
 
   const handleReload = () => {
     window.location.reload();

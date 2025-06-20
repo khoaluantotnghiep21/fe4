@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Card, Statistic, Row, Col, Spin, Select } from 'antd';
+import { Card, Statistic, Row, Col, Spin, Select, Button } from 'antd';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { getRevenueStats } from '@/lib/api/statisticsApi';
+import { getRevenueStats, getImportStats } from '@/lib/api/statisticsApi';
 import { getAllOrders } from '@/lib/api/orderApi';
+import { getUsers } from '@/lib/api/userApi';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#b37feb'];
 
@@ -11,12 +14,20 @@ export default function RevenueStatistics() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [topProducts, setTopProducts] = useState<any[]>([]);
+  const [importStats, setImportStats] = useState<any[]>([]);
+  const [userCount, setUserCount] = useState(0);
 
   const [summary, setSummary] = useState({ total: 0, count: 0, avgOrder: 0, avgCount: 0 });
+
+  // Tính tổng nhập và tổng bán ra
+  const totalImported = importStats.reduce((sum, item) => sum + Math.round(item.total_imported), 0);
+  const totalSold = topProducts.reduce((sum, item) => sum + Number(item.soluong), 0);
 
   useEffect(() => {
     fetchStats(type);
     fetchTopProducts();
+    fetchImportStats(type);
+    fetchUserCount();
   }, [type]);
 
   const fetchStats = async (type: 'day' | 'week' | 'month') => {
@@ -62,6 +73,24 @@ export default function RevenueStatistics() {
     }
   };
 
+  const fetchImportStats = async (type: 'day' | 'week' | 'month') => {
+    try {
+      const res = await getImportStats(type);
+      setImportStats(res.data || []);
+    } catch {
+      setImportStats([]);
+    }
+  };
+
+  const fetchUserCount = async () => {
+    try {
+      const users = await getUsers();
+      setUserCount(users.length);
+    } catch {
+      setUserCount(0);
+    }
+  };
+
   const pieData = data.map((d: any) => ({
     name: type === 'month' ? `Tháng ${d.period}` : type === 'week' ? `Tuần ${d.period}` : d.period,
     value: Number(d.total_revenue),
@@ -71,6 +100,37 @@ export default function RevenueStatistics() {
     if (type === 'month') { return `Tháng ${value}`; }
     if (type === 'week') { return `Tuần ${value}`; }
     return value;
+  };
+
+  // Xuất excel cho thống kê nhập/xuất
+  const handleExportExcel = () => {
+    // Chuẩn bị dữ liệu
+    const importRows = importStats.map((item: any) => ({
+      'Mã sản phẩm': item.masanpham,
+      'Tên sản phẩm': item.tensanpham,
+      'Số lượng nhập': Math.round(item.total_imported),
+    }));
+    const soldMap: Record<string, number> = {};
+    topProducts.forEach((item: any) => {
+      soldMap[item.tensanpham] = Number(item.soluong);
+    });
+    const soldRows = importStats.map((item: any) => ({
+      'Mã sản phẩm': item.masanpham,
+      'Tên sản phẩm': item.tensanpham,
+      'Số lượng bán': soldMap[item.tensanpham] || 0,
+    }));
+    // Sheet nhập
+    const wsImport = XLSX.utils.json_to_sheet(importRows);
+    // Sheet bán
+    const wsSold = XLSX.utils.json_to_sheet(soldRows);
+    // Workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, wsImport, 'NhapHang');
+    XLSX.utils.book_append_sheet(wb, wsSold, 'BanHang');
+    // Xuất file
+    const fileName = `ThongKe_NhapBan_${type}.xlsx`;
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    saveAs(new Blob([wbout], { type: 'application/octet-stream' }), fileName);
   };
 
   return (
@@ -87,6 +147,27 @@ export default function RevenueStatistics() {
             ]}
             style={{ width: 150 }}
           />
+        </Col>
+        <Col>
+          <Button
+            type="default"
+            style={{ marginLeft: 8, background: '#fff', borderColor: '#52c41a', color: '#52c41a' }}
+            onClick={handleExportExcel}
+          >
+            Xuất Excel
+          </Button>
+        </Col>
+      </Row>
+      <Row gutter={16} style={{ marginTop: 32, marginBottom: 24 }}>
+        <Col span={24}>
+          <Card style={{ background: 'linear-gradient(90deg, #e0e7ff 0%, #f0fdfa 100%)', border: 'none', boxShadow: '0 2px 8px #e0e7ff' }}>
+            <Statistic
+              title={<span style={{ fontWeight: 600, fontSize: 18, color: '#2d3748' }}>Tổng số khách hàng</span>}
+              value={userCount}
+              valueStyle={{ fontSize: 36, color: '#1890ff', fontWeight: 700 }}
+              prefix={<span role="img" aria-label="user" style={{ marginRight: 8 }}>👤</span>}
+            />
+          </Card>
         </Col>
       </Row>
       <Spin spinning={loading} tip="Đang tải thống kê...">
@@ -109,6 +190,28 @@ export default function RevenueStatistics() {
           <Col span={6}>
             <Card>
               <Statistic title={`Trung bình số đơn/${type === 'day' ? 'ngày' : type === 'week' ? 'tuần' : 'tháng'}`} value={summary.avgCount} />
+            </Card>
+          </Col>
+        </Row>
+        <Row gutter={16} style={{ marginBottom: 24 }}>
+          <Col span={12}>
+            <Card style={{ background: '#f6ffed', border: '1px solid #b7eb8f' }}>
+              <Statistic
+                title={<span style={{ fontWeight: 600, color: '#389e0d' }}>Tổng số lượng nhập vào</span>}
+                value={totalImported}
+                valueStyle={{ fontSize: 28, color: '#389e0d', fontWeight: 700 }}
+                suffix="sản phẩm"
+              />
+            </Card>
+          </Col>
+          <Col span={12}>
+            <Card style={{ background: '#fffbe6', border: '1px solid #ffe58f' }}>
+              <Statistic
+                title={<span style={{ fontWeight: 600, color: '#d48806' }}>Tổng số lượng bán ra</span>}
+                value={totalSold}
+                valueStyle={{ fontSize: 28, color: '#d48806', fontWeight: 700 }}
+                suffix="sản phẩm"
+              />
             </Card>
           </Col>
         </Row>
@@ -179,6 +282,39 @@ export default function RevenueStatistics() {
           </Card>
         </Col>
       </Row>
+      <Row gutter={16} style={{ marginTop: 32 }}>
+        <Col span={24}>
+          <Card title={`Top 3 sản phẩm nhập nhiều nhất (${type === 'day' ? 'Ngày' : type === 'week' ? 'Tuần' : 'Tháng'})`}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', minWidth: 400 }}>
+                <thead>
+                  <tr>
+                    <th>STT</th>
+                    <th>Mã sản phẩm</th>
+                    <th>Tên sản phẩm</th>
+                    <th>Số lượng nhập</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {importStats
+                    .sort((a, b) => Number(b.total_imported) - Number(a.total_imported))
+                    .slice(0, 3)
+                    .map((item, idx) => (
+                      <tr key={item.masanpham + item.tensanpham}>
+                        <td>{idx + 1}</td>
+                        <td>{item.masanpham}</td>
+                        <td>{item.tensanpham}</td>
+                        <td>{Math.round(item.total_imported)}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </Col>
+      </Row>
+
+
     </div>
   );
 }
